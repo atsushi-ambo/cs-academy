@@ -1,26 +1,15 @@
 name: Deploy CS Quest to GitHub Pages
 
-# 【任意】Pages のソースを「GitHub Actions」にした場合に使う手動デプロイ用ワークフロー。
-#
-# 注意: GitHub は「Pages を初めて有効化する」操作を自動化トークンに許可していないため、
-# このワークフローだけでは Pages を有効化できません(Resource not accessible by integration)。
-# まず一度だけ Settings → Pages で公開方式を選んでください:
-#   ・推奨(最も簡単): Source = "Deploy from a branch" → main / (root)
-#     → このワークフローは不要(GitHub 内蔵のビルドが自動デプロイします)
-#   ・代替: Source = "GitHub Actions" にしたら、このワークフローを手動実行(Run workflow)
-#
-# 上記の理由で push トリガーは外し、手動実行のみにしてあります(失敗の連発を防ぐため)。
-
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
 
-# GITHUB_TOKEN に Pages 公開と OIDC の権限を与える
 permissions:
   contents: read
   pages: write
   id-token: write
 
-# 同時実行は 1 つに絞る(進行中のデプロイは止めない)
 concurrency:
   group: pages
   cancel-in-progress: false
@@ -35,16 +24,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Configure Pages (auto-enable)
+      - name: Configure Pages
         uses: actions/configure-pages@v5
         with:
           enablement: true
 
-      - name: Assemble site (exclude .git)
+      - name: Assemble site
         run: |
           mkdir -p _site
-          # docsify は全 Markdown を必要とするのでリポジトリをまるごと公開する。
-          # ただし .git と _site 自身は除外する。
           rsync -a --exclude='.git' --exclude='_site' ./ _site/
 
       - name: Upload site artifact
