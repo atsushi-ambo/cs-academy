@@ -4,18 +4,25 @@ on:
   pull_request:
     paths:
       - '**.md'
+      - '.github/workflows/links_checker.yml'
   workflow_dispatch:
   schedule:
     - cron: '0 0 1 * *'
 
+permissions:
+  contents: read
+
 jobs:
   link_checker:
-    name: Check links and create automated issue if needed
+    name: Check links and save report
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     env:
       REPORT_FILE: links-report
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
 
       - name: Check links in Markdown files
         id: lychee
@@ -27,7 +34,6 @@ jobs:
           args: >-
             --verbose
             --accept 200,204,206
-            --headers "accept=text/html"
             --timeout 20
             --max-concurrency 3
             --no-progress
@@ -41,31 +47,11 @@ jobs:
       - name: Report exit code
         run: echo "Lychee exited with ${{ steps.lychee.outputs.exit_code }}"
 
-      - name: Find last open report issue
-        if: github.event_name != 'pull_request'
-        uses: micalevisk/last-issue-action@v2
-        id: last_issue
+      - name: Save link report
+        if: always()
+        uses: actions/upload-artifact@v4
         with:
-          state: open
-          labels: |
-            report
-            automated issue
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Create or update report issue
-        if: github.event_name != 'pull_request' && steps.lychee.outputs.exit_code != '0'
-        uses: peter-evans/create-issue-from-file@v5
-        with:
-          title: Link checker report
-          content-filepath: ${{ env.REPORT_FILE }}
-          issue-number: ${{ steps.last_issue.outputs.issue_number }}
-          labels: |
-            report
-            automated issue
-
-      - name: Close report issue if all links pass
-        if: github.event_name != 'pull_request' && steps.lychee.outputs.exit_code == '0' && steps.last_issue.outputs.has_found == 'true'
-        uses: peter-evans/close-issue@v3
-        with:
-          issue-number: ${{ steps.last_issue.outputs.issue_number }}
+          name: links-report
+          path: ${{ env.REPORT_FILE }}
+          retention-days: 14
+          if-no-files-found: error
