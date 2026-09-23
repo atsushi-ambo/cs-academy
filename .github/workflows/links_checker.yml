@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - '**.md'
+      - '.github/workflows/links_checker.yml'
   workflow_dispatch:
   schedule:
     - cron: '0 0 1 * *'
