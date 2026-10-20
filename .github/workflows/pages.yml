@@ -35,7 +35,7 @@ jobs:
           rsync -a --exclude='.git' --exclude='_site' ./ _site/
 
       - name: Upload site artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v5
         with:
           path: '_site'
 
