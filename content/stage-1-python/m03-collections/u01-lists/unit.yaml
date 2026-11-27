@@ -1,0 +1,56 @@
+id: s1.m03.u01
+title: "Lists: Keeping Many Values in Order"
+stage: 1
+module: "Collections"
+version: 1
+status: draft
+estimated_minutes: 90
+prerequisites:
+  - s1.m01.u03  # variables and types
+  - s1.m02.u02  # for loops
+objectives:
+  - Explain what a list is and why order and indexes matter.
+  - Read and change items with indexes, negative indexes, and slices.
+  - Add and remove items with append, insert, remove, and pop.
+  - Loop over a list, and build a new list from an old one.
+  - Explain the difference between "changing a list" and "making a new list".
+skills:
+  - python.lists.basic
+  - python.loops.accumulate
+  - english.explain-data-structure
+parts:
+  - steps.yaml        # play sequence (main)
+  - lesson.md         # reference sheet (read mode)
+  - handson.md
+  - exercises/
+  - solutions/solutions.md
+references:
+  - kind: official_doc
+    title: "The Python Tutorial, 3.1.3 Lists"
+    url: https://docs.python.org/3/tutorial/introduction.html#lists
+  - kind: official_doc
+    title: "The Python Tutorial, 5.1 More on Lists"
+    url: https://docs.python.org/3/tutorial/datastructures.html#more-on-lists
+  - kind: course
+    title: "CS50P Lecture 2: Loops"
+    url: https://cs50.harvard.edu/python/
+  - kind: practice
+    title: "HackerRank Python: Lists"
+    url: https://www.hackerrank.com/challenges/python-lists/problem
+  - kind: practice
+    title: "LeetCode Explore: Arrays 101"
+    url: https://leetcode.com/explore/learn/card/fun-with-arrays/
+vocab:
+  - {en: item, ja: 要素}
+  - {en: index, ja: 添字（位置の番号）}
+  - {en: mutable, ja: 変更可能な}
+  - {en: slice, ja: 切り出し}
+  - {en: append, ja: 末尾に追加する}
+  - {en: in place, ja: その場で（新しく作らずに）}
+  - {en: accumulate, ja: 積み上げる・集計する}
+  - {en: edge case, ja: 端のケース（空・1個など）}
+  - {en: boundary, ja: 境界（ちょうどの値）}
+  - {en: refer to, ja: 指す・参照する}
+  - {en: alias, ja: 別名}
+  - {en: refactor, ja: 動きを変えずにコードを改善する}
+  - {en: silently, ja: 何も知らせずに}
