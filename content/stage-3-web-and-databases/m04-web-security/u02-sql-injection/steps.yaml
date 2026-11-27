@@ -1,0 +1,349 @@
+unit: s3.m04.u02
+python_min: '3.9'
+steps:
+- id: st01
+  type: read
+  title: Keep a search term out of the SQL command
+  body: |
+    An on-call tool looks up a host by name. The name comes from a browser.
+    SQL injection happens when input becomes part of the database command.
+    You will see a normal name break a string-built query. Then you will bind it safely.
+    Every sample uses a fresh SQLite database in memory.
+- id: st02
+  type: predict
+  title: A name with an apostrophe
+  code: |
+    import sqlite3
+
+    db = sqlite3.connect(":memory:")
+    name = "O'Neil"
+    query = "SELECT '" + name + "'"
+    try:
+        print(db.execute(query).fetchone()[0])
+    except sqlite3.OperationalError:
+        print("syntax error")
+  choices:
+  - text: O'Neil
+    why: Joining strings does not protect the apostrophe.
+  - text: syntax error
+    why: The apostrophe is parsed as part of the SQL source.
+  - text: ONeil
+    why: SQLite does not silently remove the extra quote.
+  - text: None
+    why: The database cannot execute this command.
+  answer: 1
+- id: st03
+  type: try
+  title: Give the name its own value slot
+  task: Set name to O'Neil. Keep the same query and its value tuple.
+  starter: |
+    import sqlite3
+
+    db = sqlite3.connect(":memory:")
+    name = "Ada"
+    print(db.execute("SELECT ?", (name,)).fetchone()[0])
+  check:
+    stdout_line: O'Neil
+- id: st04
+  type: read
+  title: Send a query and its values separately
+  body: |
+    Use ? as a placeholder in SQLite. Bind values by giving execute a tuple as its second argument.
+    A one-item tuple needs a comma, as in (name,). Use one value per placeholder.
+    fetchone returns one row as a tuple, or None. fetchall returns a list of rows.
+    Manual escaping means treating special characters as data by rewriting them yourself.
+    Its rules depend on the database, settings, and where the input goes. Use parameters for values.
+- id: st05
+  type: predict
+  title: Will a bound value run SQL arithmetic?
+  code: |
+    import sqlite3
+
+    db = sqlite3.connect(":memory:")
+    print(db.execute("SELECT 2 + 3").fetchone()[0])
+    print(db.execute("SELECT ?", ("2 + 3",)).fetchone()[0])
+  choices:
+  - text: |-
+      5
+      5
+    why: A bound string is not a new SQL expression.
+  - text: |-
+      2 + 3
+      2 + 3
+    why: The first calculation is inside SQL source.
+  - text: |-
+      2 + 3
+      5
+    why: Binding does not cause arithmetic. SQL source does.
+  - text: |-
+      5
+      2 + 3
+    why: SQL evaluates the first expression. Binding passes plain text in the second.
+  answer: 3
+- id: st06
+  type: parsons
+  title: Bind one value
+  task: Open the database and set the value. Run the query, then print its first column.
+  lines:
+  - import sqlite3
+  - db = sqlite3.connect(":memory:")
+  - label = "edge-2"
+  - row = db.execute("SELECT ?", (label,)).fetchone()
+  - print(row[0])
+  accepted_orders:
+  - - 2
+    - 0
+    - 1
+    - 3
+    - 4
+  - - 0
+    - 2
+    - 1
+    - 3
+    - 4
+  expected_stdout: edge-2
+- id: st07
+  type: fix
+  title: Fix a host lookup that joins strings
+  task: |
+    find_hosts(db, name) returns matching host rows as a list of one-item tuples.
+    db has a hosts(name) table. name is text up to 80 characters. Keep duplicates and use exact equality.
+    Use a bound value and make no writes. For names edge and edge, a lookup for edge returns [("edge",), ("edge",)].
+  starter: |
+    def find_hosts(db, name):
+        sql = "SELECT name FROM hosts WHERE name = '" + name + "'"
+        return db.execute(sql).fetchall()
+  solution: |
+    def find_hosts(db, name):
+        return db.execute("SELECT name FROM hosts WHERE name = ?", (name,)).fetchall()
+  tests: |
+    import sqlite3
+
+    db = sqlite3.connect(":memory:")
+    db.execute("CREATE TABLE hosts (name TEXT)")
+    db.executemany("INSERT INTO hosts VALUES (?)", [("edge",), ("O'Neil",), ("edge",), ("",)])
+    assert find_hosts(db, "edge") == [("edge",), ("edge",)]
+    assert find_hosts(db, "O'Neil") == [("O'Neil",)]
+    assert find_hosts(db, "missing") == []
+    assert find_hosts(db, "") == [("",)]
+    assert db.execute("SELECT count(*) FROM hosts").fetchone() == (4,)
+  hint_levels:
+  - Separate the name from the SQL text.
+  - Use one question mark in the WHERE clause.
+  - Pass (name,) as the second argument to execute.
+  explanation: Binding preserves the exact name. With bounded names, an unindexed scan uses O(n) time
+    and O(k) result space for k matches.
+- id: st08
+  type: read
+  title: Use equality for exact names
+  body: |
+    The WHERE clause filters rows. Use = when the whole value should match.
+    LIKE checks a pattern. A percent sign in a LIKE pattern stands for zero or more characters.
+    Binding protects SQL structure. It does not change what an operator means.
+    AND makes both conditions required. Bind one value for each condition in SQL order.
+- id: st09
+  type: predict
+  title: A bound percent sign with equality
+  code: |
+    import sqlite3
+
+    db = sqlite3.connect(":memory:")
+    db.execute("CREATE TABLE hosts (name TEXT)")
+    db.executemany("INSERT INTO hosts VALUES (?)", [("a",), ("b",), ("%",)])
+    print(db.execute("SELECT name FROM hosts WHERE name = ?", ("%",)).fetchone())
+  choices:
+  - text: ('%',)
+    why: Equality compares the stored text to a literal percent sign.
+  - text: ('a',)
+    why: Equality does not expand patterns.
+  - text: None
+    why: The table contains the exact literal value.
+  - text: ('%')
+    why: fetchone returns a tuple, including the single-item comma.
+  answer: 0
+- id: st10
+  type: code
+  title: Scope an exact lookup to a team
+  task: |
+    find_ports(db, team, host) returns all matching port rows as one-item tuples sorted by port.
+    db has endpoints(team, host, port). team and host are strings of at most 80 characters.
+    Bind both values and keep duplicates. Make no writes. If ops/edge has ports 443 and 80, return [(80,), (443,)].
+  exercise: exercises/practice.py
+  function: find_ports
+  test_class: FindPorts
+  hint_levels:
+  - Match both the trusted team and the requested host.
+  - Use two placeholders and order by port.
+  - Call db.execute(sql, (team, host)).fetchall().
+- id: st11
+  type: fix
+  title: Use equality in a literal lookup
+  task: |
+    service_count(db, label) returns the number of rows with this exact label in services(label).
+    label is at most 80 characters. Use a bound value. Keep the table unchanged.
+    Example: in a table with labels cache and ca%, searching ca% returns 1.
+  starter: |
+    def service_count(db, label):
+        return db.execute("SELECT count(*) FROM services WHERE label LIKE ?", (label,)).fetchone()[0]
+  solution: |
+    def service_count(db, label):
+        return db.execute("SELECT count(*) FROM services WHERE label = ?", (label,)).fetchone()[0]
+  tests: |
+    import sqlite3
+
+    db = sqlite3.connect(":memory:")
+    db.execute("CREATE TABLE services (label TEXT)")
+    assert service_count(db, "") == 0
+    db.executemany("INSERT INTO services VALUES (?)", [("cache",), ("ca%",), ("cache",), ("",)])
+    assert service_count(db, "ca%") == 1
+    assert service_count(db, "cache") == 2
+    assert service_count(db, "CACHE") == 0
+    assert service_count(db, "") == 1
+    assert db.execute("SELECT count(*) FROM services").fetchone()[0] == 4
+  hint_levels:
+  - The value is already bound. Look at the operator.
+  - Select exact equality instead of pattern matching.
+  - Replace LIKE ? with = ?.
+  explanation: Equality gives exact matching under this table's default collation. For bounded labels
+    without an index, time is O(n) and extra space is O(1).
+- id: st12
+  type: read
+  title: Choose identifiers from fixed SQL pieces
+  body: |
+    An identifier is a name, such as a column name. A value parameter cannot stand for an identifier.
+    ORDER BY ? orders by a constant value for every row. It cannot select a sort column.
+    Use an allowlist, a short set of allowed choices. Map each choice to a constant SQL column name.
+    Unknown choices should be rejected before running the query.
+- id: st13
+  type: predict
+  title: Does a parameter become a column name?
+  code: |
+    import sqlite3
+
+    db = sqlite3.connect(":memory:")
+    db.execute("CREATE TABLE hosts (name TEXT)")
+    db.execute("INSERT INTO hosts VALUES ('edge')")
+    print(db.execute("SELECT ? FROM hosts", ("name",)).fetchone()[0])
+  choices:
+  - text: edge
+    why: Only the SQL identifier name would read the column.
+  - text: None
+    why: There is a row and the query selects a value for it.
+  - text: name
+    why: The result is the bound text, one value per row.
+  - text: syntax error
+    why: A bound value is valid in this SELECT position.
+  answer: 2
+- id: st14
+  type: code
+  title: Select a fixed sort column
+  task: |
+    sort_column(field) returns the literal column name "label" or "port", or None.
+    field is a string of at most 80 characters. Accept "name" for "label" and "number" for "port".
+    Example: sort_column("port") returns None. Matching is case sensitive.
+  exercise: exercises/practice.py
+  function: sort_column
+  test_class: SortColumn
+  hint_levels:
+  - Keep the accepted choices separate from the SQL names.
+  - Use two fixed mappings and reject a missing key.
+  - 'Return {''name'': ''label'', ''number'': ''port''}.get(field).'
+- id: st15
+  type: read
+  title: Limit what a database role may do
+  body: |
+    Least privilege gives each service only the access it needs. A read-only role can help limit damage.
+    In a server database, give a reporting service SELECT on the required tables or views.
+    An in-memory SQLite connection has no database user roles. Here we practice keeping the query itself safe.
+    A read-only role still needs correct row filters. It may otherwise read too much.
+- id: st16
+  type: predict
+  title: What does binding preserve with two filters?
+  code: |
+    import sqlite3
+
+    db = sqlite3.connect(":memory:")
+    db.execute("CREATE TABLE hosts (team TEXT, name TEXT)")
+    db.executemany("INSERT INTO hosts VALUES (?, ?)", [("ops", "api"), ("qa", "api")])
+    query = "SELECT team FROM hosts WHERE name = ? AND team = ?"
+    print(db.execute(query, ("api", "qa")).fetchall())
+  choices:
+  - text: '[(''ops'',), (''qa'',)]'
+    why: The team condition filters out ops.
+  - text: '[(''qa'',)]'
+    why: The values bind in order, and both checks must match.
+  - text: '[]'
+    why: The values are name first and team second.
+  - text: '[(''ops'',)]'
+    why: The second parameter is qa.
+  answer: 1
+- id: st17
+  type: code
+  title: 'Checkpoint: filter and sort without trusting SQL text'
+  task: |
+    team_services(db, team, order) returns sorted (label, port) tuples from services(team, label, port).
+    Inputs team and order are strings up to 80 characters. Bind team.
+    Choose fixed ORDER BY clauses for "name" (label, port) and "number" (port, label).
+    Return None for an unknown order. Use ascending order and make no writes.
+    Example: name order on [("z", 80), ("a", 443)] returns [("a", 443), ("z", 80)].
+  exercise: exercises/practice.py
+  function: team_services
+  test_class: TeamServices
+  hint_levels:
+  - There are two separate kinds of input here.
+  - Pick the sort clause from code-owned options. Bind only the team value.
+  - Append a fixed clause from orders.get(order), then execute(sql, (team,)).
+- id: st18
+  type: predict
+  title: An unknown sort option
+  code: |
+    orders = {"name": "label", "number": "port"}
+    order = "port"
+    column = orders.get(order)
+    print("reject" if column is None else column)
+  choices:
+  - text: port
+    why: The database column exists, but port is not an allowed option.
+  - text: label
+    why: This code uses no default column.
+  - text: None
+    why: The conditional prints reject for a missing mapping.
+  - text: reject
+    why: The external option must be a key in the allowlist.
+  answer: 3
+- id: st19
+  type: explain
+  title: Explain the command and the data
+  prompt: Write 2–4 English sentences. Explain why a bound value may contain a quote. Name one control
+    for dynamic sort order. Check the model answer in the lesson after writing.
+  rubric:
+  - Separate query code and value.
+  - Name a fixed mapping for sort choices.
+  model_answer: A bound name is passed as a value, so a quote stays inside the name. For sorting, I map
+    the requested choice to a fixed column name. The client never supplies SQL syntax.
+- id: st20
+  type: terminal
+  title: Hands-on in the Python sandbox
+  guide: handson.md
+  check: Run each sample and match the stated output.
+- id: st21
+  type: boss
+  title: Module checkpoint
+  draws_from:
+  - st02
+  - st05
+  - st09
+  - st13
+  - st16
+  - st18
+  - st17
+  pass_rule: Answer five predicts correctly and pass the final Code tests.
+review_cards:
+  from_steps:
+  - st02
+  - st05
+  - st09
+  - st13
+  - st16
+  - st18
+  vocab: true

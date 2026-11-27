@@ -28,14 +28,14 @@ class DockerIntegrationTest(AcademyCase):
     def setUpClass(cls):
         try:
             subprocess.run(["docker", "info", "--format", "{{.ServerVersion}}"],
-                           capture_output=True, timeout=8, check=True)
+                           capture_output=True, timeout=30, check=True)
         except (OSError, subprocess.SubprocessError) as error:
             if os.environ.get("CS_ACADEMY_REQUIRE_DOCKER"):
                 raise AssertionError("Docker is required for this test run") from error
             raise SkipTest("Docker is unavailable") from error
         try:
             subprocess.run(["docker", "image", "inspect", IMAGE],
-                           capture_output=True, timeout=8, check=True)
+                           capture_output=True, timeout=30, check=True)
         except (OSError, subprocess.SubprocessError) as error:
             raise AssertionError("Runner image is missing. Run make runner-image.") from error
 

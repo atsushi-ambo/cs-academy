@@ -1,0 +1,493 @@
+unit: s2.m06.u06
+python_min: '3.9'
+steps:
+- id: st01
+  type: read
+  title: Keep an ordered index short
+  body: |
+    Sorted server IDs can turn an ordinary BST into a long chain.
+    A **balanced tree** keeps search paths short as keys arrive.
+    An **AVL tree** is a BST with nearly equal child heights at each node.
+    You will measure the difference and repair four kinds of lean. You will also see a second kind of balanced tree.
+- id: st02
+  type: read
+  title: Read height and balance in constant time
+  body: |
+    Use height 0 for an empty link and 1 for a leaf.
+    A node stores `1 + max(left_height, right_height)` in its .height attribute. This is its **cached height**.
+    The **balance factor** is left height minus right height.
+    At every AVL node, it must be -1, 0, or 1.
+    After a link changes, refresh the height before a parent reads it.
+- id: st03
+  type: predict
+  title: Find the sign of a right-heavy tree
+  code: |
+    class Node:
+        def __init__(self, key, left=None, right=None):
+            self.key = key
+            self.left = left
+            self.right = right
+            left_height = 0 if left is None else left.height
+            right_height = 0 if right is None else right.height
+            self.height = 1 + max(left_height, right_height)
+
+    def height(node):
+        return 0 if node is None else node.height
+
+    def factor(node):
+        return height(node.left) - height(node.right)
+
+    root = Node(9, None, Node(14, Node(11)))
+    print(factor(root))
+  choices:
+  - text: '2'
+    why: A taller right side makes left minus right negative.
+  - text: '-1'
+    why: The right subtree has height 2, not 1.
+  - text: '-2'
+    why: The left height is 0 and the right height is 2.
+  - text: '0'
+    why: The root has one empty link and one subtree. Their heights differ.
+  answer: 2
+- id: st04
+  type: try
+  title: Reduce the right subtree
+  starter: |
+    class Node:
+        def __init__(self, key, left=None, right=None):
+            self.key = key
+            self.left = left
+            self.right = right
+            left_height = 0 if left is None else left.height
+            right_height = 0 if right is None else right.height
+            self.height = 1 + max(left_height, right_height)
+
+    def height(node):
+        return 0 if node is None else node.height
+
+    def factor(node):
+        return height(node.left) - height(node.right)
+
+    root = Node(9, None, Node(14, Node(11)))
+    print(factor(root))
+  task: Remove the child with key 11. Run again and see how the factor changes.
+  check:
+    stdout_line: '-1'
+- id: st05
+  type: code
+  title: Read the balance factor of a node
+  task: Return left height minus right height using each child's stored .height. A missing link and an empty
+    root each give 0 for height or factor. Keep links and heights unchanged. Node(9, Node(4)) has factor
+    1.
+  exercise: exercises/practice.py
+  function: balance_factor
+  test_class: BalanceFactor
+  hint_levels:
+  - Read the heights from the links one level down.
+  - Use zero for either missing link.
+  - Subtract the saved right height from the saved left height.
+- id: st06
+  type: read
+  title: A rotation moves links and keeps key order
+  body: |
+    A **rotation** changes which node is at the top of a small part of a BST.
+    In a left rotation, the right child moves up. This child is the **pivot**.
+    Its old left branch becomes the old root's right branch. Then the old root becomes its left child.
+
+    ```text
+      10                  20
+        \                /
+        20      ->      10
+       /                  \
+      15                  15
+    ```
+
+    20 moves above 10. Key 15 stays between them in sorted order.
+    For a right rotation, swap left and right in these steps.
+    Refresh the old root first and the pivot second. Return the pivot.
+- id: st07
+  type: predict
+  title: Follow the branch between two keys
+  code: |
+    class Node:
+        def __init__(self, key, left=None, right=None):
+            self.key = key
+            self.left = left
+            self.right = right
+            left_height = 0 if left is None else left.height
+            right_height = 0 if right is None else right.height
+            self.height = 1 + max(left_height, right_height)
+
+    def turn_left(root):
+        pivot = root.right
+        root.right = pivot.left
+        pivot.left = root
+        return pivot
+
+    root = turn_left(Node(10, None, Node(20, Node(15))))
+    print(root.key, root.left.key, root.left.right.key)
+  choices:
+  - text: 10 20 15
+    why: A left rotation moves the right child above the old root.
+  - text: 20 15 10
+    why: 15 fits on the right of 10, so it becomes that branch.
+  - text: 20 10 20
+    why: The old right link is replaced, so it no longer points to 20.
+  - text: 20 10 15
+    why: 20 moves up, 10 moves left, and the branch with 15 transfers to 10.
+  answer: 3
+- id: st08
+  type: parsons
+  title: Rewire a left rotation
+  task: Each list holds [key, left, right]. Save the pivot, then move its old left link before you overwrite
+    it.
+  lines:
+  - 'def rotate(root):'
+  - '    pivot = root[2]'
+  - '    root[2] = pivot[1]'
+  - '    pivot[1] = root'
+  - '    return pivot'
+  - print(rotate([8, None, [12, None, None]])[0])
+  expected_stdout: '12'
+- id: st09
+  type: fix
+  title: Save the middle branch in a right rotation
+  task: Repair links in a right rotation. The given root has a left child. Return the promoted child. For
+    Node(20, Node(10, None, Node(15))), 15 becomes the left child of 20. This fix changes links only.
+  starter: |
+    class Node:
+        def __init__(self, key, left=None, right=None):
+            self.key = key
+            self.left = left
+            self.right = right
+            left_height = 0 if left is None else left.height
+            right_height = 0 if right is None else right.height
+            self.height = 1 + max(left_height, right_height)
+
+    def turn_right(root):
+        pivot = root.left
+        root.left = None
+        pivot.right = root
+        return pivot
+  solution: |
+    class Node:
+        def __init__(self, key, left=None, right=None):
+            self.key = key
+            self.left = left
+            self.right = right
+            left_height = 0 if left is None else left.height
+            right_height = 0 if right is None else right.height
+            self.height = 1 + max(left_height, right_height)
+
+    def turn_right(root):
+        pivot = root.left
+        root.left = pivot.right
+        pivot.right = root
+        return pivot
+  tests: |
+    old_root = Node(20, Node(10, None, Node(15)), Node(30))
+    middle = old_root.left.right
+    root = turn_right(old_root)
+    assert root.key == 10 and root.right is old_root
+    assert old_root.left is middle
+    assert old_root.right.key == 30
+    assert turn_right(Node(8, Node(4))).right.left is None
+  hint_levels:
+  - Find the key between the old root and its left child.
+  - The pivot's old right link needs a new parent before you overwrite it.
+  - Set root.left = pivot.right before setting pivot.right = root.
+  explanation: The middle branch keeps its place in sorted order after the transfer. A rotation relinks
+    a constant number of nodes in O(1) time and space.
+- id: st10
+  type: fix
+  title: Refresh heights from the bottom
+  task: Fix a left rotation that also updates .height. The root has a right child and all heights are correct
+    before the turn. Turning Node(10, None, Node(20)) gives root 20 at height 2 and child 10 at height 1.
+  starter: |
+    class Node:
+        def __init__(self, key, left=None, right=None):
+            self.key = key
+            self.left = left
+            self.right = right
+            left_height = 0 if left is None else left.height
+            right_height = 0 if right is None else right.height
+            self.height = 1 + max(left_height, right_height)
+    def refresh(node):
+        left = 0 if node.left is None else node.left.height
+        right = 0 if node.right is None else node.right.height
+        node.height = 1 + max(left, right)
+
+    def rotate(root):
+        pivot = root.right
+        root.right = pivot.left
+        pivot.left = root
+        refresh(pivot)
+        refresh(root)
+        return pivot
+  solution: |
+    class Node:
+        def __init__(self, key, left=None, right=None):
+            self.key = key
+            self.left = left
+            self.right = right
+            left_height = 0 if left is None else left.height
+            right_height = 0 if right is None else right.height
+            self.height = 1 + max(left_height, right_height)
+    def refresh(node):
+        left = 0 if node.left is None else node.left.height
+        right = 0 if node.right is None else node.right.height
+        node.height = 1 + max(left, right)
+
+    def rotate(root):
+        pivot = root.right
+        root.right = pivot.left
+        pivot.left = root
+        refresh(root)
+        refresh(pivot)
+        return pivot
+  tests: |
+    root = rotate(Node(10, None, Node(20)))
+    assert root.key == 20 and root.height == 2
+    assert root.left.key == 10 and root.left.height == 1
+    root = rotate(Node(8, None, Node(20, Node(12))))
+    assert root.height == 3 and root.left.height == 2
+  hint_levels: &id001
+  - Which node becomes a child during the rotation?
+  - Refresh that child before the new parent uses its height.
+  - Call refresh(root) before refresh(pivot).
+  explanation: After rotation, the old root is lower. Refreshing it first lets the new root read the correct
+    child height. Time and extra space are O(1).
+- id: st11
+  type: code
+  title: Implement a left rotation
+  task: Rotate a BST root with a right child. Move that child up, preserve all other branches, and update
+    both changed heights. Return the pivot. A root with key 10 and a single right child with key 20 becomes
+    a root with key 20 and height 2.
+  exercise: exercises/practice.py
+  function: rotate_left
+  test_class: RotateLeft
+  hint_levels:
+  - Move the child up and keep its middle branch.
+  - Take the right child as pivot. Transfer its left link to the old root.
+  - Set pivot.left = root. Refresh root, then pivot. Return pivot.
+- id: st12
+  type: code
+  title: Implement a right rotation
+  task: Rotate a BST root with a left child. Move that child up, preserve all other branches, and update
+    both changed heights. Return the pivot. A root with key 20 and a single left child with key 10 becomes
+    a root with key 10 and height 2.
+  exercise: exercises/practice.py
+  function: rotate_right
+  test_class: RotateRight
+  hint_levels:
+  - Move the child up and keep its middle branch.
+  - Take the left child as pivot. Transfer its right link to the old root.
+  - Set pivot.right = root. Refresh root, then pivot. Return pivot.
+- id: st13
+  type: read
+  title: Repair the four AVL insertion cases
+  body: |
+    Insert as in a BST. As each call returns, refresh its node and check the balance factor.
+    The letters show the heavy side at that node and then at its heavy child.
+
+    - **LL** means outside left. Rotate right at the node.
+    - **RR** means outside right. Rotate left at the node.
+    - **LR** means inside left. Rotate left at the left child, then right at the node.
+    - **RL** means inside right. Rotate right at the right child, then left at the node.
+
+    A factor above 1 is left heavy. A factor below -1 is right heavy.
+    For the inside case, the heavy child's factor points the other way.
+    Return each repaired root so the caller can keep its new link.
+- id: st14
+  type: predict
+  title: Choose the repair for an LR lean
+  code: |
+    def repair_name(parent_factor, child_factor):
+        if parent_factor > 1:
+            if child_factor < 0:
+                return "left child left, then root right"
+            return "root right"
+        if child_factor > 0:
+            return "right child right, then root left"
+        return "root left"
+
+    print(repair_name(2, -1))
+  choices:
+  - text: root right
+    why: A single rotation leaves the inner lean on the other side.
+  - text: left child left, then root right
+    why: The opposite signs show an LR case. Straighten the child first.
+  - text: right child right, then root left
+    why: Those turns are for an RL lean.
+  - text: root left
+    why: A positive factor means the extra height is on the left.
+  answer: 1
+- id: st15
+  type: predict
+  title: Choose the repair for a straight RR lean
+  code: |
+    def repair_name(parent_factor, child_factor):
+        if parent_factor > 1:
+            if child_factor < 0:
+                return "left child left, then root right"
+            return "root right"
+        if child_factor > 0:
+            return "right child right, then root left"
+        return "root left"
+
+    print(repair_name(-2, -1))
+  choices:
+  - text: root left
+    why: Both factors lean right. A single left rotation repairs the outside lean.
+  - text: root right
+    why: This would move the shorter side up.
+  - text: left child left, then root right
+    why: The parent factor is negative, so the left branch is not the heavy one.
+  - text: right child right, then root left
+    why: Use that second turn at the child only for an inner RL lean.
+  answer: 0
+- id: st16
+  type: code
+  title: Implement AVL insertion repairs
+  task: Insert an integer into an AVL tree and return its updated root. Ignore duplicates. Use the given
+    node maker and rotation functions. Complete all four repairs. For keys 30, 10, 20 in that order, return
+    a tree with root 20, left 10, and right 30.
+  exercise: exercises/practice.py
+  function: avl_insert
+  test_class: AvlInsert
+  hint_levels:
+  - Check the node's factor on the way back from insertion.
+  - For a heavy side, check the sign of the child factor. Rotate that child first in an inside case.
+  - When factor > 1, turn a right-heavy left child left, then turn root right. Mirror this for factor <
+    -1.
+- id: st17
+  type: read
+  title: Red-black trees use a different rule
+  body: |
+    A **red-black tree** marks each node red or black. Its root and its missing links count as black.
+    A red node cannot have a red child.
+    For a given subtree, every path from its root to a missing link has the same black count.
+    Here, **black height** counts black nodes after the subtree root, including the missing link.
+    Use items.count("black") to count black marks in a list.
+    These rules keep paths within a constant factor of each other. They allow unequal ordinary heights.
+    After inserts, a red-black tree can change marks as well as rotate.
+- id: st18
+  type: predict
+  title: Spot two red nodes in a row
+  code: |
+    parent = "red"
+    child = "red"
+    print(parent == "black" or child == "black")
+  choices:
+  - text: 'True'
+    why: This check needs at least one black endpoint.
+  - text: red
+    why: The comparisons produce Boolean values.
+  - text: 'False'
+    why: A red parent and a red child break the rule.
+  - text: black
+    why: The code checks labels without changing them.
+  answer: 2
+- id: st19
+  type: predict
+  title: Compare black counts on paths of different lengths
+  code: |
+    left = ["black", "black"]
+    right = ["red", "black", "black"]
+    print(left.count("black") == right.count("black"))
+  choices:
+  - text: 'False'
+    why: The red node adds a step without adding to the black count.
+  - text: '3'
+    why: The print call compares two counts. It does not print the length.
+  - text: '2'
+    why: Both counts are 2, but the comparison prints a Boolean.
+  - text: 'True'
+    why: Both paths have two black entries. Their lengths may differ.
+  answer: 3
+- id: st20
+  type: explain
+  title: Explain the inner repair
+  prompt: Write 2–4 English sentences. Explain how an LR case differs from an LL case. Compare your draft
+    with the model in the lesson.
+  rubric:
+  - Describe which way the left child leans in LR.
+  - Give the two turns in order and say what they preserve.
+  model_answer: In an LR case the node leans left but its left child leans right. Turn the left child left,
+    then turn the node right. The rotations keep all keys in the same inorder sequence.
+- id: st21
+  type: terminal
+  title: 'Hands-on: run the example'
+  guide: handson.md
+  check: Match the expected output, then explain the change in one English sentence.
+- id: st22
+  type: boss
+  title: 'Mini boss: explain and repair'
+  time_limit_minutes: 10
+  pass_rule: Answer four of five review questions correctly and pass the repair checks.
+  draws_from: &id002
+  - st03
+  - st07
+  - st14
+  - st15
+  - st18
+  - st19
+  plus:
+  - type: fix
+    task: Fix a left rotation that also updates .height. The root has a right child and all heights are
+      correct before the turn. Turning Node(10, None, Node(20)) gives root 20 at height 2 and child 10 at
+      height 1.
+    starter: |
+      class Node:
+          def __init__(self, key, left=None, right=None):
+              self.key = key
+              self.left = left
+              self.right = right
+              left_height = 0 if left is None else left.height
+              right_height = 0 if right is None else right.height
+              self.height = 1 + max(left_height, right_height)
+      def refresh(node):
+          left = 0 if node.left is None else node.left.height
+          right = 0 if node.right is None else node.right.height
+          node.height = 1 + max(left, right)
+
+      def rotate(root):
+          pivot = root.right
+          root.right = pivot.left
+          pivot.left = root
+          refresh(pivot)
+          refresh(root)
+          return pivot
+    solution: |
+      class Node:
+          def __init__(self, key, left=None, right=None):
+              self.key = key
+              self.left = left
+              self.right = right
+              left_height = 0 if left is None else left.height
+              right_height = 0 if right is None else right.height
+              self.height = 1 + max(left_height, right_height)
+      def refresh(node):
+          left = 0 if node.left is None else node.left.height
+          right = 0 if node.right is None else node.right.height
+          node.height = 1 + max(left, right)
+
+      def rotate(root):
+          pivot = root.right
+          root.right = pivot.left
+          pivot.left = root
+          refresh(root)
+          refresh(pivot)
+          return pivot
+    tests: |
+      root = rotate(Node(10, None, Node(20)))
+      assert root.key == 20 and root.height == 2
+      assert root.left.key == 10 and root.left.height == 1
+      root = rotate(Node(8, None, Node(20, Node(12))))
+      assert root.height == 3 and root.left.height == 2
+    hint_levels: *id001
+    explanation: After rotation, the old root is lower. Refreshing it first lets the new root read the correct
+      child height. Time and extra space are O(1).
+review_cards:
+  from_steps: *id002
+  vocab: true

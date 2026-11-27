@@ -1,0 +1,47 @@
+id: s2.m03.u01
+title: 'Arrays vs singly linked lists: cost of each operation'
+stage: 2
+module: Linear Data Structures
+version: 1
+status: draft
+estimated_minutes: 95
+prerequisites:
+- s2.m03.u05
+- s1.m07.u01
+objectives:
+- Compare array and chain operation costs.
+- Build Node and SinglyLinkedList.
+skills:
+- python.singly-linked-lists
+- english.explain-code
+parts:
+- steps.yaml
+- lesson.md
+- handson.md
+- exercises/
+- tests/
+- solutions/solutions.md
+references:
+- kind: official_doc
+  title: Classes and objects
+  url: https://docs.python.org/3.13/tutorial/classes.html
+- kind: official_doc
+  title: Python data structures
+  url: https://docs.python.org/3.13/tutorial/datastructures.html
+vocab:
+- en: node
+  ja: ノード
+- en: link
+  ja: 次の要素への参照
+- en: singly linked list
+  ja: 単方向連結リスト
+- en: head
+  ja: 先頭ノード
+- en: tail
+  ja: 末尾ノード
+- en: traverse
+  ja: 順にたどる
+- en: predecessor
+  ja: 直前のノード
+- en: splice
+  ja: リンクのつなぎ替え

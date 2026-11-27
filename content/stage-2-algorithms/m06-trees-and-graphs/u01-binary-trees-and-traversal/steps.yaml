@@ -1,0 +1,467 @@
+unit: s2.m06.u01
+python_min: '3.9'
+steps:
+- id: st01
+  type: read
+  title: Walk a tree of service checks
+  body: |
+    A status page groups checks under services. Each group may have smaller groups.
+    A **tree** shows these links. Each item is a **node**. The top node is the **root**.
+    A **parent** has links to its **children**. Each node below the root has one parent.
+    A **binary tree** has at most two children per node, called left and right.
+    A node and all nodes below it form a **subtree**. A **leaf** has no children.
+    You will build nodes, choose four visit orders, and measure how much they visit.
+- id: st02
+  type: read
+  title: Build a node with two optional links
+  body: |
+    Use a class to keep a value and two child links together.
+    When a child is missing, its link is `None`. Here, values are short labels.
+
+    ```python
+    class Node:
+        def __init__(self, value, left=None, right=None):
+            self.value = value
+            self.left = left
+            self.right = right
+    root = Node("api", Node("db"))
+    ```
+
+    The root holds “api”. Its left child holds “db”. Its right link is empty.
+    For the next exercise, Node is inside make_node so your work fits in one editor block.
+- id: st03
+  type: predict
+  title: Read the right link
+  code: |
+    class Node:
+        def __init__(self, value, left=None, right=None):
+            self.value = value
+            self.left = left
+            self.right = right
+
+    root = Node("web", Node("cache"))
+    print(root.right is None)
+  choices:
+  - text: 'False'
+    why: The second argument sets the left link only.
+  - text: 'True'
+    why: The right argument uses its default, None.
+  - text: cache
+    why: The cache node is linked on the left.
+  - text: None
+    why: The is test prints a Boolean.
+  answer: 1
+- id: st04
+  type: code
+  title: Create a node object
+  task: Complete the Node class inside make_node. Return one new node with the given value and child links.
+    Omitted links are None. For example, make_node("api", make_node("db")).left.value is "db".
+  exercise: exercises/practice.py
+  function: make_node
+  test_class: MakeNode
+  hint_levels:
+  - Store a value and both links as attributes.
+  - Inside __init__, assign each argument to the matching self attribute.
+  - Set self.value, self.left, and self.right. The return line makes the object.
+- id: st05
+  type: read
+  title: Visit before, between, or after the children
+  body: |
+    A **traversal** visits every node in a set order. A depth-first traversal finishes one subtree before the next.
+    In **preorder**, visit the node, then its left subtree, then its right subtree.
+    In **inorder**, visit left, then the node, then right.
+    In **postorder**, visit left, then right, then the node.
+    Stop a branch when its link is None. Append values to one shared result list.
+    A helper can read and append to that list from inside the main function.
+- id: st06
+  type: predict
+  title: A parent is visited first in preorder
+  code: |
+    tree = ("web", ("db", None, ("log", None, None)), ("cdn", None, None))
+
+    def walk(node):
+        if node is None:
+            return
+        value, left, right = node
+        print(value)
+        walk(left)
+        walk(right)
+
+    walk(tree)
+  choices:
+  - text: |
+      db
+      log
+      web
+      cdn
+    why: That visits web after its left subtree.
+  - text: |
+      web
+      db
+      cdn
+      log
+    why: The db call finishes before cdn is visited.
+  - text: |
+      web
+      db
+      log
+      cdn
+    why: Each call prints its own value before either child.
+  - text: |
+      log
+      db
+      cdn
+      web
+    why: That prints each parent after both children.
+  answer: 2
+- id: st07
+  type: parsons
+  title: Build an inorder visit
+  task: Use index 0 for the value, 1 for the left link, and 2 for the right link. Visit left before printing
+    the value.
+  lines:
+  - 'def walk(node):'
+  - '    if node is None:'
+  - '        return'
+  - '    walk(node[1])'
+  - '    print(node[0])'
+  - '    walk(node[2])'
+  - walk(("A", ("B", None, None), None))
+  expected_stdout: 'B
+
+    A'
+- id: st08
+  type: predict
+  title: Find the middle visit in inorder
+  code: |
+    tree = ("proxy", ("api", None, ("db", None, None)), ("cdn", None, None))
+
+    def walk(node):
+        if node is None:
+            return
+        value, left, right = node
+        walk(left)
+        print(value)
+        walk(right)
+
+    walk(tree)
+  choices:
+  - text: |
+      proxy
+      api
+      db
+      cdn
+    why: The root is printed after the left call.
+  - text: |
+      api
+      proxy
+      db
+      cdn
+    why: The db visit is still part of the left call.
+  - text: |
+      api
+      cdn
+      db
+      proxy
+    why: The right subtree starts only after printing proxy.
+  - text: |
+      api
+      db
+      proxy
+      cdn
+    why: The left call prints api and db. Then the root and the right call print.
+  answer: 3
+- id: st09
+  type: fix
+  title: Return the parent last
+  task: Fix order(node) to return postorder for a tree of (value, left, right) tuples or None. Leave the
+    tree as it is. For ("a", None, ("b", None, None)), return ["b", "a"].
+  starter: |
+    def order(node):
+        if node is None:
+            return []
+        value, left, right = node
+        return [value] + order(left) + order(right)
+  solution: |
+    def order(node):
+        if node is None:
+            return []
+        value, left, right = node
+        return order(left) + order(right) + [value]
+  tests: |
+    assert order(("a", None, ("b", ("c", None, None), None))) == ["c", "b", "a"]
+    assert order(("a", ("b", None, None), ("c", None, None))) == ["b", "c", "a"]
+    assert order(None) == []
+  hint_levels: &id001
+  - Look at where the current value goes.
+  - Build both subtree lists before adding the value.
+  - Return order(left) + order(right) + [value].
+  explanation: Adding the node last gives postorder. Repeated list copies take O(n²) time on a chain (O(nh)
+    in general). Peak space is O(n + h), including result lists and frames.
+- id: st10
+  type: code
+  title: Write preorder
+  task: Return a new list of values in preorder. Use recursion. A missing link is None. Keep the .value,
+    .left, and .right attributes unchanged. preorder(Node(4, Node(9), Node(2))) returns [4, 9, 2].
+  exercise: exercises/practice.py
+  function: preorder
+  test_class: Preorder
+  hint_levels:
+  - Where does the current value go in this order?
+  - Use one result list and a recursive helper with a None base case.
+  - 'For a real node, run these three actions: out.append(node.value), visit(node.left), visit(node.right).'
+- id: st11
+  type: code
+  title: Write inorder
+  task: Return a new list of values in inorder. Use recursion. A missing link is None. Keep the .value,
+    .left, and .right attributes unchanged. inorder(Node(4, Node(9), Node(2))) returns [9, 4, 2].
+  exercise: exercises/practice.py
+  function: inorder
+  test_class: Inorder
+  hint_levels:
+  - Where does the current value go in this order?
+  - Use one result list and a recursive helper with a None base case.
+  - 'For a real node, run these three actions: visit(node.left), out.append(node.value), visit(node.right).'
+- id: st12
+  type: code
+  title: Write postorder
+  task: Return a new list of values in postorder. Use recursion. A missing link is None. Keep the .value,
+    .left, and .right attributes unchanged. postorder(Node(4, Node(9), Node(2))) returns [9, 2, 4].
+  exercise: exercises/practice.py
+  function: postorder
+  test_class: Postorder
+  hint_levels:
+  - Where does the current value go in this order?
+  - Use one result list and a recursive helper with a None base case.
+  - 'For a real node, run these three actions: visit(node.left), visit(node.right), out.append(node.value).'
+- id: st13
+  type: read
+  title: Visit one level at a time
+  body: |
+    **Level order** visits nodes from top to bottom and left to right within each level.
+    This is a breadth-first traversal. Use a queue, where the first node added leaves first.
+    Import `deque` from `collections`. A deque supports fast operations at both ends.
+    Start with `deque([root])`. Take the first node with `popleft()`. Add its children with `append()`.
+    The **width** is the most nodes on any one level.
+- id: st14
+  type: predict
+  title: Finish the level before the grandchild
+  code: |
+    class Node:
+        def __init__(self, value, left=None, right=None):
+            self.value = value
+            self.left = left
+            self.right = right
+
+    from collections import deque
+
+    tree = Node("web", Node("api", Node("db")), Node("cdn"))
+    queue = deque([tree])
+    while queue:
+        node = queue.popleft()
+        print(node.value)
+        if node.left is not None:
+            queue.append(node.left)
+        if node.right is not None:
+            queue.append(node.right)
+  choices:
+  - text: |
+      web
+      api
+      cdn
+      db
+    why: After api leaves, cdn is ahead of db in the queue.
+  - text: |
+      web
+      api
+      db
+      cdn
+    why: That finishes the api subtree first.
+  - text: |
+      web
+      cdn
+      api
+      db
+    why: The left child goes into the queue before the right child.
+  - text: |
+      db
+      api
+      cdn
+      web
+    why: The queue starts with the root.
+  answer: 0
+- id: st15
+  type: try
+  title: Add a leaf on the right
+  starter: |
+    class Node:
+        def __init__(self, value, left=None, right=None):
+            self.value = value
+            self.left = left
+            self.right = right
+
+    from collections import deque
+
+    tree = Node("web", Node("api", Node("db")), Node("cdn"))
+    queue = deque([tree])
+    while queue:
+        node = queue.popleft()
+        print(node.value)
+        if node.left is not None:
+            queue.append(node.left)
+        if node.right is not None:
+            queue.append(node.right)
+  task: Give cdn a right child by changing Node("cdn") to Node("cdn", None, Node("edge")). Run it and look
+    for edge after db.
+  check:
+    stdout_line: edge
+- id: st16
+  type: code
+  title: Write level order
+  task: Use a first-in, first-out queue. Return a new list in level order. Leave all node links as they
+    are. For Node(4, Node(9, Node(1)), Node(2)), return [4, 9, 2, 1]. For None, return [].
+  exercise: exercises/practice.py
+  function: level_order
+  test_class: LevelOrder
+  hint_levels:
+  - Keep a queue of nodes you still need to visit.
+  - Take from the front and append the left and right children that exist.
+  - Use deque([root]), then queue.popleft() inside while queue.
+- id: st17
+  type: read
+  title: Measure height and count leaves
+  body: |
+    Here, **height** counts nodes on the longest path from the root down to a leaf.
+    An empty tree has height 0. One node has height 1.
+    Add 1 to the larger child height at each node.
+    Count a leaf only when both child links are empty. For other nodes, add both subtree counts.
+- id: st18
+  type: predict
+  title: Height counts the deepest path
+  code: |
+    def height(node):
+        if node is None:
+            return 0
+        return 1 + max(height(node[1]), height(node[2]))
+
+    tree = ("a", ("b", None, ("d", None, None)), ("c", None, None))
+    print(height(tree))
+  choices:
+  - text: '2'
+    why: This counts links along the deepest path. The function counts nodes.
+  - text: '4'
+    why: This counts every node, including the short branch.
+  - text: '3'
+    why: The longest path contains a, b, and d.
+  - text: '1'
+    why: The function calls itself to measure both children.
+  answer: 2
+- id: st19
+  type: fix
+  title: Count only nodes with no children
+  task: Return the leaf count for (value, left, right) tuples, or 0 for None. Preserve the input. The tree
+    ("a", ("b", None, None), None) has one leaf.
+  starter: |
+    def count(node):
+        if node is None:
+            return 0
+        value, left, right = node
+        if left is None or right is None:
+            return 1
+        return count(left) + count(right)
+  solution: |
+    def count(node):
+        if node is None:
+            return 0
+        value, left, right = node
+        if left is None and right is None:
+            return 1
+        return count(left) + count(right)
+  tests: |
+    assert count(("a", ("b", ("d", None, None), ("e", None, None)), None)) == 2
+    assert count(("a", None, None)) == 1
+    assert count(None) == 0
+  hint_levels:
+  - Try a node with only one child that has two leaves.
+  - Check both missing links together.
+  - Use and between left is None and right is None.
+  explanation: One missing link still leaves a subtree to search. Each node is checked once in O(n) time.
+    The recursion uses O(h) stack space.
+- id: st20
+  type: try
+  title: Make the tree one level taller
+  starter: |
+    def height(node):
+        if node is None:
+            return 0
+        return 1 + max(height(node[1]), height(node[2]))
+
+    tree = ("a", ("b", None, None), None)
+    print(height(tree))
+  task: Give b a left child c with two empty links. Run the program and check the height.
+  check:
+    stdout_line: '3'
+- id: st21
+  type: code
+  title: Measure height and leaf count together
+  task: Return (height, leaves) in one recursive traversal of Node objects. Height counts nodes. Keep links
+    unchanged. For Node(1, Node(2), None), return (2, 1). For None, return (0, 0).
+  exercise: exercises/practice.py
+  function: tree_stats
+  test_class: TreeStats
+  hint_levels:
+  - Handle the empty link and a real leaf first.
+  - Get one pair from each child. Combine heights and counts in different ways.
+  - Return (1 + max(left_height, right_height), left_leaves + right_leaves) for an internal node.
+- id: st22
+  type: explain
+  title: Describe two visit orders
+  prompt: Write 2–4 English sentences. Explain when preorder visits a parent and when level order visits
+    it. Compare your draft with the model in the lesson.
+  rubric:
+  - Say how preorder finishes a subtree.
+  - Say why the queue finishes a level first.
+  model_answer: Preorder visits the parent first, then finishes the left subtree before starting the right.
+    Level order visits the parent first too. A queue keeps nodes already on a level ahead of their children.
+- id: st23
+  type: terminal
+  title: 'Hands-on: run the example'
+  guide: handson.md
+  check: Match the expected output, then explain the change in one English sentence.
+- id: st24
+  type: boss
+  title: 'Mini boss: explain and repair'
+  time_limit_minutes: 10
+  pass_rule: Answer four of five review questions correctly and pass the repair checks.
+  draws_from: &id002
+  - st03
+  - st06
+  - st08
+  - st14
+  - st18
+  plus:
+  - type: fix
+    task: Fix order(node) to return postorder for a tree of (value, left, right) tuples or None. Leave the
+      tree as it is. For ("a", None, ("b", None, None)), return ["b", "a"].
+    starter: |
+      def order(node):
+          if node is None:
+              return []
+          value, left, right = node
+          return [value] + order(left) + order(right)
+    solution: |
+      def order(node):
+          if node is None:
+              return []
+          value, left, right = node
+          return order(left) + order(right) + [value]
+    tests: |
+      assert order(("a", None, ("b", ("c", None, None), None))) == ["c", "b", "a"]
+      assert order(("a", ("b", None, None), ("c", None, None))) == ["b", "c", "a"]
+      assert order(None) == []
+    hint_levels: *id001
+    explanation: Adding the node last gives postorder. Repeated list copies take O(n²) time on a chain (O(nh)
+      in general). Peak space is O(n + h), including result lists and frames.
+review_cards:
+  from_steps: *id002
+  vocab: true

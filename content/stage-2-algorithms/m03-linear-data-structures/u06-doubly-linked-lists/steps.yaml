@@ -1,0 +1,330 @@
+unit: s2.m03.u06
+python_min: '3.9'
+steps:
+- id: st01
+  type: read
+  title: Walk both ways through a job list
+  body: |
+    An operator may move back and forth through a queue of maintenance jobs.
+    A **doubly linked list** stores two links per node.
+    The **previous link**, prev, goes back. The next link goes forward.
+    A **neighbor** is a node directly before or after another node.
+    You will join neighbors and check that the joins make sense.
+- id: st02
+  type: predict
+  title: Walk one step forward and back
+  code: |
+    jobs = ["scan", "sync", "mail"]
+    prev = [None, 0, 1]
+    nxt = [1, 2, None]
+    start = 1
+    print(jobs[prev[nxt[start]]])
+  choices:
+  - text: scan
+    why: This is one step back from the start.
+  - text: mail
+    why: This is one step forward only.
+  - text: sync
+    why: Moving forward and back returns to the start.
+  - text: None
+    why: This walk stays within the chain.
+  answer: 2
+- id: st03
+  type: read
+  title: Join two nodes in both directions
+  body: |
+    For neighbors a and b in that order, set a.next = b and b.prev = a.
+    This is an **invariant**, a rule that must hold after each edit.
+    Use is to check **identity**. It asks if two names refer to the same object.
+    Equal values do not prove two nodes are the same.
+    The head has no prev. The tail has no next.
+- id: st04
+  type: predict
+  title: Equal values can sit in distinct nodes
+  code: |
+    a = ["sync", None, None]
+    b = ["sync", None, None]
+    print(a[0] == b[0], a is b)
+  choices:
+  - text: True False
+    why: The stored values are equal. Each list expression made a separate node.
+  - text: True True
+    why: Equal values do not merge the two objects.
+  - text: False True
+    why: The values match, and the objects differ.
+  - text: False False
+    why: Both nodes store the same string.
+  answer: 0
+- id: st05
+  type: try
+  title: Repair a backward link
+  starter: |
+    values = ["scan", "mail"]
+    nxt = [1, None]
+    prev = [None, None]
+    print(prev[nxt[0]] == 0)
+  task: Set prev[1] to 0 in the list. Check that a forward step and a backward step return to 0.
+  check:
+    stdout_line: 'True'
+- id: st06
+  type: parsons
+  title: Join a pair of neighbors
+  task: Use every line to connect scan and mail in both directions. Slot 0 is prev and slot 1 is next.
+  lines:
+  - a = [None, None]
+  - b = [None, None]
+  - a[1] = b
+  - b[0] = a
+  - print(a[1] is b, b[0] is a)
+  expected_stdout: True True
+  hint_levels:
+  - Make both nodes.
+  - Link both ways before printing.
+  - The two writes can happen in either order.
+  accepted_orders:
+  - - 1
+    - 0
+    - 2
+    - 3
+    - 4
+  - - 0
+    - 1
+    - 3
+    - 2
+    - 4
+  - - 1
+    - 0
+    - 3
+    - 2
+    - 4
+- id: st07
+  type: read
+  title: Make room for a new node
+  body: |
+    To insert after left, first save right = left.next.
+    Point the new node back to left and forward to right.
+    Point left.next at the new node. If right exists, fix right.prev.
+    If right is None, the new node becomes the tail.
+    An empty list needs both head and tail. Our method takes None to insert into it.
+    The task gives you a function called make_node. Call it with the value to make a node.
+- id: st08
+  type: fix
+  title: Keep the old right neighbor
+  task: 'Insert a detached node new between adjacent nodes left and right. All three exist. Return new and keep
+    both directions correct. Example: 2 <-> 8 becomes 2 <-> 4 <-> 8.'
+  starter: |
+    def link_between(left, right, new):
+        left.next = new
+        new.prev = left
+        new.next = left.next
+        right.prev = new
+        return new
+  solution: |
+    def link_between(left, right, new):
+        left.next = new
+        new.prev = left
+        new.next = right
+        right.prev = new
+        return new
+  tests: |
+    from types import SimpleNamespace
+
+    left = SimpleNamespace(value=2, prev=None)
+    right = SimpleNamespace(value=8, prev=left, next=None)
+    left.next = right
+    new = SimpleNamespace(value=4, prev=None, next=None)
+    assert link_between(left, right, new) is new
+    assert left.next is new and new.prev is left
+    assert new.next is right and right.prev is new
+    assert left.prev is None and right.next is None
+  hint_levels:
+  - Follow what left.next points to after the first line.
+  - Use the saved right reference.
+  - Set new.next = right.
+  explanation: Four link writes take O(1) time and O(1) extra space.
+- id: st09
+  type: predict
+  title: Read the tail after insertion
+  code: |
+    jobs = ["scan", "mail"]
+    nxt = [1, None]
+    tail = 1
+    jobs.append("sync")
+    nxt.append(nxt[tail])
+    nxt[tail] = 2
+    tail = 2
+    print(jobs[tail], nxt[tail])
+  choices:
+  - text: mail 2
+    why: Mail is the old tail and now has a successor.
+  - text: sync 1
+    why: A next link points forward. Index 1 is its predecessor.
+  - text: mail None
+    why: Mail no longer ends the list.
+  - text: sync None
+    why: The old end marker becomes the new tail's next link.
+  answer: 3
+- id: st10
+  type: code
+  title: Implement insert_after by changing links
+  task: 'Edit chain.head, chain.tail, and chain.size. Insert and return a new node.
+
+    Use make_node(value), which returns a node with value, prev=None, next=None.
+
+    left is an existing node in chain, or None only when chain is empty.
+
+    Use O(1) time. Example: insert 4 after 2 in 2 <-> 8 yields 2 <-> 4 <-> 8.'
+  exercise: exercises/practice.py
+  function: insert_after
+  test_class: InsertAfter
+  hint_levels:
+  - Insert at the known position.
+  - Save the next node before changing left.next.
+  - Update right.prev or chain.tail. Set both ends when left is None.
+- id: st11
+  type: read
+  title: Detach a node and close the gap
+  body: |
+    A remove starts with the node itself. Use its prev and next to find both neighbors.
+    Join those neighbors. If a neighbor is missing, move the matching end of the list.
+    To **detach** the removed node, set both of its links to None.
+    The edit takes O(1) time. Finding the node by value first can still take O(n).
+- id: st12
+  type: fix
+  title: Move the head when its node leaves
+  task: 'Given a list head with at least one node, detach that head. Return the new head or None. Example: 2 <->
+    8 gives the node 8 with prev=None.'
+  starter: |
+    def detach_head(head):
+        new_head = head.next
+        head.next = None
+        return new_head
+  solution: |
+    def detach_head(head):
+        new_head = head.next
+        if new_head is not None:
+            new_head.prev = None
+        head.next = None
+        return new_head
+  tests: |
+    from types import SimpleNamespace
+
+    first = SimpleNamespace(prev=None)
+    last = SimpleNamespace(prev=first, next=None)
+    first.next = last
+    assert detach_head(first) is last
+    assert first.next is None and last.prev is None
+    assert detach_head(last) is None
+  hint_levels:
+  - Check the new head's previous link.
+  - A head has no predecessor.
+  - If new_head exists, set new_head.prev to None.
+  explanation: The edit touches at most two nodes. Time and extra space are O(1).
+- id: st13
+  type: code
+  title: Implement remove by node
+  task: 'Given chain and a known member node, unlink and detach it.
+
+    Adjust head, tail, and size. Return its value. Use O(1) time.
+
+    Example: remove the node 4 from 2 <-> 4 <-> 8 to get 2 <-> 8 and return 4.'
+  exercise: exercises/practice.py
+  function: remove_node
+  test_class: RemoveNode
+  hint_levels:
+  - Save both neighbors.
+  - Replace the head or tail when a neighbor is missing.
+  - Point left.next to right and right.prev to left when those neighbors exist.
+- id: st14
+  type: predict
+  title: Choose the safe boundary edits
+  code: |
+    prev = [None, 0]
+    nxt = [1, None]
+    head, tail = 0, 1
+    head = nxt[head]
+    prev[head] = None
+    print(head, tail, prev[head])
+  choices:
+  - text: 0 1 None
+    why: The old head should leave.
+  - text: 1 1 None
+    why: One survivor is both head and tail and has no predecessor.
+  - text: 1 None None
+    why: The tail still exists.
+  - text: 1 1 0
+    why: This leaves a backward link to the removed node.
+  answer: 1
+- id: st15
+  type: read
+  title: Check each previous link during one walk
+  body: |
+    Start at head with previous = None. At each node, compare prev with previous.
+    Count how many nodes you visit. The last visited node must be tail.
+    The count must match size. A **cycle** would send the walk to an earlier node.
+    Stop and return False if another node remains after size visits.
+    When size is zero, both ends must be None.
+- id: st16
+  type: predict
+  title: A forward walk can hide a broken back link
+  code: |
+    head = ["scan", None, None]
+    tail = ["mail", None, None]
+    head[2] = tail
+    print(head[2] is tail, tail[1] is head)
+  choices:
+  - text: True True
+    why: No line sets tail's previous link.
+  - text: True False
+    why: The forward link works, but the backward link is missing.
+  - text: False True
+    why: The only write sets the forward link.
+  - text: False False
+    why: The forward link was set to tail.
+  answer: 1
+- id: st17
+  type: code
+  title: Check the prev/next invariant
+  task: 'Given head, tail, and a nonnegative size, return True for a valid chain.
+
+    Visit the next links from head. Each prev must equal the node just visited by identity.
+
+    Require exactly size nodes and require the last to be tail. Stop on cycles.
+
+    Do not edit links. Example: 2 -> 8 with 8.prev=None gives False.'
+  exercise: exercises/practice.py
+  function: check_chain
+  test_class: CheckChain
+  hint_levels:
+  - Walk forward and remember where you came from.
+  - At each node check identity and count visits.
+  - At None, return count == size and previous is tail.
+- id: st18
+  type: explain
+  title: Explain it to a teammate
+  prompt: Write 2–4 English sentences. Why can a delete change a few links, while a full check has to walk the chain?
+    Compare with the model in the lesson after writing.
+  rubric:
+  - Mention both neighbors of a known node.
+  - Explain how to spot a broken back link.
+  model_answer: A known node gives me both neighbors. I can join them in constant time. To check the whole chain,
+    I walk from the head and compare each prev link with the node I just left.
+- id: st19
+  type: terminal
+  title: 'Hands-on: Repair a backward link'
+  guide: handson.md
+  check: The demo prints True.
+- id: st20
+  type: boss
+  title: 'Mini boss: Check the prev/next invariant'
+  time_limit_minutes: 15
+  draws_from: [st02, st04, st09, st14, st16, st17]
+  pass_rule: Get four of five predicts right and pass the selected Code exercise.
+review_cards:
+  from_steps:
+  - st02
+  - st04
+  - st09
+  - st14
+  - st16
+  vocab: true

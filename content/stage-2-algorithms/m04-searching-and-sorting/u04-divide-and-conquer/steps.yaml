@@ -1,0 +1,368 @@
+unit: s2.m04.u04
+python_min: '3.9'
+steps:
+- id: st01
+  type: read
+  title: Split a long report
+  body: |
+    A server team wants the largest delay in a report. You can split the report into two parts.
+    Find the largest delay in each part. Then keep the larger of those two answers.
+    This is **divide and conquer**. Split the job, solve each smaller **subproblem**, and **combine** the answers.
+    You will use this plan in three ways. Find a maximum, raise a power, and count pairs out of order.
+- id: st02
+  type: read
+  title: The largest value comes from one of the halves
+  body: |
+    Use the range from lo up to but excluding hi. A range of size one gives its only value.
+    For a larger range, let mid = (lo + hi) // 2. The left range is [lo, mid).
+    The right range is [mid, hi). Each is smaller, and no item is left out.
+
+    For [2, 9, 4], the two halves are [2] and [9, 4]. The right half returns 9.
+    Compare 2 with 9 and return 9. Pass bounds to avoid copying lists.
+    Define a helper inside your function. It can read the outer list while you pass each range.
+- id: st03
+  type: predict
+  title: Where does the middle item belong?
+  code: |
+    values = [12, 3, 9, 21, 7]
+    lo, hi = 0, len(values)
+    mid = (lo + hi) // 2
+    print(values[lo:mid], values[mid:hi])
+  choices:
+  - text: '[12, 3] [9, 21, 7]'
+    why: Index 2 is the end of the first slice and the start of the second.
+  - text: '[12, 3, 9] [21, 7]'
+    why: The end of a Python slice is left out.
+  - text: '[12, 3] [21, 7]'
+    why: The right half starts at mid, so 9 is not skipped.
+  - text: '[12, 3, 9] [9, 21, 7]'
+    why: With half-open ranges the middle item belongs to only one half.
+  answer: 0
+- id: st04
+  type: parsons
+  title: Get the two halves before comparing them
+  task: Use all lines. For these two one-item halves, compare the two values and print the larger.
+  lines:
+  - values = [14, 8]
+  - mid = len(values) // 2
+  - left = values[mid - 1]
+  - right = values[mid]
+  - 'if left > right:'
+  - '    right = left'
+  - print(right)
+  expected_stdout: '14'
+  accepted_orders:
+  - - 0
+    - 1
+    - 3
+    - 2
+    - 4
+    - 5
+    - 6
+- id: st05
+  type: code
+  title: Find peak delay by halves
+  exercise: exercises/practice.py
+  function: peak_delay
+  test_class: PeakDelay
+  hint_levels:
+  - Handle empty input before you split.
+  - Return the single value at a leaf. Otherwise get the maximum of each half.
+  - Call a helper on (lo, mid) and (mid, hi). Return the larger result.
+- id: st06
+  type: read
+  title: Count the levels as ranges shrink
+  body: |
+    A **recursion tree** pictures one call as a box. Each call points to the smaller calls it makes.
+    A **level** groups calls the same distance below the first call.
+    With eight items, the range size goes 8, 4, 2, 1. Three splits reach the last level.
+    For n items, each path has about log₂ n splits.
+
+    A **recurrence** gives the cost of a call in terms of smaller calls.
+    T(n) means the running time for an input of size n.
+    For powers of two, the peak search has T(n) = 2T(n/2) + O(1) and T(1) = O(1).
+    Each split has one comparison. The whole tree has n leaves and n - 1 splits, so time is O(n).
+- id: st07
+  type: predict
+  title: Do the one-item calls make a level?
+  code: |
+    size = 8
+    levels = 0
+    while size >= 1:
+        levels += 1
+        size //= 2
+    print(levels)
+  choices:
+  - text: '3'
+    why: There are three splits, but the code counts the final level too.
+  - text: '8'
+    why: Eight is the number of one-item calls, not the number of levels.
+  - text: '4'
+    why: The loop counts sizes 8, 4, 2, and 1.
+  - text: '5'
+    why: At size 0 the loop guard is false.
+  answer: 2
+- id: st08
+  type: try
+  title: Add one level by doubling the size
+  starter: |
+    size = 8
+    levels = 0
+    while size >= 1:
+        levels += 1
+        size //= 2
+    print(levels)
+  task: Set size to 16. Count the levels including the start and the one-item level.
+  check:
+    stdout_line: '5'
+- id: st09
+  type: read
+  title: Square one result for two equal halves
+  body: |
+    In `3**7`, the **exponent** is 7. It says to multiply seven copies of 3.
+    To compute `3**6`, get `3**3` once and multiply that result by itself.
+    For `3**7`, also include one extra copy of 3.
+
+    This is **power by squaring**. For exponent e, recurse on e // 2.
+    Store that answer once and square it. When e % 2 is 1, multiply by the base once more.
+    For e = 0, return 1. With one call per level, the number of multiplications is O(log e) for e ≥ 2.
+- id: st10
+  type: predict
+  title: The extra factor for an odd exponent
+  code: |
+    def power(base, e):
+        if e == 0:
+            return 1
+        half = power(base, e // 2)
+        return half * half
+
+    print(power(3, 3))
+  choices:
+  - text: '9'
+    why: The call for exponent 1 also forgets its extra factor.
+  - text: '1'
+    why: Every call squares the 1 returned by the base case. No call ever multiplies by 3.
+  - text: '27'
+    why: The code would need the extra factor of 3 for each odd exponent to give 27.
+  - text: '0'
+    why: The base case gives 1, and squaring 1 keeps it at 1.
+  answer: 1
+- id: st11
+  type: fix
+  title: Restore the factor lost by floor division
+  task: 'Return base raised to exponent. base is an integer between -9 and 9. exponent is an integer
+    from 0 to 100. Use recursion and multiplication without ** or pow(). For example, power(3, 3) returns
+    27. power(0, 0) returns 1.'
+  starter: |
+    def power(base, exponent):
+        if exponent == 0:
+            return 1
+        half = power(base, exponent // 2)
+        result = half * half
+        return result
+  solution: |
+    def power(base, exponent):
+        if exponent == 0:
+            return 1
+        half = power(base, exponent // 2)
+        result = half * half
+        if exponent % 2 == 1:
+            result *= base
+        return result
+  tests: |
+    assert power(3, 3) == 27
+    assert power(-2, 4) == 16
+    assert power(-2, 5) == -32
+    assert power(0, 0) == 1
+  hint_levels:
+  - Find what exponent // 2 drops for an odd exponent.
+  - Keep the square and multiply it by one extra base only for odd exponents.
+  - 'After squaring, use if exponent % 2 == 1: result *= base.'
+  explanation: Squaring covers two equal groups. The extra factor restores the one item lost when the
+    exponent is odd. Time in arithmetic operations and stack space are O(log e) for e ≥ 2.
+- id: st12
+  type: code
+  title: Raise a number to a power with one smaller call
+  exercise: exercises/practice.py
+  function: fast_power
+  test_class: FastPower
+  hint_levels:
+  - Start with the power of exponent zero.
+  - Use just one call on exponent // 2. Save and square its answer.
+  - If exponent % 2 is 1, multiply the square by base before returning it.
+- id: st13
+  type: read
+  title: Count only pairs in the wrong order
+  body: |
+    An **inversion** is a pair of indexes i < j with values[i] > values[j].
+    In [7, 3, 3], both pairs involving 7 count. The equal values do not form an inversion.
+
+    Split the list. Count pairs inside the left half and inside the right half using recursion.
+    The remaining pairs are **cross inversions**. Their first item is left of the split and their second is right.
+    After each call, return both its count and its items in order. That makes cross pairs easier to count.
+- id: st14
+  type: predict
+  title: How many pairs involving a tie count?
+  code: |
+    values = [7, 3, 3, 5]
+    count = 0
+    for i in range(len(values)):
+        for j in range(i + 1, len(values)):
+            if values[i] > values[j]:
+                count += 1
+    print(count)
+  choices:
+  - text: '0'
+    why: The value 7 stands before smaller values, so there are inverted pairs.
+  - text: '1'
+    why: The loop checks all pairs, even when they are not neighbors.
+  - text: '4'
+    why: An equal pair of 3s does not count.
+  - text: '3'
+    why: The 7 is before all three smaller values. No other pair counts.
+  answer: 3
+- id: st15
+  type: read
+  title: Count cross inversions during a merge
+  body: |
+    To **merge** two sorted lists, keep an index into each list. Compare the next value on each side.
+    Take the smaller value and move its index. On a tie take from the left. Append leftovers at the end.
+
+    If you take a strictly smaller right value, all unused left values are larger.
+    For left [4, 7] and right [2, 7], taking 2 adds two pairs. The two 7s make no pair.
+    Keep a running count. Each merge takes linear time. At any level, the merges together touch at most n values.
+    There are O(log n) levels for n ≥ 2. This gives O(n log n) time.
+- id: st16
+  type: predict
+  title: Count a group of pairs in one step
+  code: |
+    left = [2, 5, 8, 10]
+    right = [4, 12]
+    i, j = 1, 0
+    count = 0
+    if right[j] < left[i]:
+        count += len(left) - i
+    print(count)
+  choices:
+  - text: '0'
+    why: The next right value is smaller than the next left value, so the body runs.
+  - text: '1'
+    why: There is one right value in this step, but it forms a pair with several left values.
+  - text: '3'
+    why: The unused left values 5, 8, and 10 each form a pair with 4.
+  - text: '4'
+    why: The left value 2 has already been taken. It is smaller than 4.
+  answer: 2
+- id: st17
+  type: fix
+  title: 'Challenge: leave equal values out of the count'
+  task: Count cross inversions between two sorted integer lists of up to 1024 items each. Keep both
+    inputs unchanged. Use a single sweep. cross_count([3, 5], [3, 6]) returns 1. An empty half gives
+    0.
+  starter: |
+    def cross_count(left, right):
+        count = 0
+        i, j = 0, 0
+        while i < len(left) and j < len(right):
+            if left[i] < right[j]:
+                i += 1
+            else:
+                count += len(left) - i
+                j += 1
+        return count
+  solution: |
+    def cross_count(left, right):
+        count = 0
+        i, j = 0, 0
+        while i < len(left) and j < len(right):
+            if left[i] <= right[j]:
+                i += 1
+            else:
+                count += len(left) - i
+                j += 1
+        return count
+  tests: |
+    assert cross_count([3, 5], [3, 6]) == 1
+    assert cross_count([4, 4], [4]) == 0
+    assert cross_count([4, 5], [1, 2]) == 4
+    assert cross_count([], [3]) == 0
+  hint_levels: &id001
+  - Trace the first comparison when both values are 3.
+  - Move past a left value that is equal to the right value without adding a pair.
+  - Use left[i] <= right[j] for the branch that advances i.
+  explanation: Then every counted right value is strictly smaller than all remaining left values. Time
+    is O(L + R) and extra space is O(1), where L and R are the input lengths.
+- id: st18
+  type: code
+  title: Count all inversions in an event batch
+  exercise: exercises/practice.py
+  function: count_inversions
+  test_class: CountInversions
+  hint_levels:
+  - Return the sorted items and the count from your recursive helper.
+  - Add the counts from both halves. Merge their lists and add cross pairs as you take from the right.
+  - When right[j] < left[i], add len(left) - i. On ties take the left item first.
+- id: st19
+  type: terminal
+  title: 'Hands-on: run and change a small script'
+  guide: handson.md
+  check: The script prints the expected output and you can explain the changed run.
+- id: st20
+  type: explain
+  title: Explain your plan to a teammate
+  prompt: Write 2–4 English sentences. Why does power by squaring use fewer multiplications than multiplying
+    once for each copy? Then compare with the model in the lesson summary.
+  rubric:
+  - State what smaller power is reused.
+  - Explain the odd case and how many levels there are.
+  model_answer: I compute the power with half the exponent once and square that result. For an odd exponent,
+    I multiply by the base once more. Halving gives about log₂ e levels for exponent e.
+- id: st21
+  type: boss
+  title: 'Unit challenge: Divide and conquer: split, solve, combine'
+  time_limit_minutes: 12
+  pass_rule: Get 4 of 5 predicts right and pass the fix in st17.
+  draws_from: &id002
+  - st03
+  - st07
+  - st10
+  - st14
+  - st16
+  plus:
+  - type: fix
+    task: Count cross inversions between two sorted integer lists of up to 1024 items each. Keep both
+      inputs unchanged. Use a single sweep. cross_count([3, 5], [3, 6]) returns 1. An empty half gives
+      0.
+    starter: |
+      def cross_count(left, right):
+          count = 0
+          i, j = 0, 0
+          while i < len(left) and j < len(right):
+              if left[i] < right[j]:
+                  i += 1
+              else:
+                  count += len(left) - i
+                  j += 1
+          return count
+    solution: |
+      def cross_count(left, right):
+          count = 0
+          i, j = 0, 0
+          while i < len(left) and j < len(right):
+              if left[i] <= right[j]:
+                  i += 1
+              else:
+                  count += len(left) - i
+                  j += 1
+          return count
+    tests: |
+      assert cross_count([3, 5], [3, 6]) == 1
+      assert cross_count([4, 4], [4]) == 0
+      assert cross_count([4, 5], [1, 2]) == 4
+      assert cross_count([], [3]) == 0
+    hint_levels: *id001
+    explanation: Then every counted right value is strictly smaller than all remaining left values.
+      Time is O(L + R) and extra space is O(1), where L and R are the input lengths.
+review_cards:
+  from_steps: *id002
+  vocab: true

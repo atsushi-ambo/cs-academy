@@ -1,0 +1,378 @@
+unit: s2.m03.u09
+python_min: '3.9'
+steps:
+- id: st01
+  type: read
+  title: Save a result you may need again
+  body: |
+    A server may count lines in the same log segment many times.
+    A **cache** holds a result so you can reuse it.
+    A **cache hit** finds the saved result. A **cache miss** has to compute it.
+    Use this idea for results that stay the same for the same input.
+    You will build a small cache and decide which entries to keep.
+- id: st02
+  type: predict
+  title: Zero can be a saved result
+  code: |
+    memo = {"empty": 0}
+    print("empty" in memo, memo["empty"] == 0)
+  choices:
+  - text: False False
+    why: The key exists and its value is zero.
+  - text: False True
+    why: Zero does not remove a key from the dict.
+  - text: True False
+    why: The stored result is exactly zero.
+  - text: True True
+    why: The key is present even though its result is zero.
+  answer: 3
+- id: st03
+  type: read
+  title: Give a function its own memo dict
+  body: |
+    **Memoization** saves a function's prior results by input.
+    A **wrapper** is a function that calls another function. It can also return a saved value.
+    Make the dict when you build the wrapper. Each call then shares that same dict.
+    Build a new wrapper to get an empty memo. Test with key in memo before reading.
+    This simple memo can grow with each new input.
+
+    Imagine compute("api") scans all lines for the API service.
+    The scan can take a long time. On the next call, the wrapper returns the saved count.
+- id: st04
+  type: parsons
+  title: Reuse a saved result
+  task: Use every line. Start with a saved count of zero for empty. Compute only on a miss and print zero.
+  lines:
+  - 'memo = {"empty": 0}'
+  - key = "empty"
+  - 'if key not in memo:'
+  - '    memo[key] = 1'
+  - print(memo[key])
+  expected_stdout: '0'
+  hint_levels:
+  - Set up the saved count and choose a key.
+  - Only a missing key needs work.
+  - Put the write inside the if.
+  accepted_orders:
+  - - 1
+    - 0
+    - 2
+    - 3
+    - 4
+- id: st05
+  type: fix
+  title: Keep the memo between calls
+  task: 'Given a function compute with one parameter, return a memoized function for string keys. Cache any result, including
+    zero and None. Example: calling the result twice with ''empty'' calls compute once.'
+  starter: |
+    def memoized(compute):
+        def get(key):
+            memo = {}
+            if key not in memo:
+                memo[key] = compute(key)
+            return memo[key]
+        return get
+  solution: |
+    def memoized(compute):
+        memo = {}
+
+        def get(key):
+            if key not in memo:
+                memo[key] = compute(key)
+            return memo[key]
+        return get
+  tests: |
+    calls = []
+    def compute(key):
+        calls.append(key)
+        return {"empty": 0, "gone": None}[key]
+
+    get = memoized(compute)
+    assert get("empty") == get("empty") == 0
+    assert get("gone") is None and get("gone") is None
+    assert calls == ["empty", "gone"]
+    assert memoized(compute)("empty") == 0
+    assert calls == ["empty", "gone", "empty"]
+  hint_levels:
+  - Check when Python makes the dict.
+  - A fresh wrapper needs a fresh memo, but a repeated call should share it.
+  - Move memo = {} above def get.
+  explanation: For bounded keys and good hashes, a hit takes O(1) average time. A miss also pays for compute.
+    The memo uses O(u) space for u saved entries, plus the results.
+- id: st06
+  type: try
+  title: See which calls do work
+  starter: |
+    memo = {}
+    for key in ["api", "db", "mail"]:
+        if key not in memo:
+            print("compute", key)
+            memo[key] = len(key)
+    print(len(memo))
+  task: Replace 'mail' with 'api'. The last line should count only distinct keys. Check that compute api appears
+    once.
+  check:
+    stdout_line: '2'
+- id: st07
+  type: code
+  title: Memoize a slow count function
+  task: 'compute is a function that takes one string key and returns an integer or None.
+
+    Return a new function that calls compute only once per distinct key. Use your own dict.
+
+    Each wrapper has its own cache. Example: if compute(''empty'') returns 0, two
+
+    calls for ''empty'' both return 0 and call compute just once.'
+  exercise: exercises/practice.py
+  function: memoize_count
+  test_class: MemoizeCount
+  hint_levels:
+  - Keep a dict outside the returned function.
+  - Compute and save only after a membership miss.
+  - Inside get, assign memo[key] = compute(key) only when key not in memo. Then return memo[key].
+- id: st08
+  type: predict
+  title: Cache a missing result too
+  code: |
+    memo = {"gone": None}
+    calls = 0
+    for key in ["gone", "api", "api"]:
+        if key not in memo:
+            calls += 1
+            memo[key] = 4
+    print(calls, len(memo))
+  choices:
+  - text: 1 2
+    why: Gone is present with None. Only the first api needs work.
+  - text: 2 2
+    why: A saved None is still a hit.
+  - text: 3 2
+    why: The second api finds a saved value.
+  - text: 1 1
+    why: The original gone entry is still present.
+  answer: 0
+- id: st09
+  type: read
+  title: Give recent results another chance
+  body: |
+    **Recency** tracks how recently each key was used.
+    **LRU** means least recently used. When full, **evict** the key used longest ago.
+    A hit or a write makes its key the newest. A miss leaves the order alone.
+    This can help when requests often come back to the same small set of routes.
+    A saved value can become **stale** when its source changes. LRU only bounds the count.
+- id: st10
+  type: predict
+  title: A hit can change who leaves next
+  code: |
+    order = ["scan", "mail"]
+    order.remove("scan")
+    order.append("scan")
+    old = order.pop(0)
+    order.append("sync")
+    print(old, order)
+  choices:
+  - text: scan ['mail', 'sync']
+    why: The hit makes scan newer than mail.
+  - text: mail ['sync', 'scan']
+    why: New keys go at the right end here.
+  - text: mail ['scan', 'sync']
+    why: The hit leaves mail oldest. The new sync is newest.
+  - text: sync ['mail', 'scan']
+    why: Sync is added after the eviction.
+  answer: 2
+- id: st11
+  type: read
+  title: Pair a dict with a two-way chain
+  body: |
+    A dict maps each key to its node. That finds the node in O(1) average time.
+    Keep the oldest node at head and the newest at tail.
+    Each node stores key, value, prev, and next. Both chain ends can be None.
+    On a hit, detach its node and append it at the tail.
+    On eviction, detach head and use del nodes[key] to remove its dict entry.
+- id: st12
+  type: fix
+  title: Evict from both stores
+  task: 'Given a nonempty cache, evict its oldest node. Call cache.detach(node) to unlink it, delete its key from
+    cache.nodes, and return its key. Example: a cache holding only ''api'' becomes empty and returns ''api''.'
+  starter: |
+    def evict_oldest(cache):
+        old = cache.head
+        cache.detach(old)
+        return old.key
+  solution: |
+    def evict_oldest(cache):
+        old = cache.head
+        cache.detach(old)
+        del cache.nodes[old.key]
+        return old.key
+  tests: |
+    from types import SimpleNamespace
+
+    class Cache:
+        def __init__(self):
+            self.tail = SimpleNamespace(key="db")
+            self.head = SimpleNamespace(key="api", next=self.tail)
+            self.nodes = {"api": self.head, "db": self.tail}
+
+        def detach(self, node):
+            self.head = node.next
+            if self.head is None:
+                self.tail = None
+
+    cache = Cache()
+    cache.tail.next = None
+    assert evict_oldest(cache) == "api"
+    assert list(cache.nodes) == ["db"]
+    assert cache.head is cache.tail
+    assert evict_oldest(cache) == "db"
+    assert cache.nodes == {} and cache.head is None and cache.tail is None
+  hint_levels:
+  - The cache has two ways to reach each entry.
+  - The removed node still has its key.
+  - After detach, write del cache.nodes[old.key].
+  explanation: Detaching takes O(1) time. The dict delete takes O(1) average time for bounded keys and good
+    hashes. Extra space is O(1).
+- id: st13
+  type: code
+  title: Build LRU with a dict and your own chain
+  task: 'Capacity is 0 to 100. Keys are strings and values are integers.
+
+    get returns a value or None and moves a hit to newest. put adds or updates and
+
+    makes the entry newest. Evict the oldest on a new write to a full cache.
+
+    At capacity zero, store nothing. Use nodes (dict), head (oldest), and tail (newest).
+
+    Use your own nodes with key, value, prev, and next. Do not use library caches.
+
+    Example: with capacity 2, put(''api'', 4), put(''db'', 8), get(''api''), put(''web'', 2)
+
+    evicts db and leaves api at head and web at tail.'
+  exercise: exercises/practice.py
+  function: make_lru
+  test_class: MakeLru
+  hint_levels:
+  - Find nodes with the dict. Keep both ends up to date.
+  - Make helpers to detach a node and append a newest node.
+  - On a hit, detach and append. On a full miss during put, detach head and delete its key before appending.
+- id: st14
+  type: read
+  title: Let OrderedDict track the order
+  body: |
+    Import **OrderedDict** from collections. It is a dict with tools for changing order.
+    A write to an old key does not move it. Use move_to_end(key) to make it newest.
+    Use popitem(last=False) to remove and return the oldest pair.
+    With a size limit, these operations can replace the chain you built.
+- id: st15
+  type: predict
+  title: Writing a key does not move it on its own
+  code: |
+    from collections import OrderedDict
+
+    saved = OrderedDict([("api", 3), ("db", 8)])
+    saved["api"] = 9
+    print(saved.popitem(last=False))
+  choices:
+  - text: ('db', 8)
+    why: The update did not move api to the end.
+  - text: ('api', 9)
+    why: Api is still first, with the new value.
+  - text: ('api', 3)
+    why: The order did not change, but the value did.
+  - text: '9'
+    why: Popitem gives both the key and its value.
+  answer: 1
+- id: st16
+  type: code
+  title: Use OrderedDict for a bounded key cache
+  task: 'Use OrderedDict. Capacity is 0 to 100, keys are strings, and values are integers.
+
+    As before, get returns None on a miss. Hits, inserts, and updates make a key newest.
+
+    Example with capacity 1: put(''api'', 4), put(''db'', 8), then get(''api'') gives None.'
+  exercise: exercises/practice.py
+  function: make_ordered_lru
+  test_class: MakeOrderedLru
+  hint_levels:
+  - Make an OrderedDict for each cache.
+  - Move a hit or write to the end.
+  - After put, if len(saved) > capacity, call saved.popitem(last=False).
+- id: st17
+  type: read
+  title: Let lru_cache wrap a function
+  body: |
+    Import lru_cache from functools to save calls to a function.
+    In lru_cache(maxsize=2)(compute), the first call sets the limit.
+    The second call wraps compute. Call the new function as usual.
+    The inputs must be hashable. Use one positional key in this lesson.
+    Set maxsize to zero to turn off saving.
+- id: st18
+  type: predict
+  title: A call can run again after eviction
+  code: |
+    from functools import lru_cache
+
+    calls = []
+
+    def latency(route):
+        calls.append(route)
+        return len(route)
+
+    saved = lru_cache(maxsize=2)(latency)
+    for route in ["api", "db", "api", "web", "db"]:
+        saved(route)
+    print(calls)
+  choices:
+  - text: '[''api'', ''db'', ''web'']'
+    why: Db was evicted when web arrived, so db runs again.
+  - text: '[''api'', ''db'', ''api'', ''web'', ''db'']'
+    why: The second api is a hit and runs no new call.
+  - text: '[''api'', ''db'', ''web'', ''db'']'
+    why: The api hit keeps it newest. Web evicts db, so the last db runs.
+  - text: '[''api'', ''db'', ''api'', ''web'']'
+    why: The second api is cached, while the last db is not.
+  answer: 2
+- id: st19
+  type: code
+  title: Wrap a slow function with functools
+  task: 'Return a fresh lru_cache wrapper around compute. Capacity is 0 to 100.
+
+    compute accepts one positional string key. Call the wrapper like compute.
+
+    Example with capacity 1: calling the wrapper with ''api'', ''db'', ''api'' runs compute three times.'
+  exercise: exercises/practice.py
+  function: bounded_count
+  test_class: BoundedCount
+  hint_levels:
+  - Use the standard wrapper for this task.
+  - Pass capacity as maxsize first.
+  - Return lru_cache(maxsize=capacity)(compute).
+- id: st20
+  type: explain
+  title: Explain it to a teammate
+  prompt: Write 2–4 English sentences. Why does LRU need both a fast lookup and an order? Compare with the model
+    in the lesson after writing.
+  rubric:
+  - Say what the dict locates.
+  - Say how a hit changes the next eviction.
+  model_answer: The dict finds the node for a given key. On a cache hit, I move that node to the newest end. The
+    oldest end gives me the next key to evict.
+- id: st21
+  type: terminal
+  title: 'Hands-on: See which calls do work'
+  guide: handson.md
+  check: The demo prints 2.
+- id: st22
+  type: boss
+  title: 'Mini boss: Build LRU with a dict and your own chain'
+  time_limit_minutes: 15
+  draws_from: [st02, st08, st10, st15, st18, st13]
+  pass_rule: Get four of five predicts right and pass the selected Code exercise.
+review_cards:
+  from_steps:
+  - st02
+  - st08
+  - st10
+  - st15
+  - st18
+  vocab: true

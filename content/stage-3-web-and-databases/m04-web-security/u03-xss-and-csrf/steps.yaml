@@ -1,0 +1,332 @@
+unit: s3.m04.u03
+python_min: '3.9'
+steps:
+- id: st01
+  type: read
+  title: Two ways to cross a browser boundary
+  body: |
+    An alert dashboard shows names and saves user settings. Both actions have a boundary to protect.
+    XSS happens when untrusted data runs as code in a trusted page.
+    CSRF happens when a browser sends an unwanted action using the user's login.
+    You will protect the page text and the state change with separate checks.
+- id: st02
+  type: predict
+  title: A label accidentally becomes markup
+  code: |
+    label = "<b>ready</b>"
+    print("<p>" + label + "</p>")
+  choices:
+  - text: <p>ready</p>
+    why: Python joins the strings without removing tags.
+  - text: <p><b>ready</b></p>
+    why: The angle brackets survive. A browser would show bold text.
+  - text: <p>&lt;b&gt;ready&lt;/b&gt;</p>
+    why: Escaping needs an extra step.
+  - text: <b>ready</b>
+    why: The surrounding p tags stay in the string.
+  answer: 1
+- id: st03
+  type: try
+  title: Keep angle brackets in the label
+  task: Set label to <b>ready</b>. Keep html.escape in the print call.
+  starter: |
+    from html import escape
+
+    label = "ready"
+    print(escape(label))
+  check:
+    stdout_line: '&lt;b&gt;ready&lt;/b&gt;'
+- id: st04
+  type: read
+  title: Escape for the place the data goes
+  body: |
+    html.escape turns special characters into HTML entities. A browser reads these as literal characters.
+    Use it for text in a tag. Use quote=True in a quoted plain-text attribute, such as title.
+    A URL, script, or style has other rules. Avoid placing untrusted input into script or style.
+    A Content Security Policy (CSP) tells the browser which resources or scripts may run.
+    CSP adds a layer. Keep escaping even when you use a restrictive policy.
+- id: st05
+  type: predict
+  title: Does escaping remove a quotation mark?
+  code: |
+    from html import escape
+
+    print(escape('a"b', quote=True))
+  choices:
+  - text: a"b
+    why: quote=True encodes the double quote in the HTML source.
+  - text: ab
+    why: Escaping does not delete the quote.
+  - text: a&#x27;b
+    why: That entity is for a single quote.
+  - text: a&quot;b
+    why: The quote is encoded as an entity and stays displayed as a quote.
+  answer: 3
+- id: st06
+  type: parsons
+  title: Assemble one HTML text node
+  task: Escape the label first. Print the complete paragraph.
+  lines:
+  - from html import escape
+  - label = "a & b"
+  - safe = escape(label)
+  - print("<p>" + safe + "</p>")
+  accepted_orders:
+  - - 1
+    - 0
+    - 2
+    - 3
+  expected_stdout: <p>a &amp; b</p>
+- id: st07
+  type: fix
+  title: Keep a status label as text
+  task: |
+    status_line(label) returns one p element. label is raw text, at most 120 characters.
+    Escape the label once with html.escape. Keep the surrounding tag as markup.
+    Example: status_line("x & y") returns "<p>x &amp; y</p>".
+  starter: |
+    def status_line(label):
+        return "<p>" + label + "</p>"
+  solution: |
+    def status_line(label):
+        from html import escape
+
+        return "<p>" + escape(label) + "</p>"
+  tests: |
+    assert status_line("") == "<p></p>"
+    assert status_line("<b>ok</b>") == "<p>&lt;b&gt;ok&lt;/b&gt;</p>"
+    assert status_line("x & y") == "<p>x &amp; y</p>"
+    assert status_line("&amp;") == "<p>&amp;amp;</p>"
+    assert status_line("ok") == "<p>ok</p>"
+  hint_levels:
+  - Escape only the dynamic part.
+  - Import escape from html inside the function.
+  - Join '<p>', escape(label), and '</p>'.
+  explanation: Only the label is escaped. For n input characters, time and result space are O(n).
+- id: st08
+  type: read
+  title: A cookie identifies a session
+  body: |
+    Browsers can send cookies with requests even when the user never chose the action.
+    A CSRF token is a separate random value shared by a session and its form.
+    Use hmac.compare_digest to compare the full bytes without stopping at the first mismatch.
+    Use encode("utf-8") to turn a token string into bytes.
+    Create one with secrets.token_urlsafe(32) when the session starts.
+    Check it on the server before writing data. A missing token and a missing session both fail.
+    Only state-changing methods such as POST should save these settings.
+- id: st09
+  type: predict
+  title: An unknown session and a missing token
+  code: |
+    sessions = {"s1": "form-a"}
+    expected = sessions.get("expired")
+    received = None
+    print(expected == received)
+    print(expected is not None and expected == received)
+  choices:
+  - text: |-
+      True
+      False
+    why: Two missing values compare equal. The second check rejects a missing session.
+  - text: |-
+      True
+      True
+    why: The second line requires an expected value.
+  - text: |-
+      False
+      False
+    why: None compares equal to None in the first line.
+  - text: |-
+      False
+      True
+    why: The extra requirement can only make the check stricter.
+  answer: 0
+- id: st10
+  type: code
+  title: Escape text inside a quoted title attribute
+  task: |
+    label_span(label, hint) returns a span element with a double-quoted title attribute.
+    Both strings are raw text of at most 120 characters. Escape each before joining.
+    Example: label_span("up", "") returns '<span title="">up</span>'.
+  exercise: exercises/practice.py
+  function: label_span
+  test_class: LabelSpan
+  hint_levels:
+  - Think about the two places a value will appear.
+  - Use escape on both strings and keep quotes around the title.
+  - Place escape(hint, quote=True) between the quotes. Put escape(label) between the tags.
+- id: st11
+  type: fix
+  title: Require the token tied to the session
+  task: |
+    valid_form(sessions, sid, submitted) returns bool. Sessions map IDs to nonempty token strings.
+    sid is a string. submitted is a string of at most 128 characters or None.
+    Require a known session and a nonempty matching token. Use hmac.compare_digest on UTF-8 bytes.
+    Example: valid_form({"a": "tag-a"}, "a", None) returns False.
+  starter: |
+    def valid_form(sessions, sid, submitted):
+        return sid in sessions
+  solution: |
+    def valid_form(sessions, sid, submitted):
+        from hmac import compare_digest
+
+        expected = sessions.get(sid)
+        if not expected or not submitted:
+            return False
+        return compare_digest(expected.encode("utf-8"), submitted.encode("utf-8"))
+  tests: |
+    sessions = {"a": "tag-a", "b": "tag-b"}
+    assert valid_form(sessions, "a", "tag-a") is True
+    assert valid_form(sessions, "a", "tag-b") is False
+    assert valid_form(sessions, "a", "") is False
+    assert valid_form(sessions, "a", None) is False
+    assert valid_form(sessions, "a", "雪") is False
+    assert valid_form({}, "a", None) is False
+    assert sessions == {"a": "tag-a", "b": "tag-b"}
+  hint_levels:
+  - A session is only the first requirement.
+  - Look up the token and reject missing values before comparing.
+  - Use compare_digest(expected.encode('utf-8'), submitted.encode('utf-8')).
+  explanation: Only a matching token for this session passes. For n total token bytes, time and temporary
+    space are O(n), bounded here.
+- id: st12
+  type: read
+  title: The browser can help with SameSite
+  body: |
+    Sites are grouped by scheme and registrable domain, like https and example.test.
+    SameSite limits sending cookies across sites. Strict generally sends them only on same-site requests.
+    Lax permits some cross-site top-level visits, such as ordinary link navigation.
+    SameSite is a browser rule. Keep the server's token check for actions that change state.
+    SimpleCookie builds a cookie string. Python does not simulate the browser enforcing it.
+- id: st13
+  type: predict
+  title: Which cookie attribute was set?
+  code: |
+    from http.cookies import SimpleCookie
+
+    cookie = SimpleCookie()
+    cookie["sid"] = "demo"
+    cookie["sid"]["samesite"] = "Strict"
+    print(cookie["sid"]["samesite"])
+  choices:
+  - text: demo
+    why: demo is the cookie value, not its SameSite attribute.
+  - text: Lax
+    why: The sample sets Strict explicitly.
+  - text: Strict
+    why: The attribute stores the policy value.
+  - text: sid
+    why: sid names the cookie.
+  answer: 2
+- id: st14
+  type: code
+  title: Build a SameSite cookie header value
+  task: |
+    form_cookie(sid) returns a Set-Cookie value with cookie name sid and SameSite=Strict.
+    sid is a nonempty URL-safe ASCII token up to 64 characters. Use http.cookies.SimpleCookie.
+    Use cookie["sid"].OutputString() to produce only the header value.
+    Example: form_cookie("lab") returns "sid=lab; SameSite=Strict".
+  exercise: exercises/practice.py
+  function: form_cookie
+  test_class: FormCookie
+  hint_levels:
+  - Let the cookie library format the header.
+  - Assign the sid value before adding an attribute.
+  - Set cookie['sid']['samesite'] = 'Strict' and return the morsel's OutputString().
+- id: st15
+  type: read
+  title: Check before changing state
+  body: |
+    This toy request has a method, a session key, a token, and a new theme.
+    Read the method and validate the allowed theme first. Ask the token check before writing.
+    A rejected request leaves the saved settings unchanged.
+    An XSS bug can act as the user inside the page. Protect output even when token checks pass.
+- id: st16
+  type: predict
+  title: A token from another session
+  code: |
+    tokens = {"a": "blue-key", "b": "gray-key"}
+    sid = "b"
+    submitted = "blue-key"
+    print(submitted in tokens.values(), submitted == tokens.get(sid))
+  choices:
+  - text: True True
+    why: A token from any session is not enough.
+  - text: True False
+    why: The token exists, but it belongs to the other session.
+  - text: False True
+    why: The token is present in the values.
+  - text: False False
+    why: The first check looks at all issued tokens.
+  answer: 1
+- id: st17
+  type: code
+  title: 'Checkpoint: guard a simulated theme update'
+  task: |
+    save_theme(settings, sessions, request, check) returns True only after a save.
+    request has method, sid, token, theme. All values are bounded strings, except token may be None.
+    Allow POST with theme light or dark and check(sessions, sid, token) returning True.
+    Set settings[sid] to the theme only on success. Keep request and sessions unchanged.
+    Example: a GET for a valid session and token returns False and makes no change.
+  exercise: exercises/practice.py
+  function: save_theme
+  test_class: SaveTheme
+  hint_levels:
+  - Put every rejection before the write.
+  - Check the method and theme, then call the supplied check.
+  - Only after check(sessions, sid, request['token']) succeeds, assign settings[sid].
+- id: st18
+  type: predict
+  title: A valid session still sends a GET
+  code: |
+    method = "GET"
+    token_ok = True
+    print(method == "POST" and token_ok)
+  choices:
+  - text: 'False'
+    why: A valid token does not make a GET eligible to write.
+  - text: 'True'
+    why: The method check fails first.
+  - text: GET
+    why: The expression compares the method and produces a Boolean.
+  - text: POST
+    why: The condition does not change the method.
+  answer: 0
+- id: st19
+  type: explain
+  title: Explain two different defenses
+  prompt: Write 2–4 English sentences. Explain how the page and the theme handler protect different boundaries.
+    Check the model answer in the lesson after writing.
+  rubric:
+  - Name output escaping and its context.
+  - Explain why the CSRF token is needed.
+  - Mention SameSite as a second layer.
+  model_answer: I escape an alert label before putting it into HTML text. The theme handler checks a token
+    for the exact session before it writes. SameSite helps the browser limit when it sends the session
+    cookie.
+- id: st20
+  type: terminal
+  title: Hands-on in the Python sandbox
+  guide: handson.md
+  check: Run each sample and match the stated output.
+- id: st21
+  type: boss
+  title: Module checkpoint
+  draws_from:
+  - st02
+  - st05
+  - st09
+  - st13
+  - st16
+  - st18
+  - st17
+  pass_rule: Answer five predicts correctly and pass the final Code tests.
+review_cards:
+  from_steps:
+  - st02
+  - st05
+  - st09
+  - st13
+  - st16
+  - st18
+  vocab: true

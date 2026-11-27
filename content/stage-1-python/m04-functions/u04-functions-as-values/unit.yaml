@@ -1,0 +1,68 @@
+id: s1.m04.u04
+title: Functions as values (lambda, sorted with key)
+stage: 1
+module: Functions
+version: 1
+status: draft
+estimated_minutes: 80
+prerequisites:
+- s1.m03.u01
+- s1.m03.u02
+- s1.m04.u01
+- s1.m04.u03
+objectives:
+- Pass a function to another function.
+- Use a lambda as a key.
+- Find and sort log records by more than one field.
+skills:
+- python.higher-order-functions
+- python.sort-keys
+- english.explain-code
+parts:
+- steps.yaml
+- lesson.md
+- handson.md
+- exercises/
+- tests/
+- solutions/solutions.md
+references:
+- kind: official_doc
+  title: Python control flow and lambda
+  url: https://docs.python.org/3.13/tutorial/controlflow.html#lambda-expressions
+- kind: official_doc
+  title: Python sorting techniques
+  url: https://docs.python.org/3.13/howto/sorting.html
+- kind: official_doc
+  title: Python built-in functions
+  url: https://docs.python.org/3.13/library/functions.html
+vocab:
+- en: Big-O
+  ja: 入力サイズに対する計算量の増え方
+- en: first-class function
+  ja: 値として扱える関数
+- en: higher-order function
+  ja: 高階関数
+- en: callback
+  ja: 渡してあとで呼んでもらう関数
+- en: lambda
+  ja: ラムダ式
+- en: expression
+  ja: 値を作る式
+- en: key function
+  ja: 比較用の値を返す関数
+- en: record
+  ja: 1件分のデータ
+- en: field
+  ja: レコード内の項目
+- en: stable sort
+  ja: 同順位の入力順を保つソート
+- en: tie
+  ja: 同順位
+- en: tie-breaker
+  ja: 同順位を解消する追加条件
+- en: descending
+  ja: 降順
+- en: mutate
+  ja: 元のデータを変更する
+- en: default
+  ja: 既定値

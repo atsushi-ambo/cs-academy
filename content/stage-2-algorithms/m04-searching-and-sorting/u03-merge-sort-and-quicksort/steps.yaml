@@ -1,0 +1,561 @@
+unit: s2.m04.u03
+python_min: '3.9'
+steps:
+- id: st01
+  type: read
+  title: Put two batches of log events together
+  body: |
+    Two servers send batches of events. Each batch is already in time order.
+    You can join them by looking at just the next event in each batch.
+    A sorted stretch of data is a **run**. Joining two runs in order is a merge.
+    You will build **merge sort** from this step. Then you will build **quicksort**, which splits by value instead.
+- id: st02
+  type: read
+  title: Pick the next item from two sorted runs
+  body: |
+    Keep indexes i and j into the two runs. Compare their current keys.
+    Add the smaller item to a new list and move its index. For a tie, take the left item first.
+    If the left run came first in the input, this keeps ties in their original order.
+
+    Stop comparing once either run ends. Append the rest of the other run.
+    Each item goes into the output once. Two runs of total length n take O(n) time and O(n) space.
+- id: st03
+  type: predict
+  title: What should come first when times tie?
+  code: |
+    left = [(5, "left-a"), (5, "left-b")]
+    right = [(5, "right-a")]
+    i, j = 0, 0
+    if left[i][0] <= right[j][0]:
+        name = left[i][1]
+        i += 1
+    else:
+        name = right[j][1]
+        j += 1
+    print(name, i, j)
+  choices:
+  - text: right-a 0 1
+    why: The keys tie. The <= test chooses the left branch.
+  - text: left-b 1 0
+    why: Read the item at the old index before advancing it.
+  - text: left-a 1 0
+    why: The left item wins the tie. Only the left index moves.
+  - text: left-a 1 1
+    why: The right item is still waiting, so its index stays at 0.
+  answer: 2
+- id: st04
+  type: predict
+  title: Which items are waiting at the end?
+  code: |
+    def merge_numbers(left, right):
+        result = []
+        i, j = 0, 0
+        while i < len(left) and j < len(right):
+            if left[i] <= right[j]:
+                result.append(left[i])
+                i += 1
+            else:
+                result.append(right[j])
+                j += 1
+        return result
+
+    print(merge_numbers([1], [2, 4]))
+  choices:
+  - text: '[1]'
+    why: The left side ends after 1. The code never appends the right side.
+  - text: '[1, 2, 4]'
+    why: This would need a step to append the unused right items.
+  - text: '[2, 4]'
+    why: The loop takes 1 before it stops.
+  - text: '[]'
+    why: Both sides have an item at first, so the loop runs once.
+  answer: 0
+- id: st05
+  type: fix
+  title: Finish the merge when one run ends
+  task: Merge two sorted integer lists of up to 200 items each into a new list. Keep inputs unchanged.
+    For [1, 4] and [2, 5], return [1, 2, 4, 5]. Do not use a library sort.
+  starter: |
+    def merge_numbers(left, right):
+        result = []
+        i, j = 0, 0
+        while i < len(left) and j < len(right):
+            if left[i] <= right[j]:
+                result.append(left[i])
+                i += 1
+            else:
+                result.append(right[j])
+                j += 1
+        return result
+  solution: |
+    def merge_numbers(left, right):
+        result = []
+        i, j = 0, 0
+        while i < len(left) and j < len(right):
+            if left[i] <= right[j]:
+                result.append(left[i])
+                i += 1
+            else:
+                result.append(right[j])
+                j += 1
+        return result + left[i:] + right[j:]
+  tests: |
+    assert merge_numbers([1, 4], [2, 5]) == [1, 2, 4, 5]
+    assert merge_numbers([3, 5], [1]) == [1, 3, 5]
+    assert merge_numbers([], [6, 6]) == [6, 6]
+    assert merge_numbers([], []) == []
+    left, right = [2, 2], [2]
+    result = merge_numbers(left, right)
+    assert result == [2, 2, 2] and result is not left and result is not right
+    assert left == [2, 2] and right == [2]
+  hint_levels:
+  - Look at the indexes when the loop stops.
+  - At least one side is done. Both slices can be added because an exhausted slice is empty.
+  - Return result + left[i:] + right[j:].
+  explanation: The rest of each run is already ordered. Appending those values keeps all input items.
+    Time and extra space are O(L + R).
+- id: st06
+  type: parsons
+  title: Append both tails
+  task: Use all lines. Find which parts remain, then combine them with the prefix.
+  lines:
+  - head = [1, 2]
+  - left_tail = []
+  - right_tail = [4, 7]
+  - print(head + left_tail + right_tail)
+  expected_stdout: '[1, 2, 4, 7]'
+  accepted_orders:
+  - - 1
+    - 0
+    - 2
+    - 3
+  - - 1
+    - 2
+    - 0
+    - 3
+  - - 2
+    - 0
+    - 1
+    - 3
+  - - 2
+    - 1
+    - 0
+    - 3
+  - - 0
+    - 2
+    - 1
+    - 3
+- id: st07
+  type: code
+  title: Merge two event runs without moving ties
+  exercise: exercises/practice.py
+  function: merge_jobs
+  test_class: MergeJobs
+  hint_levels:
+  - Keep one pointer per list.
+  - Compare the times. Add one item and move only its pointer.
+  - Use <= to prefer left. Append left[i:] and right[j:] after the loop.
+- id: st08
+  type: read
+  title: Merge sort splits by position
+  body: |
+    Split the input near its middle. Sort both halves by the same rule and merge them.
+    Sizes zero and one are already sorted. Return a copy at that point.
+
+    Each level does O(n) work across all runs. For powers of two the recurrence is T(n) = 2T(n/2) + O(n).
+    There are O(log n) levels for n ≥ 2, so time is O(n log n), even for reversed input.
+    The merge lists take O(n) extra live space. A stable merge gives a stable sort at every level.
+- id: st09
+  type: predict
+  title: Why is an empty list a base case?
+  code: |
+    def leaves(values):
+        if len(values) <= 1:
+            return 1
+        mid = len(values) // 2
+        return leaves(values[:mid]) + leaves(values[mid:])
+
+    print(leaves([]), leaves([9, 8, 7]))
+  choices:
+  - text: 0 3
+    why: An empty input returns one leaf because the first call stops there.
+  - text: 1 2
+    why: The half of length two splits again, giving two leaves on that side.
+  - text: 0 2
+    why: The code counts stopping calls, not only the two initial halves.
+  - text: 1 3
+    why: The empty call is a leaf. The three-item input splits into three one-item leaves.
+  answer: 3
+- id: st10
+  type: code
+  title: Merge sort a shuffled event batch
+  exercise: exercises/practice.py
+  function: merge_sort
+  test_class: MergeSort
+  hint_levels:
+  - Stop on size zero or one and return a copy.
+  - Split at len(events) // 2. Sort both slices with the same function.
+  - Merge the returned halves by time. Use <= to take the left run on a tie.
+- id: st11
+  type: read
+  title: Lomuto partition puts the pivot in its final place
+  body: |
+    A **partition** moves values into groups around a **pivot**, a value used to split the list.
+    For **Lomuto partition**, choose the final value in the range as pivot.
+    Use included ends lo and hi. Scan from lo through hi - 1. Let store start at lo.
+    Whenever a value is at most the pivot, swap it with the value at store. Then advance store.
+    Before each check, values before store are at most the pivot. Checked values from store onward are larger.
+    After the scan, swap the pivot into store. Its index separates the two groups.
+- id: st12
+  type: predict
+  title: Where does the last-item pivot land?
+  code: |
+    def lomuto_partition(values, lo, hi):
+        pivot = values[hi]
+        store = lo
+        for i in range(lo, hi):
+            if values[i] <= pivot:
+                values[store], values[i] = values[i], values[store]
+                store += 1
+        values[store], values[hi] = values[hi], values[store]
+        return store
+
+    values = [6, 2, 5, 3]
+    print(lomuto_partition(values, 0, 3), values)
+  choices:
+  - text: 3 [6, 2, 5, 3]
+    why: The pivot starts at 3, but the final swap moves it.
+  - text: 1 [2, 3, 5, 6]
+    why: Only 2 goes to the left group. The final swap puts 3 at index 1.
+  - text: 2 [2, 5, 3, 6]
+    why: The scan does not move 5 into the left group because 5 exceeds 3.
+  - text: 1 [2, 3, 6, 5]
+    why: That is a valid split, but the final swap puts the displaced 6 last.
+  answer: 1
+- id: st13
+  type: try
+  title: See what happens when the pivot is the largest
+  starter: |
+    def lomuto_partition(values, lo, hi):
+        pivot = values[hi]
+        store = lo
+        for i in range(lo, hi):
+            if values[i] <= pivot:
+                values[store], values[i] = values[i], values[store]
+                store += 1
+        values[store], values[hi] = values[hi], values[store]
+        return store
+
+    values = [6, 2, 5, 3]
+    print(lomuto_partition(values, 0, 3), values)
+  task: Change the last value to 9. Find the pivot index and check whether any values move.
+  check:
+    stdout_line: 3 [6, 2, 5, 9]
+- id: st14
+  type: code
+  title: Partition a range with Lomuto
+  exercise: exercises/practice.py
+  function: lomuto_partition
+  test_class: LomutoPartition
+  hint_levels:
+  - Save the last value before moving any items.
+  - Track the first free spot in the small group. Swap values <= pivot into that spot.
+  - Leave hi out of the scan. Swap values[store] with values[hi] at the end and return store.
+- id: st15
+  type: read
+  title: Hoare partition returns a cut
+  body: |
+    **Hoare partition** scans from both ends. Use the first value as the pivot.
+    Start i one before lo and j one after hi. Move i right to a value >= pivot.
+    Move j left to a value <= pivot. Both scans stop on a tie.
+    If i < j, swap the two items. Move both indexes again on the next pass.
+    If i >= j, return j. This **cut** is the end of the left group.
+    For a range of at least two items, lo <= j < hi with this pivot choice.
+    The left group holds values <= pivot. The right group holds values >= pivot.
+    The cut can hold a value other than the pivot.
+- id: st16
+  type: predict
+  title: A cut can point at a different value
+  code: |
+    def hoare_partition(values, lo, hi):
+        pivot = values[lo]
+        i = lo - 1
+        j = hi + 1
+        while True:
+            i += 1
+            while values[i] < pivot:
+                i += 1
+            j -= 1
+            while values[j] > pivot:
+                j -= 1
+            if i >= j:
+                return j
+            values[i], values[j] = values[j], values[i]
+
+    values = [4, 9, 2, 6]
+    cut = hoare_partition(values, 0, 3)
+    print(cut, values[cut])
+  choices:
+  - text: 0 2
+    why: The first swap exchanges 4 and 2. The scans cross with j at 0, where 2 now sits.
+  - text: 1 4
+    why: After that swap, i stops at 9 and j moves left past 9 to index 0.
+  - text: 2 4
+    why: The pivot moves to index 2, but the cut is the final j.
+  - text: 0 4
+    why: The cut is at index 0, but its value changed in the swap.
+  answer: 0
+- id: st17
+  type: code
+  title: Partition a range from both ends
+  exercise: exercises/practice.py
+  function: hoare_partition
+  test_class: HoarePartition
+  hint_levels:
+  - Save the first value before it can move.
+  - Move each pointer at least once per pass. Stop both scans at a tie or an out-of-group value.
+  - Return j once i >= j. Otherwise swap values[i] and values[j] and scan again.
+- id: st18
+  type: read
+  title: Sort the correct sides of the split
+  body: |
+    Quicksort partitions first, then sorts the two groups. Stop when the range has fewer than two items.
+    With Lomuto, the pivot is in place. Sort lo through p - 1, and p + 1 through hi.
+    With Hoare, sort lo through j and j + 1 through hi. The cut may still need sorting.
+
+    These versions move items **in place**. This means they change the original list.
+    They use no full-size merge list. They still need space for calls that have yet to return.
+    A helper inside your function can use values from the outer function.
+    A distant swap can flip two equal keys. These versions do not promise stability.
+- id: st19
+  type: predict
+  title: Should the left recursive call include the cut?
+  code: |
+    lo, cut, hi = 1, 2, 5
+    left = list(range(lo, cut + 1))
+    right = list(range(cut + 1, hi + 1))
+    print(left, right)
+  choices:
+  - text: '[1] [3, 4, 5]'
+    why: This leaves out the cut. A Hoare cut still needs sorting.
+  - text: '[1, 2] [2, 3, 4, 5]'
+    why: The right range begins after the cut, so there is no overlap.
+  - text: '[1, 2] [3, 4]'
+    why: The stop hi + 1 includes the last index hi.
+  - text: '[1, 2] [3, 4, 5]'
+    why: Both original ends are included. The cut belongs to the left range.
+  answer: 3
+- id: st20
+  type: read
+  title: Pivot choice changes the shape of the calls
+  body: |
+    A **balanced split** makes the two groups close in size. It leads to O(log n) levels.
+    Each full level checks O(n) items, so balanced quicksort takes O(n log n) time.
+    A last-item Lomuto pivot on sorted input leaves one empty group. This repeats at each level.
+    Its **worst case**, or largest cost for that input size, is O(n²) time and O(n) stack space.
+
+    Choosing a random pivot reduces the chance of repeated bad splits on distinct keys.
+    A middle index often helps with ordered input, but its value need not be near the middle value.
+    Even a random pivot leaves a one-sided split if all values tie under the Lomuto rule above.
+- id: st21
+  type: predict
+  title: Comparison count after repeated bad pivots
+  code: |
+    size = 5
+    checks = 0
+    while size > 1:
+        checks += size - 1
+        size -= 1
+    print(checks)
+  choices:
+  - text: '4'
+    why: Four is just the cost of the first partition.
+  - text: '5'
+    why: The loop counts comparisons at each size, not the number of input values.
+  - text: '10'
+    why: The partitions check 4, 3, 2, then 1 values.
+  - text: '15'
+    why: Each scan excludes its pivot. A single-item range has no partition.
+  answer: 2
+- id: st22
+  type: code
+  title: Quicksort the list in place
+  exercise: exercises/practice.py
+  function: quick_sort
+  test_class: QuickSort
+  hint_levels:
+  - Use a helper with lo and hi that stops when lo >= hi.
+  - Partition the current range inside values. Decide which ends to pass based on the kind of partition.
+  - For Lomuto, call the helper on (lo, p - 1) and (p + 1, hi). Leave the pivot alone.
+- id: st23
+  type: fix
+  title: 'Challenge: a cut is not a finished pivot'
+  task: Fix this in-place Hoare quicksort for 0 to 256 integers. Return None. For [4, 7, 3, 1], change
+    the list to [1, 3, 4, 7]. Do not use a library sort.
+  starter: |
+    def sort_with_cut(values):
+        def partition(lo, hi):
+            pivot = values[lo]
+            i = lo - 1
+            j = hi + 1
+            while True:
+                i += 1
+                while values[i] < pivot:
+                    i += 1
+                j -= 1
+                while values[j] > pivot:
+                    j -= 1
+                if i >= j:
+                    return j
+                values[i], values[j] = values[j], values[i]
+
+        def order(lo, hi):
+            if lo < hi:
+                cut = partition(lo, hi)
+                order(lo, cut - 1)
+                order(cut + 1, hi)
+
+        order(0, len(values) - 1)
+  solution: |
+    def sort_with_cut(values):
+        def partition(lo, hi):
+            pivot = values[lo]
+            i = lo - 1
+            j = hi + 1
+            while True:
+                i += 1
+                while values[i] < pivot:
+                    i += 1
+                j -= 1
+                while values[j] > pivot:
+                    j -= 1
+                if i >= j:
+                    return j
+                values[i], values[j] = values[j], values[i]
+
+        def order(lo, hi):
+            if lo < hi:
+                cut = partition(lo, hi)
+                order(lo, cut)
+                order(cut + 1, hi)
+
+        order(0, len(values) - 1)
+  tests: |
+    values = [4, 7, 3, 1]
+    assert sort_with_cut(values) is None
+    assert values == [1, 3, 4, 7]
+    empty = []
+    assert sort_with_cut(empty) is None and empty == []
+    values = [3, 2, 1, 0]
+    sort_with_cut(values)
+    assert values == [0, 1, 2, 3]
+    values = [4, 4, 4]
+    sort_with_cut(values)
+    assert values == [4, 4, 4]
+  hint_levels: &id001
+  - Trace the index skipped by both calls.
+  - The left side includes the cut index. It may still be out of order.
+  - Change the left call to order(lo, cut).
+  explanation: Hoare returns the last index of the left group. Both groups must be sorted. Balanced
+    time and stack space are O(n log n) and O(log n). Worst-case time and stack space are O(n²) and
+    O(n).
+- id: st24
+  type: terminal
+  title: 'Hands-on: run and change a small script'
+  guide: handson.md
+  check: The script prints the expected output and you can explain the changed run.
+- id: st25
+  type: explain
+  title: Explain your plan to a teammate
+  prompt: Write 2–4 English sentences. Compare how merge sort and Lomuto quicksort divide the work and
+    use extra space. Then compare with the model in the lesson summary.
+  rubric:
+  - Describe what each split depends on.
+  - Compare the lists or frames kept during sorting.
+  model_answer: Merge sort splits by position and uses a new list to merge sorted runs. Quicksort splits
+    by a pivot value and moves items inside the input list. It still uses stack space, which grows when
+    the splits are uneven.
+- id: st26
+  type: boss
+  title: 'Unit challenge: Merge sort and quicksort'
+  time_limit_minutes: 12
+  pass_rule: Get 4 of 5 predicts right and pass the fix in st23.
+  draws_from: &id002
+  - st03
+  - st04
+  - st09
+  - st12
+  - st16
+  - st19
+  - st21
+  plus:
+  - type: fix
+    task: Fix this in-place Hoare quicksort for 0 to 256 integers. Return None. For [4, 7, 3, 1], change
+      the list to [1, 3, 4, 7]. Do not use a library sort.
+    starter: |
+      def sort_with_cut(values):
+          def partition(lo, hi):
+              pivot = values[lo]
+              i = lo - 1
+              j = hi + 1
+              while True:
+                  i += 1
+                  while values[i] < pivot:
+                      i += 1
+                  j -= 1
+                  while values[j] > pivot:
+                      j -= 1
+                  if i >= j:
+                      return j
+                  values[i], values[j] = values[j], values[i]
+
+          def order(lo, hi):
+              if lo < hi:
+                  cut = partition(lo, hi)
+                  order(lo, cut - 1)
+                  order(cut + 1, hi)
+
+          order(0, len(values) - 1)
+    solution: |
+      def sort_with_cut(values):
+          def partition(lo, hi):
+              pivot = values[lo]
+              i = lo - 1
+              j = hi + 1
+              while True:
+                  i += 1
+                  while values[i] < pivot:
+                      i += 1
+                  j -= 1
+                  while values[j] > pivot:
+                      j -= 1
+                  if i >= j:
+                      return j
+                  values[i], values[j] = values[j], values[i]
+
+          def order(lo, hi):
+              if lo < hi:
+                  cut = partition(lo, hi)
+                  order(lo, cut)
+                  order(cut + 1, hi)
+
+          order(0, len(values) - 1)
+    tests: |
+      values = [4, 7, 3, 1]
+      assert sort_with_cut(values) is None
+      assert values == [1, 3, 4, 7]
+      empty = []
+      assert sort_with_cut(empty) is None and empty == []
+      values = [3, 2, 1, 0]
+      sort_with_cut(values)
+      assert values == [0, 1, 2, 3]
+      values = [4, 4, 4]
+      sort_with_cut(values)
+      assert values == [4, 4, 4]
+    hint_levels: *id001
+    explanation: Hoare returns the last index of the left group. Both groups must be sorted. Balanced
+      time and stack space are O(n log n) and O(log n). Worst-case time and stack space are O(n²) and
+      O(n).
+review_cards:
+  from_steps: *id002
+  vocab: true

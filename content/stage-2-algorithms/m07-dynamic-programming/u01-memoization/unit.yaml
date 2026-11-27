@@ -1,0 +1,75 @@
+id: s2.m07.u01
+title: Memoization
+stage: 2
+module: Dynamic Programming
+version: 1
+status: draft
+estimated_minutes: 95
+prerequisites:
+- s1.m03.u03
+- s1.m04.u05
+- s2.m02.u01
+- s2.m05.u01
+- s2.m05.u03
+objectives:
+- Spot repeated work in a call tree and count calls.
+- Store Fibonacci and stair counts with a dict or lru_cache.
+- Describe a two-part cache key for counting coin combinations.
+skills:
+- algorithms.memoization
+- algorithms.overlapping-subproblems
+- english.explain-code
+parts:
+- steps.yaml
+- lesson.md
+- handson.md
+- exercises/
+- tests/
+- solutions/solutions.md
+references:
+- kind: official_doc
+  title: Python functools.lru_cache
+  url: https://docs.python.org/3.13/library/functools.html#functools.lru_cache
+- kind: official_doc
+  title: Python dictionaries
+  url: https://docs.python.org/3.13/tutorial/datastructures.html#dictionaries
+- kind: official_doc
+  title: Global names in Python
+  url: https://docs.python.org/3.13/reference/simple_stmts.html#the-global-statement
+vocab:
+- en: dynamic programming
+  ja: 動的計画法
+- en: subproblem
+  ja: 部分問題
+- en: overlap
+  ja: 同じ部分問題が繰り返し現れること
+- en: state
+  ja: 部分問題を特定する状態
+- en: memoization
+  ja: メモ化
+- en: cache
+  ja: 計算結果の一時保存
+- en: cache key
+  ja: キャッシュ内の結果を識別するキー
+- en: cache hit
+  ja: 保存した結果が見つかること
+- en: cache miss
+  ja: 結果がまだ保存されていないこと
+- en: pure function
+  ja: 入力だけで結果が決まる副作用のない関数
+- en: Fibonacci number
+  ja: フィボナッチ数
+- en: recurrence
+  ja: 漸化式
+- en: global
+  ja: モジュールの変数を更新する宣言
+- en: hashable
+  ja: 辞書のキーなどにできる性質
+- en: denomination
+  ja: 硬貨の額面
+- en: combination
+  ja: 順序を区別しない組み合わせ
+- en: remaining amount
+  ja: 残りの金額
+- en: base case
+  ja: 再帰の終了条件

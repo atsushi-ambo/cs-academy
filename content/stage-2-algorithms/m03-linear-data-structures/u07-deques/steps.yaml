@@ -1,0 +1,331 @@
+unit: s2.m03.u07
+python_min: '3.9'
+steps:
+- id: st01
+  type: read
+  title: Work from either end
+  body: |
+    A worker may take jobs from the front and put retries back at either end.
+    A **deque** is a queue with edits at both ends. Say it like deck.
+    The **left end** is the front. The **right end** is the back.
+    You will build a deque and use the idea to track peaks in server load.
+- id: st02
+  type: predict
+  title: Step left from slot zero
+  code: |
+    head = 0
+    capacity = 4
+    print((head - 1) % capacity)
+  choices:
+  - text: '-1'
+    why: This is the value before taking the remainder.
+  - text: '0'
+    why: One step left moves to another slot.
+  - text: '3'
+    why: Python's remainder with positive capacity wraps -1 to the last slot.
+  - text: '4'
+    why: Four is outside the slot range.
+  answer: 2
+- id: st03
+  type: read
+  title: Keep the occupied part of a ring
+  body: |
+    Use a fixed ring of capacity slots. Keep head and size.
+    For a left push, step head back by one using %. Then write at head.
+    For a right push, write at (head + size) % capacity.
+    For a right pop, read at (head + size - 1) % capacity.
+    For a left pop, read at head and move head one step forward.
+    Every pop clears the used slot. Every successful edit changes size.
+- id: st04
+  type: parsons
+  title: Take the rightmost occupied slot
+  task: Use all lines. Slots 3 and 0 hold jobs. Print the slot for a right pop.
+  lines:
+  - head = 3
+  - size = 2
+  - capacity = 4
+  - last = (head + size - 1) % capacity
+  - print(last)
+  expected_stdout: '0'
+  hint_levels:
+  - Use the final occupied offset.
+  - A size of two gives an offset of one.
+  - Calculate the remainder before printing.
+  accepted_orders:
+  - - 0
+    - 2
+    - 1
+    - 3
+    - 4
+  - - 1
+    - 0
+    - 2
+    - 3
+    - 4
+  - - 1
+    - 2
+    - 0
+    - 3
+    - 4
+  - - 2
+    - 0
+    - 1
+    - 3
+    - 4
+  - - 2
+    - 1
+    - 0
+    - 3
+    - 4
+- id: st05
+  type: predict
+  title: Separate the last item from the next open slot
+  code: |
+    head, size, capacity = 2, 2, 4
+    last = (head + size - 1) % capacity
+    free = (head + size) % capacity
+    print(last, free)
+  choices:
+  - text: 0 3
+    why: The open slot comes after the last item.
+  - text: 3 4
+    why: Wrap the open slot back to zero.
+  - text: 2 3
+    why: Two is the head. There is one more item.
+  - text: 3 0
+    why: The live slots are 2 and 3. The next slot wraps to 0.
+  answer: 3
+- id: st06
+  type: fix
+  title: Read the current right end
+  task: 'Given head, positive size, and capacity up to 100, return the last occupied index. The inputs describe
+    a valid nonempty ring. Example: right_index(3, 2, 4) gives 0.'
+  starter: |
+    def right_index(head, size, capacity):
+        return (head + size) % capacity
+  solution: |
+    def right_index(head, size, capacity):
+        return (head + size - 1) % capacity
+  tests: |
+    assert right_index(3, 2, 4) == 0
+    assert right_index(0, 1, 1) == 0
+    assert right_index(2, 4, 4) == 1
+    assert right_index(1, 1, 3) == 1
+  hint_levels:
+  - Offset zero belongs to the first item.
+  - A size of n uses offsets 0 to n - 1.
+  - Use (head + size - 1) % capacity.
+  explanation: One index calculation takes O(1) time and O(1) extra space.
+- id: st07
+  type: try
+  title: Wrap a left push
+  starter: |
+    head = 1
+    slots = [None] * 4
+    head = (head - 1) % len(slots)
+    slots[head] = "retry"
+    print(head, slots[head])
+  task: Set the starting head to 0. Print the new head and its value.
+  check:
+    stdout_line: 3 retry
+- id: st08
+  type: code
+  title: Build a deque from a fixed ring
+  task: 'Capacity is 1 to 100. Keep a fixed list named slots and store integers.
+
+    push_left and push_right return True on success or False if full.
+
+    pop_left and pop_right return the item or None if empty. Clear each removed slot to None.
+
+    Use O(1) time per call. Build it from the ring. Do not use collections.deque.
+
+    Example: push_left(4), push_right(8), pop_right(), pop_left() removes 8 then 4.'
+  exercise: exercises/practice.py
+  function: make_deque
+  test_class: MakeDeque
+  hint_levels:
+  - Write index formulas before coding.
+  - Move head only on left edits. Change size on each success.
+  - Pop left at head. Pop right at (head + size - 1) % capacity. Clear only the slot you read.
+- id: st09
+  type: read
+  title: Use a library deque for the next task
+  body: |
+    In Python, from collections import deque gives you a ready-made deque.
+    Write deque() for an empty one. Write deque([2, 3]) to start with those items.
+    Use appendleft and popleft for the left end. Use append and pop for the right.
+    Reads at d[0] and d[-1] are fast. A middle read can take O(n).
+    Only the ring exercise needs your own structure. The next exercises use this library.
+- id: st10
+  type: predict
+  title: Use opposite ends on the same deque
+  code: |
+    from collections import deque
+
+    jobs = deque(["mail"])
+    jobs.appendleft("retry")
+    jobs.append("scan")
+    print(jobs.popleft(), jobs.pop(), jobs[0])
+  choices:
+  - text: mail scan retry
+    why: Retry went before mail.
+  - text: retry scan mail
+    why: Left pop serves retry, then right pop takes scan.
+  - text: scan retry mail
+    why: Left pop removes from the other end.
+  - text: retry mail scan
+    why: Scan is newer and sits at the right end.
+  answer: 1
+- id: st11
+  type: read
+  title: Keep only possible peaks
+  body: |
+    A **sliding window** is a span that moves one step at a time.
+    For a window ending at i with width k, its first index is i - k + 1.
+    A **candidate** is an index that could still give a peak.
+    When a bigger value arrives, older smaller values can leave from the right.
+    The newer bigger value stays in later windows for longer.
+    You may also drop an older equal value for the same reason.
+- id: st12
+  type: predict
+  title: Keep the newer of two equal values
+  code: |
+    from collections import deque
+
+    values = [4, 2, 4]
+    candidates = deque([0, 1])
+    i = 2
+    while candidates and values[candidates[-1]] <= values[i]:
+        candidates.pop()
+    candidates.append(i)
+    print(list(candidates))
+  choices:
+  - text: '[2]'
+    why: The new 4 lasts longer than both older values and is at least as large.
+  - text: '[0, 2]'
+    why: The loop also removes equal values.
+  - text: '[0, 1, 2]'
+    why: Both older entries match the pop rule.
+  - text: '[4]'
+    why: The deque stores indexes, which tell you when a value leaves the window.
+  answer: 0
+- id: st13
+  type: read
+  title: Drop indexes left of the window
+  body: |
+    An index **expires** once it is smaller than the first live index.
+    Store candidate indexes in arrival order. The oldest is at the left.
+    After removing smaller values from the right, the largest candidate is at the left.
+    A deque that keeps values in one direction is a **monotonic deque**.
+    This example keeps values in decreasing order.
+- id: st14
+  type: fix
+  title: Keep the index at the left edge
+  task: 'Remove indexes below first_live from the left of an increasing deque. An empty deque is valid. Example:
+    [0, 2, 5] with first_live=2 becomes [2, 5].'
+  starter: |
+    def expire(candidates, first_live):
+        while candidates and candidates[0] <= first_live:
+            candidates.popleft()
+  solution: |
+    def expire(candidates, first_live):
+        while candidates and candidates[0] < first_live:
+            candidates.popleft()
+  tests: |
+    from collections import deque
+
+    items = deque([0, 2, 5])
+    expire(items, 2)
+    assert list(items) == [2, 5]
+    expire(items, 6)
+    assert list(items) == []
+    expire(items, 8)
+    assert list(items) == []
+  hint_levels:
+  - First live means the first index still inside.
+  - Only smaller indexes have left.
+  - Use candidates[0] < first_live.
+  explanation: Removing r stale indexes takes O(r + 1) time and O(1) extra space.
+- id: st15
+  type: code
+  title: Drop weaker candidates from the right
+  task: 'candidates is a deque of indexes in arrival order and decreasing value order.
+
+    i is a new, later index of values. Pop older candidates with value <= values[i] from the right.
+
+    Append i. Leave values unchanged. Example: [0, 1] for [9, 4, 7], with i=2, becomes [0, 2].'
+  exercise: exercises/practice.py
+  function: offer_index
+  test_class: OfferIndex
+  hint_levels:
+  - Only the right end can have weaker items.
+  - Compare values at the indexes on the right.
+  - Pop while values[candidates[-1]] <= values[i], then append i.
+- id: st16
+  type: predict
+  title: Output only full windows
+  code: |
+    values = [4, 2, 6, 1]
+    width = 3
+    starts = []
+    for i in range(len(values)):
+        first = i - width + 1
+        if first >= 0:
+            starts.append(first)
+    print(starts)
+  choices:
+  - text: '[0, 1, 2, 3]'
+    why: The first two windows are still too short.
+  - text: '[-2, -1, 0, 1]'
+    why: Negative starts are skipped.
+  - text: '[0, 1]'
+    why: Only two full windows fit.
+  - text: '[2, 3]'
+    why: These are right edges. The program prints left edges.
+  answer: 2
+- id: st17
+  type: code
+  title: Find each sliding-window maximum
+  task: 'Return a fresh list of maxima for windows of width k. Values are integers.
+
+    If k < 1 or k > len(values), return []. Leave values unchanged.
+
+    Use a deque of candidate indexes and one pass. Do not scan each window.
+
+    Example: window_maxima([9, 4, 7, 7], 2) gives [9, 7, 7].'
+  exercise: exercises/practice.py
+  function: window_maxima
+  test_class: WindowMaxima
+  hint_levels:
+  - Keep candidates across windows.
+  - Expire left indexes, drop weaker right indexes, append the new index.
+  - Only when i >= k - 1, append values[candidates[0]] to the result.
+- id: st18
+  type: explain
+  title: Explain it to a teammate
+  prompt: Write 2–4 English sentences. How can the deque find each peak without scanning a whole window? Compare
+    with the model in the lesson after writing.
+  rubric:
+  - Say which stale indexes leave the left.
+  - Say why a larger new value can remove older candidates.
+  model_answer: I drop indexes from the left when they leave the window. A larger new value stays in the window
+    longer, so I drop weaker values from the right. The leftmost candidate now gives the peak.
+- id: st19
+  type: terminal
+  title: 'Hands-on: Wrap a left push'
+  guide: handson.md
+  check: The demo prints 3 retry.
+- id: st20
+  type: boss
+  title: 'Mini boss: Find each sliding-window maximum'
+  time_limit_minutes: 15
+  draws_from: [st02, st05, st10, st12, st16, st17]
+  pass_rule: Get four of five predicts right and pass the selected Code exercise.
+review_cards:
+  from_steps:
+  - st02
+  - st05
+  - st10
+  - st12
+  - st16
+  vocab: true

@@ -1,0 +1,57 @@
+id: s2.m04.u03
+title: Merge sort and quicksort
+stage: 2
+module: Searching and Sorting
+version: 1
+status: draft
+estimated_minutes: 115
+prerequisites:
+- s2.m04.u02
+- s2.m04.u04
+- s2.m02.u04
+- s2.m02.u05
+objectives:
+- Merge sorted runs and implement a stable merge sort.
+- Write Lomuto and Hoare partitions and tell their return values apart.
+- Implement in-place quicksort and compare its costs with merge sort.
+skills:
+- algo.merge-sort-and-quicksort
+- english.explain-code
+parts:
+- steps.yaml
+- lesson.md
+- handson.md
+- exercises/
+- solutions/solutions.md
+references:
+- kind: official_doc
+  title: Python sorting and stability
+  url: https://docs.python.org/3.13/howto/sorting.html
+- kind: official_doc
+  title: Python lists
+  url: https://docs.python.org/3.13/tutorial/datastructures.html
+vocab:
+- en: merge sort
+  ja: マージソート
+- en: quicksort
+  ja: クイックソート
+- en: run
+  ja: 連続した整列済み区間
+- en: partition
+  ja: 基準値の前後に分けること
+- en: pivot
+  ja: 分割の基準値
+- en: Lomuto partition
+  ja: ピボットを最終位置に置く単方向の分割法
+- en: Hoare partition
+  ja: 両端から走査して境界を返す分割法
+- en: cut
+  ja: 左右を分ける境界
+- en: balanced split
+  ja: 左右の大きさが近い分割
+- en: worst case
+  ja: 最もコストがかかる場合
+- en: in place
+  ja: データを元のリスト内で並べ替える
+- en: extra space
+  ja: 入力以外に使う作業領域

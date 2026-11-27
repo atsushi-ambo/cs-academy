@@ -1,0 +1,343 @@
+unit: s3.m04.u05
+python_min: '3.9'
+steps:
+- id: st01
+  type: read
+  title: Follow a login across requests
+  body: |
+    An on-call engineer opens a second dashboard page. The server must remember the earlier login.
+    A server session records the user and deadline. The browser carries a random session ID.
+    The ID is opaque. It has no user details inside it.
+    You will create, rotate, check, and revoke sessions without starting a server.
+- id: st02
+  type: predict
+  title: Does the cookie contain the account name?
+  code: |
+    sid = "toy-opaque"
+    sessions = {sid: {"user": "lee", "expires": 40}}
+    print(sid, sessions[sid]["user"])
+  choices:
+  - text: lee lee
+    why: The account name is only in the server record.
+  - text: toy-opaque toy-opaque
+    why: The dictionary lookup returns a user record.
+  - text: toy-opaque lee
+    why: The cookie carries an ID. The server stores the user's name.
+  - text: 40 lee
+    why: The expiry is a stored field, separate from the ID.
+  answer: 2
+- id: st03
+  type: try
+  title: See how a cookie flag changes the header
+  task: Set cookie['sid']['httponly'] to True after setting the value.
+  starter: |
+    from http.cookies import SimpleCookie
+
+    cookie = SimpleCookie()
+    cookie["sid"] = "sample"
+    print(cookie["sid"].OutputString())
+  check:
+    stdout_line: sid=sample; HttpOnly
+- id: st04
+  type: read
+  title: Control how the browser handles the cookie
+  body: |
+    Set-Cookie is a response header that sets a cookie. SimpleCookie can format its value.
+    HttpOnly limits script access to the cookie. The browser can still send it with requests.
+    Secure limits sending to secure connections, usually HTTPS. It does not encrypt the cookie value.
+    SameSite limits cross-site sends. Choose a policy for your login and form flow.
+    Use Path=/ for this toy site's full path. Leave Domain unset to scope the cookie to the host.
+- id: st05
+  type: predict
+  title: Set Secure on the cookie
+  code: |
+    from http.cookies import SimpleCookie
+
+    cookie = SimpleCookie()
+    cookie["sid"] = "toy"
+    cookie["sid"]["secure"] = True
+    print(cookie["sid"].OutputString())
+  choices:
+  - text: sid=toy; Secure
+    why: Secure is a flag in the header, and the value is still toy.
+  - text: sid=toy
+    why: OutputString includes the enabled flag.
+  - text: sid=toy; secure=True
+    why: Cookie flags appear without a value.
+  - text: sid=Secure
+    why: Secure is an attribute. It does not replace the ID.
+  answer: 0
+- id: st06
+  type: parsons
+  title: Prepare an opaque ID and expiry
+  task: Create a mock ID and a deadline. Put them in a server table before printing the deadline.
+  lines:
+  - sid = "sample"
+  - expires = 60
+  - 'sessions = {sid: expires}'
+  - print(sessions[sid])
+  accepted_orders:
+  - - 1
+    - 0
+    - 2
+    - 3
+  expected_stdout: '60'
+- id: st07
+  type: code
+  title: Format the session cookie
+  task: |
+    session_cookie(sid) returns a Set-Cookie value. sid is a URL-safe ASCII string of 1–64 characters.
+    Set HttpOnly, Secure, SameSite=Lax, and Path=/ on a cookie named sid. Leave Domain unset.
+    Use SimpleCookie and return the morsel's OutputString().
+    Example: parsing the result for "a" gives sid="a" and path="/".
+  exercise: exercises/practice.py
+  function: session_cookie
+  test_class: SessionCookie
+  hint_levels:
+  - Add policy flags to the session cookie.
+  - Assign the value, then set the attributes on its morsel.
+  - Set both flags to True and pass Lax and / as strings.
+- id: st08
+  type: read
+  title: Enforce expiry and logout on the server
+  body: |
+    A session is valid only while it exists and the current time is before its deadline.
+    A browser may keep an old ID. The server still rejects that expired session.
+    Logout removes the server record. Also clear the cookie in a real browser response.
+    Use dict.pop(key, None) to remove a key safely if the key may already be gone.
+- id: st09
+  type: predict
+  title: The deadline belongs to the server
+  code: |
+    deadline = 60
+    for now in (59, 60, 61):
+        print(now < deadline)
+  choices:
+  - text: |-
+      True
+      True
+      False
+    why: That would use an inclusive upper limit.
+  - text: |-
+      False
+      False
+      True
+    why: That would accept a time after expiry.
+  - text: |-
+      True
+      True
+      True
+    why: Holding a cookie cannot extend its lifetime.
+  - text: |-
+      True
+      False
+      False
+    why: The time must be strictly before the deadline.
+  answer: 3
+- id: st10
+  type: fix
+  title: Reject expired server sessions
+  task: |
+    session_user(sessions, sid, now) returns a user ID or None. Sessions map IDs to (user, deadline).
+    sid is a bounded string. Times are integer seconds. The deadline is exclusive.
+    Keep sessions unchanged. Example: session_user({"a": ("lee", 9)}, "a", 9) returns None.
+  starter: |
+    def session_user(sessions, sid, now):
+        session = sessions.get(sid)
+        if session is None:
+            return None
+        return session[0]
+  solution: |
+    def session_user(sessions, sid, now):
+        session = sessions.get(sid)
+        if session is None or now >= session[1]:
+            return None
+        return session[0]
+  tests: |
+    sessions = {"a": ("lee", 9), "b": ("lee", 10)}
+    assert session_user({}, "a", 0) is None
+    assert session_user(sessions, "a", 8) == "lee"
+    assert session_user(sessions, "a", 9) is None
+    assert session_user(sessions, "a", 10) is None
+    assert session_user(sessions, "b", 9) == "lee"
+    assert sessions == {"a": ("lee", 9), "b": ("lee", 10)}
+  hint_levels:
+  - Finding the ID is only one requirement.
+  - Look at the deadline inside the record.
+  - Reject if the record is absent or now >= session[1].
+  explanation: The server decides validity at request time. For bounded keys, average time and extra space
+    are O(1).
+- id: st11
+  type: fix
+  title: Invalidate the record on logout
+  task: |
+    logout(sessions, sid) returns None and removes only sid if present.
+    sid is a short string. Calling twice must be safe. Example: with {"a": ("lee", 5)}, logout removes a.
+  starter: |
+    def logout(sessions, sid):
+        sid = ""
+  solution: |
+    def logout(sessions, sid):
+        sessions.pop(sid, None)
+  tests: |
+    sessions = {"a": ("lee", 5), "b": ("lee", 5)}
+    assert logout(sessions, "a") is None
+    assert sessions == {"b": ("lee", 5)}
+    assert logout(sessions, "a") is None
+    assert logout({}, "a") is None
+    assert sessions == {"b": ("lee", 5)}
+  hint_levels:
+  - Change the table, not the function's local ID.
+  - Remove the matching record and keep other sessions.
+  - Use sessions.pop(sid, None) without returning the removed record.
+  explanation: An old copy of the ID loses access after removal. Average time and extra space are O(1)
+    for a bounded ID.
+- id: st12
+  type: read
+  title: Rotate the ID when privilege changes
+  body: |
+    Session fixation means someone already knows the ID that survives another user's login.
+    After authentication, generate a fresh ID with secrets.token_urlsafe(32). Then invalidate the old ID.
+    The function encodes the random bytes as URL-safe text. A random draw could collide. The exercise checks for a collision before writing the new record.
+    In a shared store, reserve a unique ID and switch records as one operation.
+- id: st13
+  type: try
+  title: Draw a random session ID
+  task: Change the input to 32 random bytes. Print the length, while keeping the ID private.
+  starter: |
+    from secrets import token_urlsafe
+
+    sid = token_urlsafe(16)
+    print("ID characters", len(sid))
+  check:
+    stdout_line: ID characters 43
+- id: st14
+  type: predict
+  title: What survives when the user signs in?
+  code: |
+    sessions = {"guest": None, "other": ("kai", 90)}
+    sessions["fresh"] = ("lee", 90)
+    sessions.pop("guest", None)
+    print("guest" in sessions, "other" in sessions, "fresh" in sessions)
+  choices:
+  - text: True True True
+    why: pop removes the old table entry.
+  - text: False True True
+    why: The old guest ID is removed. The new and unrelated IDs remain.
+  - text: False False True
+    why: Removing one key leaves other sessions intact.
+  - text: False True False
+    why: The fresh session was inserted first.
+  answer: 1
+- id: st15
+  type: code
+  title: Draw a fresh session identifier
+  task: |
+    new_id(sessions, draw) returns a new ID not found in sessions. Keep the table unchanged.
+    draw is a supplied function with no arguments. It returns nonempty URL-safe strings and eventually returns a free ID.
+    A key with a None value is still occupied. Example: if draws yield a then b and a exists, return b.
+  exercise: exercises/practice.py
+  function: new_id
+  test_class: NewId
+  hint_levels:
+  - Check the key even when its value is None.
+  - Keep drawing while the ID is in use.
+  - Use while candidate in sessions and set candidate = draw() inside.
+- id: st16
+  type: read
+  title: Compare other token designs
+  body: |
+    An API client can send an Authorization header with Bearer and a token. Anyone holding it can use it.
+    An opaque bearer token can use a server lookup and immediate revocation, just like a session ID.
+    A signed JWT can carry claims for local checks. Claims are values such as issuer, audience, and expiry.
+    Decoding a JWT does not verify it. Pin permitted algorithms. Reject unsigned tokens such as alg=none in signed flows.
+    A local signature check alone cannot revoke an issued JWT before expiry. Use short lifetimes or server-side revocation state.
+- id: st17
+  type: predict
+  title: What changes when a server entry is removed?
+  code: |
+    tokens = {"opaque-lab": "lee"}
+    issuer_ok = True
+    claims_unexpired = True
+    tokens.pop("opaque-lab")
+    print("opaque-lab" in tokens, issuer_ok and claims_unexpired)
+  choices:
+  - text: True True
+    why: The opaque lookup now fails.
+  - text: False False
+    why: The local check uses no lookup or revocation list here.
+  - text: False True
+    why: Removing the opaque entry has no effect on the independent local claim check.
+  - text: True False
+    why: Only the opaque entry was changed.
+  answer: 2
+- id: st18
+  type: code
+  title: 'Checkpoint: rotate after an authenticated login'
+  task: |
+    rotate(sessions, old_id, user, expires, fresh_id) returns the new ID.
+    Trust user and expires because authentication already passed. IDs and user are short strings, and expires is an integer.
+    Call fresh_id(sessions) before removing old_id. It returns an ID absent from the table.
+    Remove just old_id if present, then store (user, expires) under the new ID.
+    Example: rotating guest to next leaves {"next": ("lee", 30)} if guest was the only entry.
+  exercise: exercises/practice.py
+  function: rotate
+  test_class: Rotate
+  hint_levels:
+  - Choose a fresh ID before removing anything.
+  - Drop the old ID, then create the authenticated entry.
+  - Use sessions.pop(old_id, None) and sessions[sid] = (user, expires).
+- id: st19
+  type: predict
+  title: An old session cookie after logout
+  code: |
+    browser_sid = "old"
+    sessions = {browser_sid: ("lee", 60)}
+    sessions.pop(browser_sid, None)
+    print(browser_sid, sessions.get(browser_sid))
+  choices:
+  - text: old None
+    why: The browser can still hold the old string. The server rejects it.
+  - text: old ('lee', 60)
+    why: The server removed the record.
+  - text: None None
+    why: The server cannot change the local variable in this example.
+  - text: old False
+    why: get returns None for an absent key unless given a default.
+  answer: 0
+- id: st20
+  type: explain
+  title: Explain login and logout
+  prompt: Write 2–4 English sentences. Explain why rotation at login and invalidation at logout are both
+    needed. Check the model answer in the lesson after writing.
+  rubric:
+  - Describe what happens to the old ID at login.
+  - Describe the server-side effect of logout.
+  model_answer: After login I create a new session ID and retire the old one. At logout I delete the current
+    session from the server. A copy of either retired ID can no longer find a valid session.
+- id: st21
+  type: terminal
+  title: Hands-on in the Python sandbox
+  guide: handson.md
+  check: Run each sample and match the stated output.
+- id: st22
+  type: boss
+  title: Module checkpoint
+  draws_from:
+  - st02
+  - st05
+  - st09
+  - st14
+  - st17
+  - st19
+  - st18
+  pass_rule: Answer five predicts correctly and pass the final Code tests.
+review_cards:
+  from_steps:
+  - st02
+  - st05
+  - st09
+  - st14
+  - st17
+  - st19
+  vocab: true

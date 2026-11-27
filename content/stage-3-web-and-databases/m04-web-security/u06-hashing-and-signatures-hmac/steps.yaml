@@ -1,0 +1,382 @@
+unit: s3.m04.u06
+python_min: '3.9'
+steps:
+- id: st01
+  type: read
+  title: A notification that may change in transit
+  body: |
+    A monitoring tool sends a webhook, or event message, to a dashboard.
+    A hash is a fingerprint of bytes. Anyone can recompute an unkeyed hash.
+    An HMAC is a tag computed with a shared secret. It helps verify a message's integrity.
+    Encryption hides what the message says. An HMAC tag leaves the text readable.
+    You will sign exact bytes, reject changes, and retire an older key.
+- id: st02
+  type: predict
+  title: Same message, same unkeyed fingerprint
+  code: |
+    from hashlib import sha256
+
+    sender = sha256(b"up").digest()
+    receiver = sha256(b"up").digest()
+    print(sender == receiver)
+  choices:
+  - text: 'False'
+    why: There is no random input here.
+  - text: up
+    why: The print shows a comparison result.
+  - text: None
+    why: Both hash calls return bytes.
+  - text: 'True'
+    why: Both parties run the same public function over the same bytes.
+  answer: 3
+- id: st03
+  type: try
+  title: Change only the message
+  task: Change the second body to b'down' while keeping the key the same.
+  starter: |
+    import hmac
+
+    key = b"toy-only"
+    first = hmac.digest(key, b"up", "sha256")
+    second = hmac.digest(key, b"up", "sha256")
+    print(hmac.compare_digest(first, second))
+  check:
+    stdout_line: 'False'
+- id: st04
+  type: read
+  title: Use a keyed construction
+  body: |
+    hmac.digest(key, body, "sha256") returns a tag as bytes. The body and key are bytes too.
+    A home-made hash of key followed by body is unsafe with some hashes, including SHA-256.
+    Length extension means a digest may expose enough state to continue that hash over more data.
+    HMAC uses two keyed hash applications. Use the library construction.
+    A public-key signature uses a private signing key and a public verification key. HMAC shares one secret.
+- id: st05
+  type: predict
+  title: The same body under two keys
+  code: |
+    import hmac
+
+    body = b"cpu=90"
+    first = hmac.digest(b"demo-v1", body, "sha256")
+    second = hmac.digest(b"demo-v2", body, "sha256")
+    print(first == second, len(second))
+  choices:
+  - text: True 32
+    why: The key is part of HMAC, so the same body is insufficient.
+  - text: False 32
+    why: Changing the key changes the tag. SHA-256 gives 32 raw bytes.
+  - text: False 64
+    why: This is raw bytes. A hex display would have 64 characters.
+  - text: True 64
+    why: Both the key and output representation matter.
+  answer: 1
+- id: st06
+  type: parsons
+  title: Make a tag for one webhook
+  task: Prepare a toy key and exact body bytes. Make the tag, then print its byte count.
+  lines:
+  - import hmac
+  - key = b"demo"
+  - body = b"up"
+  - tag = hmac.digest(key, body, "sha256")
+  - print(len(tag))
+  accepted_orders:
+  - - 0
+    - 2
+    - 1
+    - 3
+    - 4
+  - - 1
+    - 0
+    - 2
+    - 3
+    - 4
+  - - 1
+    - 2
+    - 0
+    - 3
+    - 4
+  - - 2
+    - 1
+    - 0
+    - 3
+    - 4
+  - - 2
+    - 0
+    - 1
+    - 3
+    - 4
+  expected_stdout: '32'
+- id: st07
+  type: fix
+  title: Replace a plain checksum
+  task: |
+    body_tag(key, body) returns the raw 32-byte HMAC-SHA-256 tag.
+    key is nonempty bytes and body is bytes up to 4096 bytes. Use hmac.digest.
+    Example: body_tag(b"k", b"") returns a 32-byte tag, even for the empty body.
+  starter: |
+    def body_tag(key, body):
+        from hashlib import sha256
+
+        return sha256(body).digest()
+  solution: |
+    def body_tag(key, body):
+        from hmac import digest
+
+        return digest(key, body, "sha256")
+  tests: |
+    from hmac import digest
+
+    for key, body in ((b"a", b""), (b"a", b"up"), (b"b", b"up"), (b"a", b"\xff")):
+        assert body_tag(key, body) == digest(key, body, "sha256")
+    assert body_tag(b"a", b"up") != body_tag(b"b", b"up")
+  hint_levels:
+  - A plain hash ignores the key.
+  - Use the library function that accepts both key and body.
+  - Return hmac.digest(key, body, 'sha256').
+  explanation: HMAC binds a body to a secret. Time is O(n + k) for body and key lengths with O(1) output
+    size.
+- id: st08
+  type: read
+  title: Compare the entire expected tag
+  body: |
+    hmac.compare_digest avoids returning early based on matching bytes. Use equal-length byte tags.
+    A hex string is another display for bytes. This sandbox sends raw tags inside Python.
+    Compute the expected tag over the received bytes. Parsing and reformatting may change those bytes.
+    A message with a valid tag can still be replayed. Real webhooks may check timestamps and unique IDs.
+- id: st09
+  type: predict
+  title: Same JSON meaning, changed bytes
+  code: |
+    import hmac
+
+    key = b"demo"
+    one = hmac.digest(key, b'{"up":true}', "sha256")
+    two = hmac.digest(key, b'{"up": true}', "sha256")
+    print(hmac.compare_digest(one, two))
+  choices:
+  - text: 'True'
+    why: HMAC uses bytes and does not parse JSON.
+  - text: TypeError
+    why: Both tags are bytes, which the comparison accepts.
+  - text: 'False'
+    why: The space changes the byte sequence, so the tag changes.
+  - text: None
+    why: compare_digest returns a Boolean.
+  answer: 2
+- id: st10
+  type: code
+  title: Sign a toy event
+  task: |
+    sign(key, body) returns (body, tag) as a tuple. Both inputs are bytes. key is nonempty and body can be empty.
+    Keep the exact bytes. Use HMAC-SHA-256 to return a raw digest.
+    Example: sign(b"k", b"up")[0] returns b"up".
+  exercise: exercises/practice.py
+  function: sign
+  test_class: Sign
+  hint_levels:
+  - Return two items without rewriting the body.
+  - Compute the tag using the shared key and exact bytes.
+  - Return body, hmac.digest(key, body, 'sha256').
+- id: st11
+  type: fix
+  title: Check the whole tag in constant-time style
+  task: |
+    same_tag(expected, supplied) returns bool. expected is exactly 32 bytes.
+    supplied is bytes of at most 64 bytes. Reject a different length.
+    Use hmac.compare_digest for the entire tags. A first-byte match alone must fail.
+    Example: expected b"a"*32 and supplied b"a"+b"b"*31 returns False.
+  starter: |
+    def same_tag(expected, supplied):
+        return expected[:1] == supplied[:1]
+  solution: |
+    def same_tag(expected, supplied):
+        from hmac import compare_digest
+
+        if len(supplied) != len(expected):
+            return False
+        return compare_digest(expected, supplied)
+  tests: |
+    import hmac
+    from unittest.mock import patch
+
+    expected = b"a" * 32
+    assert same_tag(expected, b"a" + b"b" * 31) is False
+    assert same_tag(expected, b"") is False
+    assert same_tag(expected, b"a" * 33) is False
+    with patch("hmac.compare_digest", wraps=hmac.compare_digest) as compare:
+        assert same_tag(expected, expected) is True
+        compare.assert_called_once_with(expected, expected)
+  hint_levels:
+  - A partial match is never enough.
+  - Reject an invalid size, then compare all bytes.
+  - Return compare_digest(expected, supplied) for the equal-length case.
+  explanation: The full tag must match. Comparison takes O(n) time for n tag bytes and O(1) extra space.
+    Here n is fixed.
+- id: st12
+  type: read
+  title: Keep the check close to the receiver
+  body: |
+    The receiver must have the same secret as the sender. Keep it outside the source repository.
+    Reject a missing or wrong-size tag before hashing. Then recompute over the exact body.
+    Use a fixed algorithm from trusted configuration. The incoming message cannot choose how you verify it.
+    A tag does not hide the body. Protect private data with a secure transport too.
+- id: st13
+  type: predict
+  title: A message and a reusable tag
+  code: |
+    import hmac
+
+    key = b"demo"
+    body = b"state=up"
+    tag = hmac.digest(key, body, "sha256")
+    print(body)
+    print(hmac.compare_digest(tag, hmac.digest(key, body, "sha256")))
+  choices:
+  - text: |-
+      b'state=up'
+      True
+    why: The body stays readable, and the same bytes give the same valid tag.
+  - text: |-
+      b'state=up'
+      False
+    why: The key and bytes are unchanged.
+  - text: |-
+      hidden
+      True
+    why: A tag does not encrypt the body.
+  - text: |-
+      hidden
+      False
+    why: The print uses the original body and the tag matches.
+  answer: 0
+- id: st14
+  type: code
+  title: Verify the exact message bytes
+  task: |
+    verify_tag(key, body, tag) returns bool. key is nonempty bytes. body is bytes up to 4096 bytes.
+    tag is bytes up to 64 bytes or None. Require exactly 32 bytes, compute HMAC-SHA-256, and use hmac.compare_digest.
+    Example: a valid tag for b"up" must fail for b"down".
+  exercise: exercises/practice.py
+  function: verify_tag
+  test_class: VerifyTag
+  hint_levels:
+  - Treat the received tag as a claim to verify.
+  - Check its size before making the expected tag.
+  - Use compare_digest(digest(key, body, 'sha256'), tag).
+- id: st15
+  type: read
+  title: Rotate the key with a deadline
+  body: |
+    Sign new events with the current secret. The key ID is a public label.
+    A receiver can keep the old key for a short rotation window.
+    Use the ID only to find a policy entry. Reject unknown or retired keys.
+    If a key leaks, revoke it at once. Do not wait for a normal rotation window.
+- id: st16
+  type: predict
+  title: An old key at its deadline
+  code: |
+    keys = {"old": 10, "next": 50}
+    now = 10
+    for key in ("old", "next"):
+        print(now < keys[key])
+  choices:
+  - text: |-
+      True
+      True
+    why: The old deadline is exclusive.
+  - text: |-
+      False
+      True
+    why: The old key stops at 10. The next key is still in its window.
+  - text: |-
+      True
+      False
+    why: Ten is before 50 but not before 10.
+  - text: |-
+      False
+      False
+    why: Each key has its own deadline.
+  answer: 1
+- id: st17
+  type: code
+  title: 'Checkpoint: verify only during the key''s window'
+  task: |
+    accept_event(keys, kid, now, body, tag, check) returns bool. keys maps key IDs to (secret, deadline).
+    kid is a short string. now and deadline are integer seconds. body and tag are bounded bytes.
+    Reject unknown and expired keys. Otherwise return check(secret, body, tag). Keep keys unchanged.
+    Example: a valid tag for a key expiring at 10 fails at time 10.
+  exercise: exercises/practice.py
+  function: accept_event
+  test_class: AcceptEvent
+  hint_levels:
+  - Reject an unavailable key before checking any tag.
+  - Look up the key ID and compare now with its deadline.
+  - For a live record, call check(record[0], body, tag).
+- id: st18
+  type: predict
+  title: Can a valid tag stop a repeated message?
+  code: |
+    import hmac
+
+    secret = b"demo"
+    body = b"restart-notice"
+    tag = hmac.digest(secret, body, "sha256")
+    for attempt in (1, 2):
+        print(hmac.compare_digest(tag, hmac.digest(secret, body, "sha256")))
+  choices:
+  - text: |-
+      True
+      False
+    why: No used-message state exists in this example.
+  - text: |-
+      False
+      True
+    why: The first body is the same as the signed body.
+  - text: |-
+      False
+      False
+    why: The tag is valid on both copies.
+  - text: |-
+      True
+      True
+    why: The valid tag matches both times. Freshness needs another check.
+  answer: 3
+- id: st19
+  type: explain
+  title: Explain what the tag proves
+  prompt: Write 2–4 English sentences. Explain what a webhook HMAC protects and why the receiver may still
+    need a replay check. Check the model answer in the lesson after writing.
+  rubric:
+  - Mention the shared secret and exact bytes.
+  - Distinguish integrity from confidentiality.
+  - Name a freshness check.
+  model_answer: A matching HMAC checks that the exact bytes came with a tag made using the shared key.
+    The tag does not hide the message. I also check a timestamp and an event ID to reject replays.
+- id: st20
+  type: terminal
+  title: Hands-on in the Python sandbox
+  guide: handson.md
+  check: Run each sample and match the stated output.
+- id: st21
+  type: boss
+  title: Module checkpoint
+  draws_from:
+  - st02
+  - st05
+  - st09
+  - st13
+  - st16
+  - st18
+  - st17
+  pass_rule: Answer five predicts correctly and pass the final Code tests.
+review_cards:
+  from_steps:
+  - st02
+  - st05
+  - st09
+  - st13
+  - st16
+  - st18
+  vocab: true

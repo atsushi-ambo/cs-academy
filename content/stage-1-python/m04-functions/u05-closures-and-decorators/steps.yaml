@@ -1,0 +1,388 @@
+unit: s1.m04.u05
+python_min: '3.9'
+steps:
+- id: st01
+  type: read
+  title: Keep a little state near a function
+  body: |
+    A server monitor may count alerts for each service.
+    You can make one counting function for each service.
+    You will build such functions, fix a loop trap, and wrap calls with extra work.
+
+    A **nested function** is defined inside another function.
+    The outer function's names live in the **enclosing scope**.
+    A **closure** can still read those names after the outer call ends.
+- id: st02
+  type: predict
+  title: Each outer call has its own label
+  code: |
+    def make_label(prefix):
+        def label(host):
+            return prefix + host
+        return label
+
+    dev = make_label("dev-")
+    prod = make_label("prod-")
+    print(dev("db"), prod("db"))
+  choices:
+  - text: prod-db prod-db
+    why: The second call has a separate enclosing scope.
+  - text: dev-db prod-db
+    why: Each closure reads the prefix from its own make_label call.
+  - text: dev-db dev-db
+    why: The first closure does not set a shared prefix.
+  - text: db db
+    why: label adds the prefix before returning.
+  answer: 1
+- id: st03
+  type: read
+  title: Update the name in the outer function
+  body: |
+    Reading an outer name needs no extra keyword.
+    An assignment inside the nested function usually creates a local name.
+    `nonlocal total` tells Python to update `total` in an enclosing function.
+    It needs an existing binding there. A **binding** connects a name to a value.
+- id: st04
+  type: predict
+  title: Read two independent counters
+  code: |
+    def counter():
+        count = 0
+        def step():
+            nonlocal count
+            count += 1
+            return count
+        return step
+
+    left = counter()
+    right = counter()
+    print(left(), left(), right())
+  choices:
+  - text: 1 1 1
+    why: The left closure keeps its updated count between calls.
+  - text: 1 2 3
+    why: The right closure has its own enclosing count.
+  - text: 1 2 1
+    why: The left closure counts twice. The right closure starts from zero.
+  - text: 0 1 0
+    why: Each call adds one before returning.
+  answer: 2
+- id: st05
+  type: fix
+  title: Make increment update the outer count
+  task: Return a zero-argument counter that adds 1 before each result. Each counter starts from the provided
+    integer. For make_counter(9), successive calls return 10 and 11.
+  starter: |
+    def make_counter(start):
+        count = start
+        def increment():
+            count += 1
+            return count
+        return increment
+  solution: |
+    def make_counter(start):
+        count = start
+        def increment():
+            nonlocal count
+            count += 1
+            return count
+        return increment
+  tests: |
+    first = make_counter(9)
+    other = make_counter(-1)
+    assert first() == 10
+    assert other() == 0
+    assert first() == 11
+  hint_levels:
+  - Find which function owns count.
+  - Declare the name before assigning to it inside increment.
+  - Add nonlocal count just before count += 1.
+  explanation: The declaration makes the update reach the enclosing scope. Creating and advancing a counter
+    each take O(1) time and space.
+- id: st06
+  type: code
+  title: Accumulate an alert total
+  task: 'Return a function that accepts an integer delta, adds it to the total, and returns the new total.
+    Keep a separate total for each outer call. Example: add = make_total(3); add(2) returns 5 and add(-2)
+    then returns 3.'
+  exercise: exercises/practice.py
+  function: make_total
+  test_class: MakeTotal
+  hint_levels:
+  - Keep the total in the outer call.
+  - Define add(delta) and let it update the outer total.
+  - Inside add, declare nonlocal total, add delta, and return total. Outer make_total returns add.
+- id: st07
+  type: read
+  title: Freeze a loop value at definition time
+  body: |
+    A loop can build several callbacks that read the same loop variable.
+    That variable may hold the final value when the callbacks run.
+    This is **late binding**. The closure reads the name at call time.
+
+    A **default argument** is set when the function is made.
+    Use `lambda label=label: label` to set a separate default on each loop pass.
+    A helper function called once per item also creates separate bindings.
+- id: st08
+  type: predict
+  title: Read the loop label after the loop ends
+  code: |
+    def jobs():
+        callbacks = []
+        for label in ["api", "db"]:
+            callbacks.append(lambda: label)
+        return callbacks
+
+    first, second = jobs()
+    print(first(), second())
+  choices:
+  - text: api db
+    why: This would require a separate binding or default for each callback.
+  - text: api api
+    why: The last loop pass changes the shared label to db.
+  - text: db api
+    why: The callbacks do not store an ordered copy of each label.
+  - text: db db
+    why: Both functions read the same binding. It holds db when the loop ends.
+  answer: 3
+- id: st09
+  type: fix
+  title: Give every log job a separate host
+  task: 'Return one zero-argument callback per host string, in input order. Each callback returns its
+    own host. Example: for jobs([''api'', ''db'']), calling the two callbacks gives ''api'' and ''db''.
+    Do not change hosts.'
+  starter: |
+    def jobs(hosts):
+        callbacks = []
+        for host in hosts:
+            callbacks.append(lambda: host)
+        return callbacks
+  solution: |
+    def jobs(hosts):
+        callbacks = []
+        for host in hosts:
+            callbacks.append(lambda host=host: host)
+        return callbacks
+  tests: |
+    hosts = ['api', 'db', 'api', 'ops']
+    tasks = jobs(hosts)
+    assert [task() for task in tasks] == ['api', 'db', 'api', 'ops']
+    assert hosts == ['api', 'db', 'api', 'ops']
+    assert jobs([]) == []
+  hint_levels: &id001
+  - Check when the loop variable is read.
+  - Set a default when each lambda is created.
+  - 'Append lambda host=host: host on each pass.'
+  explanation: The default holds the host for that pass. For n hosts, construction takes O(n) time and
+    space. Each callback takes O(1) time and space.
+- id: st10
+  type: read
+  title: Add behavior around a call
+  body: |
+    A **decorator** takes a function and returns its replacement.
+    The replacement is often a **wrapper** that calls the original.
+    `@logged` above a definition does the same job as `read = logged(read)` after it.
+
+    A **positional argument** uses its place in the call. A **keyword argument** uses a name.
+    For example, `read("db", mode="fast")` passes one of each.
+    Write `*args` and `**kwargs` to collect positional and keyword arguments.
+    Pass `fn(*args, **kwargs)` to send them on.
+    A **log sink** receives log messages. For experiments, use a list's append method.
+- id: st11
+  type: predict
+  title: See when a wrapper logs
+  code: |
+    def logged(fn):
+        def wrapper(value):
+            print("call")
+            return fn(value)
+        return wrapper
+
+    @logged
+    def read(value):
+        return value + 1
+
+    print(read(6))
+  choices:
+  - text: 'call
+
+      7'
+    why: The wrapper prints first, then returns 7 to the outer print.
+  - text: '7
+
+      call'
+    why: The outer print waits until the wrapper returns.
+  - text: call
+    why: The outer print also prints the returned value.
+  - text: '7'
+    why: The wrapper runs when read is called.
+  answer: 0
+- id: st12
+  type: parsons
+  title: Forward an argument and return the result
+  task: Place the inner function inside the decorator. Try it on abs.
+  lines:
+  - 'def logged(fn):'
+  - '    def wrapper(value):'
+  - '        print("call")'
+  - '        return fn(value)'
+  - '    return wrapper'
+  - traced = logged(abs)
+  - print(traced(-4))
+  expected_stdout: 'call
+
+    4'
+- id: st13
+  type: read
+  title: Keep the name and measure elapsed time
+  body: |
+    A function name is part of its **metadata**, or details about the function.
+    `from module import name` brings one name from a module into this file.
+    Use `from functools import wraps` and put `@wraps(fn)` above the wrapper definition.
+    Then `wrapper.__name__` reports the original function name.
+    Use `from time import perf_counter`. Call `perf_counter()` to read a clock in seconds.
+    Subtract the start reading from the finish reading to get **elapsed time**.
+- id: st14
+  type: predict
+  title: Keep the original name with wraps
+  code: |
+    from functools import wraps
+
+    def logged(fn):
+        @wraps(fn)
+        def wrapper():
+            return fn()
+        return wrapper
+
+    @logged
+    def health():
+        return "ok"
+
+    print(health.__name__, health())
+  choices:
+  - text: wrapper ok
+    why: The wrapper would have this name without wraps.
+  - text: logged ok
+    why: The decorator name is separate from the wrapped function name.
+  - text: health ok
+    why: wraps keeps the original name. The wrapper returns the original result.
+  - text: health None
+    why: The wrapper has an explicit return.
+  answer: 2
+- id: st15
+  type: try
+  title: Turn on the log sink
+  task: In wrapper, append fn.__name__ to notes before calling fn.
+  starter: |
+    from functools import wraps
+
+    notes = []
+    def logged(fn):
+        @wraps(fn)
+        def wrapper(*args, **kwargs):
+            return fn(*args, **kwargs)
+        return wrapper
+
+    @logged
+    def health(host):
+        return host + " ok"
+
+    health(host="api")
+    print(notes)
+  check:
+    stdout_line: '[''health'']'
+- id: st16
+  type: code
+  title: Wrap a server check with a clock
+  task: 'Return a wrapper for fn. On each successful call, read clock() before and after fn. Send the
+    difference to sink(seconds) and return the original result. Forward positional and keyword arguments
+    and preserve the function name with wraps. Example: clock readings 2 and 5 log 3 seconds to sink.
+    Assume fn, clock, and sink finish normally.'
+  exercise: exercises/practice.py
+  function: timed
+  test_class: Timed
+  hint_levels:
+  - Take one clock reading on either side of the call.
+  - Store the result before sending elapsed time to sink.
+  - Under @wraps(fn), read start, call fn(*args, **kwargs), send clock() - start to sink, then return
+    result.
+- id: st17
+  type: read
+  title: Stop a retry as soon as a result arrives
+  body: |
+    To **retry** is to try again after a temporary failure.
+    For this exercise, `None` is a **sentinel**, a value that marks a failed attempt.
+    Check `result is not None` so a valid result such as 0 ends the loop.
+    This is an **identity comparison**. It checks for the specific object None.
+    Set a limit so a failed check cannot run forever.
+- id: st18
+  type: code
+  title: 'Boss: retry and log the attempts'
+  task: 'Return a wrapper that logs each 1-based attempt number to sink before calling fn. Make at most
+    attempts calls. Return the first result that is not None, or None if all fail. Zero attempts makes
+    no calls. attempts is a nonnegative integer. Forward all arguments and use wraps. Example: results
+    [None, 0] give logs [1, 2] and return 0.'
+  exercise: exercises/practice.py
+  function: retry_with_log
+  test_class: RetryWithLog
+  hint_levels:
+  - A successful result stops the wrapper early.
+  - Loop from 1 through attempts and log before each call.
+  - Forward args and kwargs. Return result when result is not None. Return None after the loop.
+- id: st19
+  type: explain
+  title: Explain it to a teammate
+  prompt: Write 2–4 English sentences. Explain how a wrapper can time a health check and keep its name.
+    After writing, compare with the model answer in the lesson.
+  rubric:
+  - Describe when to read the clock.
+  - Describe argument forwarding, the return value, and wraps.
+  model_answer: The wrapper reads the clock before and after calling the check with its original arguments.
+    It logs the difference and returns the original result. I use wraps so the replacement keeps the original
+    name.
+- id: st20
+  type: terminal
+  title: 'Hands-on: run and change the sample'
+  guide: handson.md
+  check: The original sample prints the expected output in the guide.
+- id: st21
+  type: boss
+  title: 'Mini boss: review and repair'
+  time_limit_minutes: 15
+  pass_rule: Answer at least 4 of 5 predicts and pass the bug-fix tests.
+  draws_from: &id002
+  - st02
+  - st04
+  - st08
+  - st11
+  - st14
+  plus:
+  - type: fix
+    title: Give every log job a separate host
+    task: 'Return one zero-argument callback per host string, in input order. Each callback returns its
+      own host. Example: for jobs([''api'', ''db'']), calling the two callbacks gives ''api'' and ''db''.
+      Do not change hosts.'
+    starter: |
+      def jobs(hosts):
+          callbacks = []
+          for host in hosts:
+              callbacks.append(lambda: host)
+          return callbacks
+    solution: |
+      def jobs(hosts):
+          callbacks = []
+          for host in hosts:
+              callbacks.append(lambda host=host: host)
+          return callbacks
+    tests: |
+      hosts = ['api', 'db', 'api', 'ops']
+      tasks = jobs(hosts)
+      assert [task() for task in tasks] == ['api', 'db', 'api', 'ops']
+      assert hosts == ['api', 'db', 'api', 'ops']
+      assert jobs([]) == []
+    hint_levels: *id001
+    explanation: The default holds the host for that pass. For n hosts, construction takes O(n) time and
+      space. Each callback takes O(1) time and space.
+review_cards:
+  from_steps: *id002
+  vocab: true

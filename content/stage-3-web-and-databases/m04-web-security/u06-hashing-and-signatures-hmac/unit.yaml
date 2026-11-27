@@ -1,0 +1,64 @@
+id: s3.m04.u06
+title: 'Hashing and signatures (HMAC): integrity of data you send'
+stage: 3
+module: Web Security
+version: 1
+status: draft
+estimated_minutes: 80
+prerequisites:
+- s3.m04.u04
+- s3.m04.u05
+objectives:
+- Distinguish hashes, HMACs, encryption, and public-key signatures.
+- Sign and verify the bytes of a toy webhook.
+- Accept old keys only within a planned rotation window.
+skills:
+- security.hmac
+- security.key-rotation
+- english.explain-code
+parts:
+- steps.yaml
+- lesson.md
+- handson.md
+- exercises/
+- tests/
+- solutions/solutions.md
+references:
+- kind: official_doc
+  title: Python hmac
+  url: https://docs.python.org/3.13/library/hmac.html
+- kind: official_doc
+  title: Python hashlib
+  url: https://docs.python.org/3.13/library/hashlib.html
+- kind: official_doc
+  title: HMAC specification
+  url: https://www.rfc-editor.org/rfc/rfc2104.html
+vocab:
+- en: hash
+  ja: 入力から固定長の値を作る関数
+- en: integrity
+  ja: 改変されていないこと
+- en: confidentiality
+  ja: 内容の機密性
+- en: encryption
+  ja: 暗号化
+- en: HMAC
+  ja: 共通の秘密鍵を使うメッセージ認証コード
+- en: MAC tag
+  ja: メッセージ認証タグ
+- en: digital signature
+  ja: 公開鍵で検証できる電子署名
+- en: length extension
+  ja: 一部のハッシュ構造における長さ拡張
+- en: hexadecimal
+  ja: 16進表記
+- en: webhook
+  ja: 別サービスから届くイベント通知
+- en: replay
+  ja: 同じ通知を再送すること
+- en: constant-time comparison
+  ja: 内容による実行時間の差を抑えた比較
+- en: rotation window
+  ja: 鍵の移行を許す期間
+- en: key ID
+  ja: 鍵の識別子

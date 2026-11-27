@@ -1,0 +1,68 @@
+id: s3.m04.u05
+title: Cookies, server sessions, and token authentication
+stage: 3
+module: Web Security
+version: 1
+status: draft
+estimated_minutes: 85
+prerequisites:
+- s3.m01.u02
+- s3.m04.u03
+- s3.m04.u04
+objectives:
+- Issue and revoke server sessions.
+- Rotate the session ID after a login.
+- Compare server sessions, bearer tokens, and JWTs.
+skills:
+- security.session-lifecycle
+- security.cookie-flags
+- english.explain-code
+parts:
+- steps.yaml
+- lesson.md
+- handson.md
+- exercises/
+- tests/
+- solutions/solutions.md
+references:
+- kind: official_doc
+  title: Python http.cookies
+  url: https://docs.python.org/3.13/library/http.cookies.html
+- kind: official_doc
+  title: Python secrets
+  url: https://docs.python.org/3.13/library/secrets.html
+- kind: official_doc
+  title: OWASP Session Management
+  url: https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html
+- kind: official_doc
+  title: JWT Best Current Practices
+  url: https://www.rfc-editor.org/rfc/rfc8725.html
+vocab:
+- en: session ID
+  ja: セッションを指す識別子
+- en: opaque
+  ja: 中身に意味を持たない
+- en: Set-Cookie
+  ja: ブラウザーにCookieを設定するレスポンスヘッダー
+- en: HttpOnly
+  ja: スクリプトからのCookie読み取りを防ぐ属性
+- en: Secure
+  ja: 通常はHTTPSにのみCookieを送る属性
+- en: SameSite
+  ja: サイトをまたぐCookie送信を制限する属性
+- en: expiry
+  ja: 有効期限
+- en: invalidation
+  ja: 無効化
+- en: session fixation
+  ja: 既知のセッションIDをログイン後も使わせる問題
+- en: bearer token
+  ja: 持っている人が提示して使えるトークン
+- en: JWT
+  ja: クレームを運ぶJSON Web Token
+- en: claim
+  ja: トークン内の属性や主張
+- en: revocation
+  ja: 有効期間内の失効
+- en: algorithm allowlist
+  ja: 使用可能なアルゴリズムの許可リスト

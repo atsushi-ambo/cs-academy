@@ -1,0 +1,378 @@
+unit: s2.m06.u04
+python_min: '3.9'
+steps:
+- id: st01
+  type: read
+  title: Find a route that takes less time
+  body: |
+    A request can cross several network links before it reaches a server.
+    Each link has a **weight**, such as **latency** in milliseconds.
+    A **weighted graph** gives a cost to each edge.
+    You will find the lowest **total cost**, the sum of the weights along a path.
+    You will also find which links form that path.
+- id: st02
+  type: predict
+  title: The route with fewer hops can take longer
+  code: |
+    direct = [12]
+    relay = [3, 4]
+    print(len(direct), sum(direct), len(relay), sum(relay))
+  choices:
+  - text: 1 12 2 7
+    why: The one-hop route costs 12. The two-hop route costs only 7.
+  - text: 1 7 2 12
+    why: The direct link weighs 12 on its own.
+  - text: 12 1 7 2
+    why: Each pair prints the length before the sum.
+  - text: 1 12 2 4
+    why: Sum adds both relay weights, 3 and 4.
+  answer: 0
+- id: st03
+  type: read
+  title: Take the cheapest known route next
+  body: |
+    BFS processes routes by number of hops. Its first visit can miss a cheaper route.
+    **Dijkstra's algorithm** takes the currently cheapest candidate first.
+    Use a **min-heap**, a **priority queue** where the smallest key comes out first.
+    Python's `heapq.heappush(heap, item)` adds an item. `heappop(heap)` removes the smallest.
+    Store `(cost, node)` pairs. Strings break cost ties in these examples.
+- id: st04
+  type: predict
+  title: The heap compares cost before node name
+  code: |
+    from heapq import heappop, heappush
+
+    heap = [(9, "api")]
+    heappush(heap, (2, "db"))
+    heappush(heap, (2, "cache"))
+    print(heappop(heap))
+  choices:
+  - text: (9, 'api')
+    why: The largest cost waits in the heap.
+  - text: (2, 'cache')
+    why: Both low costs are 2. The string cache sorts before db.
+  - text: (2, 'db')
+    why: Equal costs are compared by the second tuple field.
+  - text: '2'
+    why: heappop returns the full pair.
+  answer: 1
+- id: st05
+  type: try
+  title: Make the relay-first item cheaper
+  task: Change the cost of db to 1. Observe which pair leaves the heap first.
+  starter: |
+    from heapq import heappop, heappush
+
+    heap = [(9, "api")]
+    heappush(heap, (2, "db"))
+    heappush(heap, (2, "cache"))
+    print(heappop(heap))
+  check:
+    stdout_line: (1, 'db')
+- id: st06
+  type: read
+  title: Improve a candidate and keep the best cost
+  body: |
+    Start with cost 0 at the source. Missing nodes have no known cost yet.
+    For an edge of weight w from a node with cost d, try the new cost d + w.
+    Save it only if it improves the **tentative distance**, the best cost found so far.
+    This check and update is called **relaxation**.
+    Push a new pair for each improvement. An old pair is a **stale entry**.
+    When you pop a pair, skip it if its cost differs from the best cost.
+- id: st07
+  type: predict
+  title: A later route can lower the best cost
+  code: |
+    best = {"db": 12}
+    via = 3 + 4
+    if via < best["db"]:
+        best["db"] = via
+    print(best["db"])
+  choices:
+  - text: '12'
+    why: The current cost can change before it is settled.
+  - text: '4'
+    why: The last edge is just part of the route.
+  - text: '7'
+    why: The route adds both weights and replaces 12 with 7.
+  - text: '19'
+    why: The new route replaces the old cost rather than adding to it.
+  answer: 2
+- id: st08
+  type: parsons
+  title: Set a new best distance and queue it
+  task: Store the improvement before pushing it. Pop the cheap pair and print it.
+  lines:
+  - from heapq import heappop, heappush
+  - heap = [(12, "db")]
+  - 'best = {"db": 12}'
+  - 'if 7 < best["db"]:'
+  - '    best["db"] = 7'
+  - '    heappush(heap, (best["db"], "db"))'
+  - print(heappop(heap))
+  expected_stdout: (7, 'db')
+  accepted_orders:
+  - - 0
+    - 2
+    - 1
+    - 3
+    - 4
+    - 5
+    - 6
+  - - 1
+    - 0
+    - 2
+    - 3
+    - 4
+    - 5
+    - 6
+  - - 1
+    - 2
+    - 0
+    - 3
+    - 4
+    - 5
+    - 6
+  - - 2
+    - 0
+    - 1
+    - 3
+    - 4
+    - 5
+    - 6
+  - - 2
+    - 1
+    - 0
+    - 3
+    - 4
+    - 5
+    - 6
+- id: st09
+  type: fix
+  title: Ignore a heap entry replaced by a cheaper one
+  task: 'Given popped (cost, node) pairs and a dict of their best known costs, return only pairs whose
+    cost equals the best. Keep order and duplicates. Every node has a best cost. Example: current([(4,
+    ''db''), (9, ''db'')], {''db'': 4}) returns [(4, ''db'')]. Leave inputs unchanged.'
+  starter: |
+    def current(entries, best):
+        kept = []
+        for cost, node in entries:
+            if cost != best[node]:
+                kept.append((cost, node))
+        return kept
+  solution: |
+    def current(entries, best):
+        kept = []
+        for cost, node in entries:
+            if cost == best[node]:
+                kept.append((cost, node))
+        return kept
+  tests: |
+    entries = [(4, 'db'), (9, 'db'), (4, 'db'), (5, 'api')]
+    best = {'db': 4, 'api': 5}
+    assert current(entries, best) == [(4, 'db'), (4, 'db'), (5, 'api')]
+    assert entries == [(4, 'db'), (9, 'db'), (4, 'db'), (5, 'api')]
+    assert best == {'db': 4, 'api': 5}
+    assert current([], {}) == []
+  hint_levels:
+  - Find which pair is current.
+  - Compare a popped cost with the best known cost for that node.
+  - Append only when cost == best[node].
+  explanation: The old heap entry can stay until popped. Checking n entries takes O(n) time and at most
+    O(n) space for the output.
+- id: st10
+  type: code
+  title: Compute best latencies to every reachable host
+  task: 'Implement Dijkstra with heapq. graph maps string hosts to lists of (host, nonnegative integer
+    latency) pairs. Every neighbor has a key. Return a dict of minimum latencies including start at 0.
+    Omit unreachable hosts. Return {} if start is absent. Keep graph unchanged. Example: latencies({''api'':
+    [(''db'', 4)], ''db'': []}, ''api'') returns {''api'': 0, ''db'': 4}.'
+  exercise: exercises/practice.py
+  function: latencies
+  test_class: Latencies
+  hint_levels:
+  - Keep a heap of possible routes and a dict of best costs.
+  - Pop the cheapest pair. Skip an old pair. For each edge, add its weight.
+  - When candidate is smaller or the neighbor is new, update best[neighbor] and push (candidate, neighbor).
+- id: st11
+  type: predict
+  title: Read the up-to-date pair before the old pair
+  code: |
+    from heapq import heappop, heappush
+
+    heap = [(12, "db")]
+    best = {"db": 7}
+    heappush(heap, (7, "db"))
+    kept = []
+    while heap:
+        cost, node = heappop(heap)
+        if cost == best[node]:
+            kept.append(cost)
+    print(kept)
+  choices:
+  - text: '[7, 12]'
+    why: The old cost stays in the heap but is skipped after removal.
+  - text: '[12]'
+    why: The heap pops 7 first, and 12 no longer matches best.
+  - text: '[]'
+    why: The pair with 7 still matches the dictionary.
+  - text: '[7]'
+    why: The smaller pair leaves first. The old cost fails the equality check.
+  answer: 3
+- id: st12
+  type: read
+  title: Save predecessors as you improve costs
+  body: |
+    A **predecessor** is the node just before another on a chosen route.
+    When a cost improves, store the node that gave the improvement.
+    Updating both dictionaries keeps the route matched to its cost.
+    For **path reconstruction**, walk from target back to start using predecessors.
+    Then reverse the collected list with `path[::-1]`.
+    An **unreachable** target has no route from the start.
+- id: st13
+  type: fix
+  title: Read the route in travel order
+  task: 'Follow parent links back from target and return the route from start to target. All links lead
+    to start. Leave parent unchanged. Example: route({''db'': ''cache'', ''cache'': ''api''}, ''api'',
+    ''db'') returns [''api'', ''cache'', ''db'']. If start equals target, return a one-item list.'
+  starter: |
+    def route(parent, start, target):
+        path = [target]
+        while target != start:
+            target = parent[target]
+            path.append(target)
+        return path
+  solution: |
+    def route(parent, start, target):
+        path = [target]
+        while target != start:
+            target = parent[target]
+            path.append(target)
+        return path[::-1]
+  tests: |
+    parent = {'db': 'cache', 'cache': 'api'}
+    assert route(parent, 'api', 'db') == ['api', 'cache', 'db']
+    assert parent == {'db': 'cache', 'cache': 'api'}
+    assert route({}, 'api', 'api') == ['api']
+  hint_levels: &id001
+  - Look at which end of path you fill first.
+  - Return the collected path in reverse order.
+  - Change the return to path[::-1].
+  explanation: The parent chain gives the route backwards. For a path with k hosts, collecting and reversing
+    use O(k) time and O(k) space.
+- id: st14
+  type: code
+  title: Trace a route with an optional missing target
+  task: 'The dict parent maps each reached node other than start to its predecessor. Every chain ends
+    at start. Return the list from start to target, or [] if target was not reached. Do not change parent.
+    Example: trace_route({''z'': ''a''}, ''a'', ''z'') returns [''a'', ''z''].'
+  exercise: exercises/practice.py
+  function: trace_route
+  test_class: TraceRoute
+  hint_levels:
+  - Check whether the target has a predecessor unless it is start.
+  - Walk back one link at a time.
+  - Start path with target. Append parent[path[-1]] until start, then return path[::-1].
+- id: st15
+  type: read
+  title: Use only nonnegative weights
+  body: |
+    A **nonnegative** weight is zero or greater.
+    A **settled distance** is a best cost that cannot get smaller.
+    With nonnegative weights, a current minimum pair settles its node.
+    Any route through a later pair starts at an equal or larger cost.
+    A negative edge can break this rule. For example, 5 + (−4) can beat 2.
+    You can stop at the first current target pair only under the nonnegative rule.
+- id: st16
+  type: predict
+  title: A negative edge can break the early stop
+  code: |
+    from heapq import heappop, heappush
+
+    heap = [(2, "target")]
+    heappush(heap, (5, "relay"))
+    cost, node = heappop(heap)
+    print(node, cost, 5 + (-4))
+  choices:
+  - text: target 2 1
+    why: The target comes out first, but a later negative edge could give a cost of 1.
+  - text: relay 5 1
+    why: The heap orders candidates by known cost, so 2 leaves before 5.
+  - text: target 1 1
+    why: The route through relay has not been explored when the target is popped.
+  - text: target 2 9
+    why: Adding a negative weight lowers the relay cost.
+  answer: 0
+- id: st17
+  type: code
+  title: 'Boss: return the cheapest path and its cost'
+  task: 'Use heapq and Dijkstra to return (cost, path) for a graph of string hosts. Each neighbor has
+    a key. Each edge is a (host, nonnegative integer latency) pair. path lists hosts from start through
+    target. Any equal-cost best path is valid. Return (None, []) for an absent host or unreachable target.
+    Leave graph unchanged. Example: lowest_latency({''a'': [(''b'', 3)], ''b'': []}, ''a'', ''b'') returns
+    (3, [''a'', ''b'']).'
+  exercise: exercises/practice.py
+  function: lowest_latency
+  test_class: LowestLatency
+  hint_levels:
+  - Store a parent whenever you improve a distance.
+  - Skip stale heap entries before checking the target.
+  - At a current target pair, follow parent to start and reverse the path. Return (None, []) if the heap
+    empties first.
+- id: st18
+  type: explain
+  title: Explain it to a teammate
+  prompt: Write 2–4 English sentences. Explain why the first current pair for the target gives its minimum
+    cost. After writing, compare with the model answer in the lesson.
+  rubric:
+  - Describe the ordering of pending costs.
+  - Explain what the nonnegative condition guarantees.
+  model_answer: The heap removes the least cost among the pending routes. I skip a pair if its cost is
+    old. Any remaining route can only add nonnegative cost, so it cannot beat the current target cost.
+- id: st19
+  type: terminal
+  title: 'Hands-on: run and change the sample'
+  guide: handson.md
+  check: The original sample prints the expected output in the guide.
+- id: st20
+  type: boss
+  title: 'Mini boss: review and repair'
+  time_limit_minutes: 15
+  pass_rule: Answer at least 4 of 5 predicts and pass the bug-fix tests.
+  draws_from: &id002
+  - st02
+  - st04
+  - st07
+  - st11
+  - st16
+  plus:
+  - type: fix
+    title: Read the route in travel order
+    task: 'Follow parent links back from target and return the route from start to target. All links lead
+      to start. Leave parent unchanged. Example: route({''db'': ''cache'', ''cache'': ''api''}, ''api'',
+      ''db'') returns [''api'', ''cache'', ''db'']. If start equals target, return a one-item list.'
+    starter: |
+      def route(parent, start, target):
+          path = [target]
+          while target != start:
+              target = parent[target]
+              path.append(target)
+          return path
+    solution: |
+      def route(parent, start, target):
+          path = [target]
+          while target != start:
+              target = parent[target]
+              path.append(target)
+          return path[::-1]
+    tests: |
+      parent = {'db': 'cache', 'cache': 'api'}
+      assert route(parent, 'api', 'db') == ['api', 'cache', 'db']
+      assert parent == {'db': 'cache', 'cache': 'api'}
+      assert route({}, 'api', 'api') == ['api']
+    hint_levels: *id001
+    explanation: The parent chain gives the route backwards. For a path with k hosts, collecting and reversing
+      use O(k) time and O(k) space.
+review_cards:
+  from_steps: *id002
+  vocab: true

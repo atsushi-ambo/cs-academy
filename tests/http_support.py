@@ -181,6 +181,22 @@ def play_lists(case, api):
 
 
 TRY_EDITS = {
+    "s2.m04.u01": [
+        ('target = 7', 'target = 4'),
+    ],
+    "s2.m04.u02": [
+        ('values = [1, 2, 3, 4]', 'values = [1, 2, 3, 4, 5]'),
+        ('values = [5, 1, 4, 2]', 'values = [2, 3, 4, 1]'),
+    ],
+    "s2.m04.u04": [
+        ('size = 8', 'size = 16'),
+    ],
+    "s2.m04.u03": [
+        ('values = [6, 2, 5, 3]', 'values = [6, 2, 5, 9]'),
+    ],
+    "s2.m05.u02": [
+        ('routes(2)', 'routes(3)'),
+    ],
     "s1.m02.u02": [
         ('["web", "db"]', '["web", "db", "cache"]'),
         ("range(3, 0, -1)", "range(3, -1, -1)"),
@@ -247,7 +263,16 @@ TRY_EDITS = {
         ('slots[0]', 'slots[3]'),
         ('range(5)', 'range(9)'),
     ],
+    "s2.m03.u01": [("index = 2", "index = 0")],
+    "s2.m03.u06": [("prev = [None, None]", "prev = [None, 0]")],
+    "s2.m03.u02": [("size = 1", "size = 2")],
+    "s2.m03.u07": [("head = 1", "head = 0")],
+    "s2.m03.u03": [("[200, 500, 200]", "[200, 500, 200, 503]")],
+    "s2.m03.u08": [("capacity = 4", "capacity = 8")],
+    "s2.m03.u09": [('"mail"', '"api"')],
 }
+TRY_EDITS.update({'s2.m03.u01': [('index = 2', 'index = 0')], 's2.m03.u06': [('prev = [None, None]', 'prev = [None, 0]')], 's2.m03.u02': [('size = 1', 'size = 2')], 's2.m03.u07': [('head = 1', 'head = 0')], 's2.m03.u03': [('[200, 500, 200]', '[200, 500, 200, 503]')], 's2.m03.u08': [('capacity = 4', 'capacity = 8')], 's2.m03.u09': [('"mail"', '"api"')], 's1.m04.u04': [('return value * 2', 'return value + 10')], 's1.m04.u05': [('        return fn(*args, **kwargs)', '        notes.append(fn.__name__)\n        return fn(*args, **kwargs)')], 's2.m06.u03': [('print(frontier.popleft())', 'frontier.popleft()\nprint(frontier.popleft())')], 's2.m06.u04': [('heappush(heap, (2, "db"))', 'heappush(heap, (1, "db"))')], 's2.m07.u01': [('print(fib(4), calls)', 'print(fib(3), calls)')], 's2.m07.u02': [('range(2, 5)', 'range(4, 1, -1)')], 's2.m08.u06': [('values = filter(lambda n: n > 0, [3, -1, 2])', 'values = list(filter(lambda n: n > 0, [3, -1, 2]))')], 's3.m04.u01': [('"owner": "kai"', '"owner": "lee"')], 's3.m04.u02': [('name = "Ada"', 'name = "O\'Neil"')], 's3.m04.u03': [('label = "ready"', 'label = "<b>ready</b>"')], 's3.m04.u04': [('OUTPUT = "md5"', 'OUTPUT = "sha256"'), ('calls = 4', 'calls = 8')], 's3.m04.u05': [('print(cookie["sid"].OutputString())', 'cookie["sid"]["httponly"] = True\nprint(cookie["sid"].OutputString())'), ('sid = token_urlsafe(16)', 'sid = token_urlsafe(32)')], 's3.m04.u06': [('second = hmac.digest(key, b"up"', 'second = hmac.digest(key, b"down"')], 's3.m04.u07': [('port = 0', 'port = 1')], 's3.m04.u08': [('{"patched": True}', '{"patched": False}')], 's2.m06.u01': [('tree = Node("web", Node("api", Node("db")), Node("cdn"))\n', 'tree = Node("web", Node("api", Node("db")), Node("cdn", None, Node("edge")))\n'), ('tree = ("a", ("b", None, None), None)\n', 'tree = ("a", ("b", ("c", None, None), None), None)\n')], 's2.m06.u05': [('print(trace(tree, 65))\n', 'print(trace(tree, 22))\n'), ('for key in [1, 2, 3, 4]:\n', 'for key in [2, 1, 3, 4]:\n')], 's2.m06.u06': [('root = Node(9, None, Node(14, Node(11)))\n', 'root = Node(9, None, Node(14))\n')], 's2.m06.u02': [('i = 4\n', 'i = 5\n'), ('for index, job in enumerate([(4, "archive"), (1, "z-check"), (1, "a-check")]):\n', 'for index, job in enumerate([(0, "archive"), (1, "z-check"), (1, "a-check")]):\n')], 's2.m06.u07': [('values = [9, 6, 5, 1, 12]\nend = 4\n', 'values = [9, 6, 5, 1, 4]\nend = 5\n'), ('values[0], values[2] = values[2], values[0]\n', 'other = values.pop(2)\nvalues.insert(0, other)\n')]})
+
 
 
 def try_source(uid, step, index):

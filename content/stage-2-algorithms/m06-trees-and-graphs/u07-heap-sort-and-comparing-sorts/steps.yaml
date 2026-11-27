@@ -1,0 +1,440 @@
+unit: s2.m06.u07
+python_min: '3.9'
+steps:
+- id: st01
+  type: read
+  title: Sort a batch with little extra memory
+  body: |
+    A server may need to order a large batch of timings in the same list.
+    **Heap sort** uses a heap to move the largest remaining timing into its final slot.
+    You will write the sort, then compare it with selection, insertion, merge, and quicksort.
+    Each is a **comparison sort**: it uses comparisons between keys to decide their order.
+- id: st02
+  type: read
+  title: Use a max-heap in a shrinking prefix
+  body: |
+    In a **max-heap**, each parent is at least as large as its children. The largest item is at index 0.
+    The **active prefix** is the part that still forms the heap. It uses indexes 0 through `end - 1`.
+    Here end is an **exclusive end**: end itself is outside the heap.
+    Swap the root with the last active item at end - 1. Reduce end by one, then sift down.
+    The **sorted suffix** starts at the new end. Every later sift leaves it alone.
+- id: st03
+  type: predict
+  title: Separate one more maximum
+  code: |
+    values = [9, 6, 5, 1, 12]
+    end = 4
+    last = end - 1
+    values[0], values[last] = values[last], values[0]
+    end -= 1
+    print(values[:end], values[end:])
+  choices:
+  - text: '[1, 6, 5, 9] [12]'
+    why: This leaves 9 inside the active part. The code lowers end.
+  - text: '[9, 6, 5] [1, 12]'
+    why: The swap replaces the root with 1.
+  - text: '[1, 6, 5] [9, 12]'
+    why: The old maximum goes next to 12, and end drops to 3.
+  - text: '[6, 1, 5] [9, 12]'
+    why: Sifting would move 6 up, but this snippet ends before the sift.
+  answer: 2
+- id: st04
+  type: try
+  title: Move a maximum with no sorted suffix yet
+  starter: |
+    values = [9, 6, 5, 1, 12]
+    end = 4
+    last = end - 1
+    values[0], values[last] = values[last], values[0]
+    end -= 1
+    print(values[:end], values[end:])
+  task: Replace the last item with 4 and set end to 5. The whole list starts as a heap. Run the swap and
+    inspect both parts.
+  check:
+    stdout_line: '[4, 6, 5, 1] [9]'
+- id: st05
+  type: read
+  title: Sift down without touching the suffix
+  body: |
+    Start at the index that might be too small. Find the larger child inside the active prefix.
+    If no child exists, stop. If the parent is at least as large as that child, stop.
+    Otherwise swap and keep going from the child's index.
+    Treat end as the limit for both children, even when the list itself is longer.
+- id: st06
+  type: predict
+  title: Ignore a larger value outside the heap
+  code: |
+    def sift_down_max(values, i, end):
+        while 2*i + 1 < end:
+            child = 2*i + 1
+            right = child + 1
+            if right < end and values[right] > values[child]:
+                child = right
+            if values[i] >= values[child]:
+                break
+            values[i], values[child] = values[child], values[i]
+            i = child
+
+    values = [3, 5, 20, 34]
+    sift_down_max(values, 0, 2)
+    print(values)
+  choices:
+  - text: '[20, 5, 3, 34]'
+    why: 20 sits at index 2, outside the active prefix.
+  - text: '[34, 5, 20, 3]'
+    why: The algorithm visits children inside the prefix only.
+  - text: '[3, 5, 20, 34]'
+    why: The left child at index 1 can still move up.
+  - text: '[5, 3, 20, 34]'
+    why: The only active child is 5. Swap it up and leave the suffix alone.
+  answer: 3
+- id: st07
+  type: fix
+  title: Stop at the active leaf
+  task: Fix a downward sift for an integer max-heap prefix. Index i is inside a non-empty prefix. Only its
+    value may be too small. Update the list in place and return None. Sifting [3, 9, 11, 20] at i = 0 with
+    end = 1 must leave it unchanged.
+  starter: |
+    def sift_down_max(values, i, end):
+        while 2*i + 1 < len(values):
+            child = 2*i + 1
+            right = child + 1
+            if right < end and values[right] > values[child]:
+                child = right
+            if values[i] >= values[child]:
+                break
+            values[i], values[child] = values[child], values[i]
+            i = child
+  solution: |
+    def sift_down_max(values, i, end):
+        while 2*i + 1 < end:
+            child = 2*i + 1
+            right = child + 1
+            if right < end and values[right] > values[child]:
+                child = right
+            if values[i] >= values[child]:
+                break
+            values[i], values[child] = values[child], values[i]
+            i = child
+  tests: |
+    values = [3, 9, 11, 20]
+    assert sift_down_max(values, 0, 1) is None
+    assert values == [3, 9, 11, 20]
+    values = [3, 5, 20]
+    sift_down_max(values, 0, 2)
+    assert values == [5, 3, 20]
+  hint_levels: &id001
+  - Compare the length of the list with the active heap size.
+  - Guard the left child with the same end bound used for the right.
+  - Use while 2*i + 1 < end for the loop condition.
+  explanation: The left link is usable only within the active heap. A bounded sift follows one path in O(log
+    n) time and uses O(1) extra space.
+- id: st08
+  type: code
+  title: Write a bounded max-heap sift
+  task: Repair the max-heap prefix in place. Index i is valid inside the prefix of length end. Its child
+    subtrees are already max-heaps. Return None, keep values[end:] unchanged, and use no sort or heap library.
+    Sifting [1, 7, 5, 2, 4, 12] at 0 with end = 5 yields [7, 4, 5, 2, 1, 12].
+  exercise: exercises/practice.py
+  function: sift_down_max
+  test_class: SiftDownMax
+  hint_levels:
+  - Which child can become a parent of the other child?
+  - Compare only active child indexes. Pick the larger active child.
+  - If values[i] is smaller, swap it with that child and set i to the child's index.
+- id: st09
+  type: read
+  title: Build once, then shrink
+  body: |
+    Build the max-heap from the last parent down to the root. That takes O(n) time.
+    Then move one maximum to the suffix on each pass. One active item already fits, so stop there.
+    **In place** here means using the original list and O(1) extra working space.
+    Heap sort takes O(n log n) worst-case time. Each of up to n removals sifts down one path.
+- id: st10
+  type: parsons
+  title: Shrink before repair
+  task: Order a trace of one extraction. Log the swap before logging the repair. Both use the reduced end.
+  lines:
+  - 'def move(end):'
+  - '    end -= 1'
+  - '    print("swap", end)'
+  - '    print("repair", end)'
+  - '    return end'
+  - print(move(4))
+  expected_stdout: 'swap 3
+
+    repair 3
+
+    3'
+- id: st11
+  type: code
+  title: Move one maximum into the suffix
+  task: Given a max-heap prefix of an integer list with 2 <= end <= len(values), put its maximum at end
+    - 1. Repair the remaining prefix with the given sift_down_max(values, i, end). Work in place and return
+    the new end. For [9, 6, 4, 2, 12] and end = 4, return 3 and leave [6, 2, 4, 9, 12].
+  exercise: exercises/practice.py
+  function: move_max
+  test_class: MoveMax
+  hint_levels:
+  - The last active slot is where the root belongs.
+  - After the swap, that slot is outside the heap.
+  - Decrease end, swap indexes 0 and end, then call sift_down_max(values, 0, end) and return end.
+- id: st12
+  type: fix
+  title: Include the root when building
+  task: Fix the build so it makes a max-heap in place from any integer list. Return None. With [1, 8, 3],
+    it must move 8 to index 0. Use the given sift helper and leave an empty list alone.
+  starter: |
+    def sift_down_max(values, i, end):
+        while 2*i + 1 < end:
+            child = 2*i + 1
+            right = child + 1
+            if right < end and values[right] > values[child]:
+                child = right
+            if values[i] >= values[child]:
+                break
+            values[i], values[child] = values[child], values[i]
+            i = child
+
+    def build(values):
+        end = len(values)
+        for i in range(end // 2 - 1, 0, -1):
+            sift_down_max(values, i, end)
+  solution: |
+    def sift_down_max(values, i, end):
+        while 2*i + 1 < end:
+            child = 2*i + 1
+            right = child + 1
+            if right < end and values[right] > values[child]:
+                child = right
+            if values[i] >= values[child]:
+                break
+            values[i], values[child] = values[child], values[i]
+            i = child
+
+    def build(values):
+        end = len(values)
+        for i in range(end // 2 - 1, -1, -1):
+            sift_down_max(values, i, end)
+  tests: |
+    values = [1, 8, 3]
+    assert build(values) is None
+    assert values == [8, 1, 3]
+    values = [0, 3, 2, 7, 6]
+    build(values)
+    assert values[0] == 7
+    assert all(values[(i - 1) // 2] >= values[i] for i in range(1, len(values)))
+    assert build([]) is None
+  hint_levels:
+  - Which parent still has not been visited?
+  - range excludes the stop value.
+  - Use -1 as the stop value so the last iteration reaches index 0.
+  explanation: The root sift is part of the bottom-up build. Most nodes move only a short distance. The
+    full build takes O(n) time and O(1) extra space.
+- id: st13
+  type: code
+  title: Write in-place heap sort
+  task: Sort an integer list in ascending order in its original list and return None. Use the given local
+    sift_down_max helper. Build the heap, then shrink it until one item remains. Use no extra list, sort,
+    or heap library. [4, -1, 4, 0] becomes [-1, 0, 4, 4].
+  exercise: exercises/practice.py
+  function: heap_sort
+  test_class: HeapSort
+  hint_levels:
+  - First arrange the whole list into a max-heap.
+  - Sift parents from bottom to top. Then repeat the move-and-sift step.
+  - Once the heap is built, use while end > 1. Decrease end, swap the root with values[end], then sift with
+    that end.
+- id: st14
+  type: read
+  title: Keep ties in the same order when it matters
+  body: |
+    A sort has **stability** when tied keys keep their order from the input.
+    For logs with the same time, that can keep events in arrival order.
+    A long swap can pass one record over another record with the same key.
+    Selection sort's usual swap and heap sort's root swap can both break stability.
+- id: st15
+  type: predict
+  title: Check the order of tied records after a swap
+  code: |
+    values = [(8, "first"), (8, "second"), (2, "other")]
+    values[0], values[2] = values[2], values[0]
+    print(values[1][1], values[2][1])
+  choices:
+  - text: first second
+    why: The swap moved the first record past the second.
+  - text: second first
+    why: The record at index 1 stayed in place. The first record moved to index 2.
+  - text: other second
+    why: The record labeled other moved to index 0, which is outside the two printed indexes.
+  - text: 8 8
+    why: The code prints names at index 1 inside each tuple, rather than their keys.
+  answer: 1
+- id: st16
+  type: try
+  title: Keep ties in place by shifting a block
+  starter: |
+    values = [(8, "first"), (8, "second"), (2, "other")]
+    values[0], values[2] = values[2], values[0]
+    print(values[1][1], values[2][1])
+  task: Instead of swapping, set other = values.pop(2), then call values.insert(0, other). Look at the order
+    of the two names.
+  check:
+    stdout_line: first second
+- id: st17
+  type: read
+  title: Compare five common implementations
+  body: |
+    **Auxiliary space** is the extra memory used during the sort. The table excludes the input.
+    A quicksort **pivot** is a key used to split a range. A **partition** moves items into groups around it.
+
+    | Sort | Average time | Worst time | Extra space | Stable? |
+    | --- | --- | --- | --- | --- |
+    | Selection with swaps | O(n²) | O(n²) | O(1) | No |
+    | Insertion with shifts | O(n²) | O(n²) | O(1) | Yes |
+    | Array merge, left comes first on ties | O(n log n) | O(n log n) | O(n) | Yes |
+    | In-place partition quicksort, two recursive calls | O(n log n) | O(n²) | O(log n) average, O(n) worst | No |
+    | Iterative heap sort | O(n log n) | O(n log n) | O(1) | No |
+
+    Insertion sort moves only larger keys, so it can take O(n) on sorted input.
+    Quicksort's average assumes typical splits, such as with a random pivot. Repeated one-sided splits cause the worst case.
+- id: st18
+  type: predict
+  title: Choose a stable sort for a large mixed log batch
+  code: |
+    def choose(stable, space_for_buffer, nearly_sorted):
+        if nearly_sorted:
+            return "insertion"
+        if stable and space_for_buffer:
+            return "merge"
+        if not stable and not space_for_buffer:
+            return "heap"
+        return "review the constraints"
+
+    print(choose(True, True, False))
+  choices:
+  - text: insertion
+    why: It can keep ties stable but may take quadratic time on mixed data.
+  - text: heap
+    why: Standard heap sort offers a worst-case bound but can reorder ties.
+  - text: quick
+    why: The listed quicksort is unstable and can take quadratic time.
+  - text: merge
+    why: With a buffer, merge sort can preserve ties and bound worst-case time.
+  answer: 3
+- id: st19
+  type: predict
+  title: Choose a sort with constant workspace and a worst-case bound
+  code: |
+    def choose(stable, space_for_buffer, nearly_sorted):
+        if nearly_sorted:
+            return "insertion"
+        if stable and space_for_buffer:
+            return "merge"
+        if not stable and not space_for_buffer:
+            return "heap"
+        return "review the constraints"
+
+    print(choose(False, False, False))
+  choices:
+  - text: heap
+    why: Heap sort uses constant extra space and has O(n log n) worst-case time.
+  - text: selection
+    why: Selection uses constant extra space, but its time is quadratic.
+  - text: merge
+    why: Standard array merge sort needs a buffer.
+  - text: quick
+    why: This recursive quicksort uses stack space and can take quadratic time.
+  answer: 0
+- id: st20
+  type: predict
+  title: Choose a sort for a small batch that is already almost ordered
+  code: |
+    def choose(stable, space_for_buffer, nearly_sorted):
+        if nearly_sorted:
+            return "insertion"
+        if stable and space_for_buffer:
+            return "merge"
+        if not stable and not space_for_buffer:
+            return "heap"
+        return "review the constraints"
+
+    print(choose(True, False, True))
+  choices:
+  - text: heap
+    why: It does not take special advantage of a short distance between items and their final slots.
+  - text: merge
+    why: This standard merge sort uses a buffer even when there are few items out of order.
+  - text: insertion
+    why: With few out-of-order pairs, it moves very few keys and keeps ties stable.
+  - text: selection
+    why: It scans the unsorted part even on an already sorted list.
+  answer: 2
+- id: st21
+  type: explain
+  title: Explain the shrinking heap
+  prompt: Write 2–4 English sentences. Explain what each part of the list holds and how one pass changes
+    it. Compare your draft with the model in the lesson.
+  rubric:
+  - Describe the active prefix and the sorted suffix.
+  - Say which index moves out of the heap and why it stays put.
+  model_answer: The active prefix holds a max-heap, so its first value is the largest remaining key. Swap
+    it into the last active slot and shrink the heap. The sift fixes only the prefix, so the new suffix
+    stays sorted.
+- id: st22
+  type: terminal
+  title: 'Hands-on: run the example'
+  guide: handson.md
+  check: Match the expected output, then explain the change in one English sentence.
+- id: st23
+  type: boss
+  title: 'Mini boss: explain and repair'
+  time_limit_minutes: 10
+  pass_rule: Answer four of five review questions correctly and pass the repair checks.
+  draws_from: &id002
+  - st03
+  - st06
+  - st15
+  - st18
+  - st19
+  - st20
+  plus:
+  - type: fix
+    task: Fix a downward sift for an integer max-heap prefix. Index i is inside a non-empty prefix. Only
+      its value may be too small. Update the list in place and return None. Sifting [3, 9, 11, 20] at i
+      = 0 with end = 1 must leave it unchanged.
+    starter: |
+      def sift_down_max(values, i, end):
+          while 2*i + 1 < len(values):
+              child = 2*i + 1
+              right = child + 1
+              if right < end and values[right] > values[child]:
+                  child = right
+              if values[i] >= values[child]:
+                  break
+              values[i], values[child] = values[child], values[i]
+              i = child
+    solution: |
+      def sift_down_max(values, i, end):
+          while 2*i + 1 < end:
+              child = 2*i + 1
+              right = child + 1
+              if right < end and values[right] > values[child]:
+                  child = right
+              if values[i] >= values[child]:
+                  break
+              values[i], values[child] = values[child], values[i]
+              i = child
+    tests: |
+      values = [3, 9, 11, 20]
+      assert sift_down_max(values, 0, 1) is None
+      assert values == [3, 9, 11, 20]
+      values = [3, 5, 20]
+      sift_down_max(values, 0, 2)
+      assert values == [5, 3, 20]
+    hint_levels: *id001
+    explanation: The left link is usable only within the active heap. A bounded sift follows one path in
+      O(log n) time and uses O(1) extra space.
+review_cards:
+  from_steps: *id002
+  vocab: true

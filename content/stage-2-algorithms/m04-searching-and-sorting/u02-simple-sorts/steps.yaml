@@ -1,0 +1,430 @@
+unit: s2.m04.u02
+python_min: '3.9'
+steps:
+- id: st01
+  type: read
+  title: Put small jobs in order
+  body: |
+    A server runs small jobs first. You have a list of job sizes to put in order.
+    In this unit you will write three simple sorts. You will also count how much work each sort does.
+    A **comparison** asks how two values are ordered. Count each such question about values in the list.
+    Skip questions about loop indexes when you count.
+- id: st02
+  type: read
+  title: Selection sort finds the next smallest item
+  body: |
+    In **selection sort**, the items before index start are already in their final positions.
+    This is the **sorted prefix**. A prefix is the start of a list.
+    Each **pass** scans the rest of the list to find its smallest item.
+    Then **swap**, or trade, that item and the item at start.
+
+    ```python
+    values = [8, 4, 6]
+    best = 0
+    for i in range(1, len(values)):
+        if values[i] < values[best]:
+            best = i
+    values[0], values[best] = values[best], values[0]
+    ```
+
+    The first pass puts 4 at the front. The other two values still need work.
+- id: st03
+  type: predict
+  title: After the first selection pass
+  code: |
+    values = [7, 4, 3, 6]
+    best = 0
+    for i in range(1, len(values)):
+        if values[i] < values[best]:
+            best = i
+    values[0], values[best] = values[best], values[0]
+    print(values)
+  choices:
+  - text: '[3, 4, 6, 7]'
+    why: One swap only fixes the first position.
+  - text: '[3, 4, 7, 6]'
+    why: The minimum is at index 2. The swap puts 7 at that index.
+  - text: '[4, 7, 3, 6]'
+    why: The scan keeps going after it finds 4. It finds 3 next.
+  - text: '[3, 7, 4, 6]'
+    why: A swap changes only the two selected positions.
+  answer: 1
+- id: st04
+  type: try
+  title: Count the scans as the list grows
+  starter: |
+    values = [1, 2, 3, 4]
+    checks = 0
+    for start in range(len(values)):
+        for i in range(start + 1, len(values)):
+            checks += 1
+    print(checks)
+  task: Use five values. The loops show where selection sort would compare items. Check the total.
+  check:
+    stdout_line: '10'
+- id: st05
+  type: predict
+  title: Selection work on an already ordered list
+  code: |
+    values = [1, 2, 3, 4]
+    checks = 0
+    for start in range(len(values)):
+        for i in range(start + 1, len(values)):
+            checks += 1
+    print(checks)
+  choices:
+  - text: '0'
+    why: Selection sort still checks the remaining items before it can move on.
+  - text: '4'
+    why: There are four starts. Each start can cause more than one check.
+  - text: '16'
+    why: The inner loop scans only indexes after start.
+  - text: '6'
+    why: The scans count 3, 2, 1, then 0 checks.
+  answer: 3
+- id: st06
+  type: read
+  title: Why doubling the input costs about four times as much
+  body: |
+    Selection sort checks n - 1 items in the first scan. The next scan checks n - 2.
+    The sum down to 1 is n * (n - 1) // 2. Pair the sum with the same sum in reverse to see why.
+    For n = 4, pair 3 + 2 + 1 with 1 + 2 + 3. The three pairs give 12, so one sum is 6.
+
+    This is **quadratic growth**. Doubling a large n brings the time close to four times as much.
+    The count stays the same on ordered and reversed input.
+- id: st07
+  type: code
+  title: Sort job sizes and count selection comparisons
+  exercise: exercises/practice.py
+  function: selection_report
+  test_class: SelectionReport
+  hint_levels:
+  - Copy the list. Pick the first index in the unsorted part.
+  - Scan every later item. Count each comparison and track the index of the best value.
+  - Swap result[start] with result[best] after the scan. Return the copy and the count.
+- id: st08
+  type: read
+  title: Insertion sort opens a place for the next record
+  body: |
+    A **record** is one item with several pieces of data. Here it is a pair of a job size and a name.
+    The size is the **key**, the field we compare. Two equal keys make a **tie**.
+    A **stable sort** keeps ties in their input order.
+
+    In **insertion sort**, take the next item and save it. **Shift** larger keys one place right.
+    That opens a place where the saved item belongs. Stop when the item to the left is smaller or equal.
+    The first item needs no work. This method keeps ties in order because it only shifts larger keys.
+- id: st09
+  type: predict
+  title: Where does a later tie go?
+  code: |
+    jobs = [(2, "first"), (5, "large"), (2, "later")]
+    job = jobs[2]
+    j = 1
+    while j >= 0 and jobs[j][0] > job[0]:
+        jobs[j + 1] = jobs[j]
+        j -= 1
+    jobs[j + 1] = job
+    print(jobs[1][1])
+  choices:
+  - text: later
+    why: The size-5 record moves right. The saved job goes just after the first size-2 job.
+  - text: first
+    why: The original size-2 job stays at index 0.
+  - text: large
+    why: The size-5 job moves to index 2.
+  - text: '2'
+    why: The final [1] inside the pair selects the name, not the size.
+  answer: 0
+- id: st10
+  type: parsons
+  title: Save, shift, then insert
+  task: Use all lines to insert the final integer into the first two sorted integers.
+  lines:
+  - values = [2, 6, 3]
+  - item = values[2]
+  - j = 1
+  - 'while j >= 0 and values[j] > item:'
+  - '    values[j + 1] = values[j]'
+  - '    j -= 1'
+  - values[j + 1] = item
+  - print(values)
+  expected_stdout: '[2, 3, 6]'
+  accepted_orders:
+  - - 0
+    - 2
+    - 1
+    - 3
+    - 4
+    - 5
+    - 6
+    - 7
+  - - 2
+    - 0
+    - 1
+    - 3
+    - 4
+    - 5
+    - 6
+    - 7
+- id: st11
+  type: predict
+  title: Does selection sort keep ties?
+  code: |
+    jobs = [(4, "first"), (4, "second"), (2, "small")]
+    jobs[0], jobs[2] = jobs[2], jobs[0]
+    print(jobs[1][1], jobs[2][1])
+  choices:
+  - text: first second
+    why: The first size-4 record moves past the second size-4 record.
+  - text: small first
+    why: The small job moves to index 0, which is not printed.
+  - text: second first
+    why: The swap moves the first size-4 record to the last position.
+  - text: 4 4
+    why: The print reads each record name, not its size.
+  answer: 2
+- id: st12
+  type: code
+  title: Sort records by priority while keeping ties
+  exercise: exercises/practice.py
+  function: insertion_jobs
+  test_class: InsertionJobs
+  hint_levels:
+  - Treat the first record as already sorted.
+  - Save the next record. Move left, shifting each larger record one place right.
+  - Compare keys with >. Write the saved record at j + 1 after the shifts.
+- id: st13
+  type: fix
+  title: Keep the arrival order of equal jobs
+  task: Fix this stable insertion sort for up to 200 (integer size, string label) pairs. Return a new
+    list by size. For [(2, "b"), (1, "x"), (2, "a")] return [(1, "x"), (2, "b"), (2, "a")]. Do not use
+    a library sort.
+  starter: |
+    def order_ties(jobs):
+        result = jobs[:]
+        for i in range(1, len(result)):
+            saved = result[i]
+            j = i - 1
+            while j >= 0 and result[j][0] >= saved[0]:
+                result[j + 1] = result[j]
+                j -= 1
+            result[j + 1] = saved
+        return result
+  solution: |
+    def order_ties(jobs):
+        result = jobs[:]
+        for i in range(1, len(result)):
+            saved = result[i]
+            j = i - 1
+            while j >= 0 and result[j][0] > saved[0]:
+                result[j + 1] = result[j]
+                j -= 1
+            result[j + 1] = saved
+        return result
+  tests: |
+    assert order_ties([(2, "b"), (1, "x"), (2, "a")]) == [(1, "x"), (2, "b"), (2, "a")]
+    assert order_ties([(5, "z"), (5, "a")]) == [(5, "z"), (5, "a")]
+    assert order_ties([]) == []
+    jobs = [(5, "x"), (1, "y")]
+    result = order_ties(jobs)
+    assert result == [(1, "y"), (5, "x")] and result is not jobs
+    assert jobs == [(5, "x"), (1, "y")]
+  hint_levels:
+  - Trace two jobs with the same size.
+  - The new job must stay after the older equal job.
+  - Shift only when result[j][0] > saved[0].
+  explanation: A strict comparison moves only larger keys, so ties keep their order. Worst-case time
+    is O(n²) and extra space is O(n) for the returned copy.
+- id: st14
+  type: read
+  title: Bubble sort moves a large value to the end
+  body: |
+    **Bubble sort** compares neighbors. Swap when the left value is greater than the right value.
+    A left-to-right pass moves a largest remaining value to the right end.
+    That value is in place. Leave it out on the next pass.
+
+    If a full pass makes no swap, every pair checked is already in order.
+    The part left out was already fixed, so the whole list is sorted. You can stop.
+    Swapping only when the left key is larger makes this version stable.
+- id: st15
+  type: predict
+  title: One pass over four neighbors
+  code: |
+    values = [5, 1, 4, 2]
+    for j in range(len(values) - 1):
+        if values[j] > values[j + 1]:
+            values[j], values[j + 1] = values[j + 1], values[j]
+    print(values)
+  choices:
+  - text: '[1, 2, 4, 5]'
+    why: The largest item reaches the end, but the left part can still need work.
+  - text: '[1, 5, 4, 2]'
+    why: The pass continues after the first swap.
+  - text: '[1, 4, 5, 2]'
+    why: The pass also compares indexes 2 and 3.
+  - text: '[1, 4, 2, 5]'
+    why: The 5 moves right at each comparison until it reaches the end.
+  answer: 3
+- id: st16
+  type: try
+  title: See a smaller item move only one place left
+  starter: |
+    values = [5, 1, 4, 2]
+    for j in range(len(values) - 1):
+        if values[j] > values[j + 1]:
+            values[j], values[j + 1] = values[j + 1], values[j]
+    print(values)
+  task: Change the input to [2, 3, 4, 1]. Run one pass. Does the 1 get all the way to the front?
+  check:
+    stdout_line: '[2, 3, 1, 4]'
+- id: st17
+  type: predict
+  title: How many checks before an early stop?
+  code: |
+    values = [1, 2, 3, 4, 5]
+    checks = 0
+    for end in range(len(values) - 1, 0, -1):
+        swapped = False
+        for j in range(end):
+            checks += 1
+            if values[j] > values[j + 1]:
+                values[j], values[j + 1] = values[j + 1], values[j]
+                swapped = True
+        if not swapped:
+            break
+    print(checks)
+  choices:
+  - text: '0'
+    why: The code must check neighbors to learn that no swap is needed.
+  - text: '4'
+    why: The first pass checks all four pairs and stops with no swaps.
+  - text: '5'
+    why: There is one fewer neighboring pair than there are values.
+  - text: '10'
+    why: Ten checks would come from all four passes. The break stops after one.
+  answer: 1
+- id: st18
+  type: code
+  title: Count comparisons in bubble sort
+  exercise: exercises/practice.py
+  function: bubble_report
+  test_class: BubbleReport
+  hint_levels:
+  - Track the last index still in the active part.
+  - Check every pair up to that index. Mark whether any swap occurred.
+  - For each j in range(end), compare j and j + 1. Break after the pass if swapped is False.
+- id: st19
+  type: fix
+  title: 'Challenge: reset the swap flag for each pass'
+  task: Return the bubble comparison count for up to 200 integers. Keep the input unchanged. Scan left
+    to right and shrink after each pass. For [2, 1, 3, 4, 5], return 7. For [], return 0.
+  starter: |
+    def count_checks(values):
+        result = values[:]
+        checks = 0
+        swapped = False
+        for end in range(len(result) - 1, 0, -1):
+            for j in range(end):
+                checks += 1
+                if result[j] > result[j + 1]:
+                    result[j], result[j + 1] = result[j + 1], result[j]
+                    swapped = True
+            if not swapped:
+                break
+        return checks
+  solution: |
+    def count_checks(values):
+        result = values[:]
+        checks = 0
+        for end in range(len(result) - 1, 0, -1):
+            swapped = False
+            for j in range(end):
+                checks += 1
+                if result[j] > result[j + 1]:
+                    result[j], result[j + 1] = result[j + 1], result[j]
+                    swapped = True
+            if not swapped:
+                break
+        return checks
+  tests: |
+    assert count_checks([2, 1, 3, 4, 5]) == 7
+    assert count_checks([1, 2, 3, 4, 5]) == 4
+    assert count_checks([4, 3, 2, 1]) == 6
+    assert count_checks([]) == 0
+  hint_levels: &id001
+  - Ask what the flag says in the second pass.
+  - The flag should report swaps during the current pass only.
+  - Move swapped = False to the first line inside the outer loop.
+  explanation: Resetting the flag lets a quiet pass end the loop. Time is O(n) in the best case and
+    O(n²) in the worst case. The copy uses O(n) extra space.
+- id: st20
+  type: terminal
+  title: 'Hands-on: run and change a small script'
+  guide: handson.md
+  check: The script prints the expected output and you can explain the changed run.
+- id: st21
+  type: explain
+  title: Explain your plan to a teammate
+  prompt: Write 2–4 English sentences. Why can bubble sort stop early? How does that differ from the
+    selection sort you wrote? Then compare with the model in the lesson summary.
+  rubric:
+  - Explain what a pass with no swaps proves.
+  - Describe what selection sort checks even on sorted input.
+  model_answer: A pass without swaps shows that every neighboring pair in the active part is in order.
+    The end is already fixed. Selection sort still checks the whole remaining part to find the next
+    minimum.
+- id: st22
+  type: boss
+  title: 'Unit challenge: Simple sorts and why they are slow'
+  time_limit_minutes: 12
+  pass_rule: Get 4 of 5 predicts right and pass the fix in st19.
+  draws_from: &id002
+  - st03
+  - st05
+  - st09
+  - st11
+  - st15
+  - st17
+  plus:
+  - type: fix
+    task: Return the bubble comparison count for up to 200 integers. Keep the input unchanged. Scan
+      left to right and shrink after each pass. For [2, 1, 3, 4, 5], return 7. For [], return 0.
+    starter: |
+      def count_checks(values):
+          result = values[:]
+          checks = 0
+          swapped = False
+          for end in range(len(result) - 1, 0, -1):
+              for j in range(end):
+                  checks += 1
+                  if result[j] > result[j + 1]:
+                      result[j], result[j + 1] = result[j + 1], result[j]
+                      swapped = True
+              if not swapped:
+                  break
+          return checks
+    solution: |
+      def count_checks(values):
+          result = values[:]
+          checks = 0
+          for end in range(len(result) - 1, 0, -1):
+              swapped = False
+              for j in range(end):
+                  checks += 1
+                  if result[j] > result[j + 1]:
+                      result[j], result[j + 1] = result[j + 1], result[j]
+                      swapped = True
+              if not swapped:
+                  break
+          return checks
+    tests: |
+      assert count_checks([2, 1, 3, 4, 5]) == 7
+      assert count_checks([1, 2, 3, 4, 5]) == 4
+      assert count_checks([4, 3, 2, 1]) == 6
+      assert count_checks([]) == 0
+    hint_levels: *id001
+    explanation: Resetting the flag lets a quiet pass end the loop. Time is O(n) in the best case and
+      O(n²) in the worst case. The copy uses O(n) extra space.
+review_cards:
+  from_steps: *id002
+  vocab: true

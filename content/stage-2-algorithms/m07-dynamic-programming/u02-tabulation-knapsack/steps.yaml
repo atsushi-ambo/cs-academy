@@ -1,0 +1,386 @@
+unit: s2.m07.u02
+python_min: '3.9'
+steps:
+- id: st01
+  type: read
+  title: Pack tools within a limit
+  body: |
+    A technician has a small bag and several repair tools.
+    Each tool has a weight and a value. Which tools give the most value?
+    You will build a table for the bag, a coin tray, and two strings.
+
+    **Tabulation** fills a table of answers in a useful order.
+    A **table cell** holds the answer to one small state.
+    A **bottom-up** method starts with small states and works toward the goal.
+- id: st02
+  type: read
+  title: Fill the first row with zero
+  body: |
+    The **capacity** of a bag is the total weight it can hold.
+    In **0/1 knapsack** each input item can be taken once or skipped.
+    The **item weight** uses capacity. The **item value** is the gain from taking it.
+    Let best[i][c] be the best value from the first i items within capacity c.
+    The **base row** has zero items, so every value in it is zero.
+- id: st03
+  type: predict
+  title: Zero items have zero value at every capacity
+  code: |
+    capacity = 3
+    base = [0] * (capacity + 1)
+    print(base)
+  choices:
+  - text: '[0, 0, 0, 0]'
+    why: There is one entry per capacity from zero through three.
+  - text: '[0, 0, 0]'
+    why: That omits the entry for capacity three.
+  - text: '[0, 1, 2, 3]'
+    why: Capacity labels are not the values in the cells.
+  - text: '[3, 3, 3, 3]'
+    why: No tools are available in the base row.
+  answer: 0
+- id: st04
+  type: fix
+  title: Make a fresh list for every row
+  task: Return a rows-by-cols table of zeros whose rows can be changed independently. Both sizes are nonnegative
+    integers. For zeros(2, 2), setting table[0][0] to 7 leaves table[1][0] at 0. zeros(0, 2) returns [].
+  starter: |
+    def zeros(rows, cols):
+        return [[0] * cols] * rows
+  solution: |
+    def zeros(rows, cols):
+        return [[0] * cols for row in range(rows)]
+  tests: |
+    table = zeros(2, 2)
+    table[0][0] = 7
+    assert table == [[7, 0], [0, 0]]
+    assert zeros(0, 2) == []
+    assert zeros(2, 0) == [[], []]
+  hint_levels:
+  - List repetition can share one inner list.
+  - Make a new inner list for each row in a comprehension or loop.
+  - Return [[0] * cols for row in range(rows)].
+  explanation: 'The starter has aliasing: all its rows point to one list. Independent rows take O(rows
+    × (cols + 1)) time and space.'
+- id: st05
+  type: read
+  title: Compare taking a tool with skipping it
+  body: |
+    For item i, use its weight w and value v.
+    Skipping gives best[i−1][c], from the row directly above.
+    If w fits, taking it gives v + best[i−1][c−w].
+    Both options use the previous row. This leaves the current item available only once.
+    Store the larger value and move on to the next cell.
+- id: st06
+  type: predict
+  title: A later tool can improve a filled cell
+  code: |
+    previous = [0, 0, 3, 3, 3]
+    weight, value, capacity = 2, 5, 4
+    skip = previous[capacity]
+    take = value + previous[capacity - weight]
+    print(skip, take, max(skip, take))
+  choices:
+  - text: 3 5 5
+    why: There is room for the current tool and the earlier tool.
+  - text: 3 8 8
+    why: Skipping keeps 3. Taking adds 5 to the best at capacity 2, giving 8.
+  - text: 3 10 10
+    why: The previous row excludes the current tool.
+  - text: 8 3 8
+    why: The print statement puts the skip value first.
+  answer: 1
+- id: st07
+  type: parsons
+  title: Build one row from the previous row
+  task: Try every capacity from 0 to 3. For each cell, keep the skip value or improve it by taking one
+    tool.
+  lines:
+  - previous = [0, 0, 2, 2]
+  - row = []
+  - 'for capacity in range(4):'
+  - '    best = previous[capacity]'
+  - '    if capacity >= 1:'
+  - '        best = max(best, 4 + previous[capacity - 1])'
+  - '    row.append(best)'
+  - print(row)
+  expected_stdout: '[0, 4, 4, 6]'
+  accepted_orders:
+  - - 1
+    - 0
+    - 2
+    - 3
+    - 4
+    - 5
+    - 6
+    - 7
+- id: st08
+  type: read
+  title: Reuse one row in descending capacity order
+  body: |
+    For the value alone, you can keep one list of capacity cells.
+    Process capacities from large to small for each item. This is **descending order**.
+    `range(capacity, weight - 1, -1)` includes weight as its last value.
+    When you read c−w, that smaller cell still holds the previous item's answer.
+    This **space optimization** saves memory by keeping only one row.
+- id: st09
+  type: predict
+  title: An increasing loop can reuse the same tool
+  code: |
+    best = [0, 0, 0, 0, 0]
+    for capacity in range(2, 5):
+        best[capacity] = max(best[capacity], 3 + best[capacity - 2])
+    print(best)
+  choices:
+  - text: '[0, 0, 3, 3, 3]'
+    why: This would use the old row for every read.
+  - text: '[0, 0, 0, 0, 3]'
+    why: The loop also fills capacities 2 and 3.
+  - text: '[0, 0, 3, 3, 6]'
+    why: Capacity 4 uses the updated capacity 2 cell and adds the same tool again.
+  - text: '[0, 0, 3, 6, 6]'
+    why: At capacity 3 the code reads capacity 1, which is zero.
+  answer: 2
+- id: st10
+  type: try
+  title: Use each tool once
+  task: Change the range to visit 4, 3, 2 in that order. Check the last cell.
+  starter: |
+    best = [0, 0, 0, 0, 0]
+    for capacity in range(2, 5):
+        best[capacity] = max(best[capacity], 3 + best[capacity - 2])
+    print(best)
+  check:
+    stdout_line: '[0, 0, 3, 3, 3]'
+- id: st11
+  type: fix
+  title: Keep a single tool from filling the bag twice
+  task: 'Return the greatest total value from (weight, value) pairs within capacity. Each input item can
+    be used once. Weights are positive integers and values and capacity are nonnegative integers. Keep
+    items unchanged. Example: pack([(2, 5)], 4) returns 5.'
+  starter: |
+    def pack(items, capacity):
+        best = [0] * (capacity + 1)
+        for weight, value in items:
+            for c in range(weight, capacity + 1):
+                best[c] = max(best[c], value + best[c - weight])
+        return best[capacity]
+  solution: |
+    def pack(items, capacity):
+        best = [0] * (capacity + 1)
+        for weight, value in items:
+            for c in range(capacity, weight - 1, -1):
+                best[c] = max(best[c], value + best[c - weight])
+        return best[capacity]
+  tests: |
+    assert pack([(2, 5)], 4) == 5
+    assert pack([(2, 5), (2, 5)], 4) == 10
+    assert pack([(7, 20)], 2) == 0
+    assert pack([], 4) == 0
+  hint_levels: &id001
+  - The same item appears in best[c - weight] after an early update.
+  - Read the lower cells before this item changes them.
+  - Use range(capacity, weight - 1, -1).
+  explanation: Descending updates keep the take option on the previous row. For n items and capacity C,
+    time is O(n(C+1) + C + 1) and space is O(C+1).
+- id: st12
+  type: code
+  title: Find the best value in a single row
+  task: 'Use bottom-up 0/1 knapsack with O(capacity + 1) table space. items is a list of (positive integer
+    weight, nonnegative integer value) pairs. The capacity is a nonnegative integer. Return the maximum
+    value from a subset within capacity. Leave items unchanged. Example: bag_value([(2, 4), (3, 7), (4,
+    10)], 5) returns 11.'
+  exercise: exercises/practice.py
+  function: bag_value
+  test_class: BagValue
+  hint_levels:
+  - Keep one best value per capacity.
+  - Visit capacities backward for each item.
+  - At c, compare best[c] with value + best[c - weight]. After all items, return best[capacity].
+- id: st13
+  type: read
+  title: For minimum coins, build from smaller amounts
+  body: |
+    Let best[a] be the fewest coins that pay amount a.
+    With unlimited coins, choosing a coin of value c leaves amount a−c.
+    Scan amounts in increasing order so a−c already has an answer.
+    Use 0 at amount zero. Set other cells to amount + 1 at first.
+    That large marker means **unreachable**. A valid result never needs more coins than the amount.
+- id: st14
+  type: predict
+  title: Keep an impossible amount marked
+  code: |
+    amount = 5
+    best = [0] + [amount + 1] * amount
+    coins = [2]
+    for subtotal in range(1, amount + 1):
+        for coin in coins:
+            if coin <= subtotal:
+                best[subtotal] = min(best[subtotal], 1 + best[subtotal - coin])
+    print(best[4], best[5])
+  choices:
+  - text: 2 3
+    why: No number of coins worth 2 can pay an odd amount.
+  - text: 6 6
+    why: The cell for amount 4 can use the solved cell for amount 2.
+  - text: 2 5
+    why: The marker was set to amount + 1.
+  - text: 2 6
+    why: Two coins of 2 pay 4. Amount 5 keeps the unreachable marker 6.
+  answer: 3
+- id: st15
+  type: code
+  title: Find the fewest coins for a payment
+  task: 'Use bottom-up tabulation. coins contains positive integer values with unlimited copies. amount
+    is a nonnegative integer. Return the fewest coins that pay exactly amount, or -1 if it cannot be paid.
+    Do not change coins. Examples: min_coins([1, 4, 5], 8) returns 2 and min_coins([2], 5) returns -1.'
+  exercise: exercises/practice.py
+  function: min_coins
+  test_class: MinCoins
+  hint_levels:
+  - Build answers by amount, starting with zero coins for zero.
+  - For each amount, try using each coin as the final coin.
+  - Update best[total] with min(best[total], 1 + best[total - coin]) when a coin fits. Return -1 for the
+    marker.
+- id: st16
+  type: read
+  title: Match the ends of two prefixes
+  body: |
+    A **subsequence** keeps order and may skip letters.
+    `"ab"` is a subsequence of `"axb"`.
+    The **longest common subsequence** (LCS) is the longest one shared by both inputs.
+    A **prefix** is the first i letters. Use one table row and column per prefix length.
+    An empty prefix gives length zero.
+    If the last letters match, add 1 to the cell above-left.
+    If they differ, take the larger cell from above or left.
+- id: st17
+  type: predict
+  title: A common subsequence can skip letters
+  code: |
+    a = "axb"
+    b = "ayb"
+    middle = 1
+    if a[-1] == b[-1]:
+        middle += 1
+    print(middle)
+  choices:
+  - text: '2'
+    why: The earlier prefixes share a. Both final letters are b, so append one match.
+  - text: '1'
+    why: Subsequences can skip the different middle letters.
+  - text: '3'
+    why: The middle letters x and y do not match.
+  - text: '0'
+    why: Both strings contain a and b in the same order.
+  answer: 0
+- id: st18
+  type: code
+  title: Compute a longest common subsequence length
+  task: 'Use a bottom-up table to return the length of a longest common subsequence of left and right,
+    both strings. You may skip letters and must keep order. Match letters exactly, including case. Examples:
+    lcs_length(''axb'', ''ayb'') returns 2 and lcs_length('''', ''a'') returns 0.'
+  exercise: exercises/practice.py
+  function: lcs_length
+  test_class: LcsLength
+  hint_levels:
+  - Give each cell a left and a right prefix length.
+  - Compare their last letters. On a match, look diagonally back one row and column.
+  - For nonmatching letters use max(best[i - 1][j], best[i][j - 1]). Return the last cell.
+- id: st19
+  type: read
+  title: Walk backward to recover the chosen tools
+  body: |
+    Keep all rows when you need **choice reconstruction**, the recovery of one best set.
+    Start at the last row and the full capacity.
+    If a cell equals the cell above, skipping this item still gives the best value.
+    Otherwise, take the item and reduce capacity by its weight.
+    Move up one row either way. Reverse the collected indexes to get increasing order.
+- id: st20
+  type: predict
+  title: An unchanged value lets you skip a tool
+  code: |
+    best = [[0, 0, 0], [0, 0, 5], [0, 0, 5]]
+    capacity = 2
+    print(best[2][capacity] > best[1][capacity])
+  choices:
+  - text: 'True'
+    why: The current row has the same value as the row above.
+  - text: 'False'
+    why: Both rows give 5. Skipping the second item keeps a best value.
+  - text: '5'
+    why: The comparison returns a boolean, even though the cells store numbers.
+  - text: '0'
+    why: The comparison returns False, and print displays its boolean name.
+  answer: 1
+- id: st21
+  type: code
+  title: 'Boss: reconstruct a best tool set'
+  task: 'Use a table to return one best subset as a list of zero-based indexes in increasing order. items
+    holds (positive integer weight, nonnegative integer value) pairs. capacity is a nonnegative integer.
+    Ties may return any best subset. Each item is used at most once and items stays unchanged. Example:
+    bag_choices([(2, 4), (3, 7), (4, 10)], 5) returns [0, 1].'
+  exercise: exercises/practice.py
+  function: bag_choices
+  test_class: BagChoices
+  hint_levels:
+  - Keep a row per item count so you can recover choices.
+  - Start at the last cell. Equal to the row above means you may skip the current item.
+  - When taking item i - 1, append that index and subtract its weight from c. Move up a row, then reverse
+    the choices.
+- id: st22
+  type: explain
+  title: Explain it to a teammate
+  prompt: Write 2–4 English sentences. Explain why a one-row 0/1 knapsack uses descending capacity order.
+    After writing, compare with the model answer in the lesson.
+  rubric:
+  - Say which cell the take option reads.
+  - Explain why an increasing loop could take one item twice.
+  model_answer: I read a smaller capacity when I take an item. In descending order that cell still holds
+    the previous row's answer. In increasing order I might read a cell already updated with the same item.
+- id: st23
+  type: terminal
+  title: 'Hands-on: run and change the sample'
+  guide: handson.md
+  check: The original sample prints the expected output in the guide.
+- id: st24
+  type: boss
+  title: 'Mini boss: review and repair'
+  time_limit_minutes: 15
+  pass_rule: Answer at least 5 of 6 predicts and pass the bug-fix tests.
+  draws_from: &id002
+  - st03
+  - st06
+  - st09
+  - st14
+  - st17
+  - st20
+  plus:
+  - type: fix
+    title: Keep a single tool from filling the bag twice
+    task: 'Return the greatest total value from (weight, value) pairs within capacity. Each input item
+      can be used once. Weights are positive integers and values and capacity are nonnegative integers.
+      Keep items unchanged. Example: pack([(2, 5)], 4) returns 5.'
+    starter: |
+      def pack(items, capacity):
+          best = [0] * (capacity + 1)
+          for weight, value in items:
+              for c in range(weight, capacity + 1):
+                  best[c] = max(best[c], value + best[c - weight])
+          return best[capacity]
+    solution: |
+      def pack(items, capacity):
+          best = [0] * (capacity + 1)
+          for weight, value in items:
+              for c in range(capacity, weight - 1, -1):
+                  best[c] = max(best[c], value + best[c - weight])
+          return best[capacity]
+    tests: |
+      assert pack([(2, 5)], 4) == 5
+      assert pack([(2, 5), (2, 5)], 4) == 10
+      assert pack([(7, 20)], 2) == 0
+      assert pack([], 4) == 0
+    hint_levels: *id001
+    explanation: Descending updates keep the take option on the previous row. For n items and capacity
+      C, time is O(n(C+1) + C + 1) and space is O(C+1).
+review_cards:
+  from_steps: *id002
+  vocab: true

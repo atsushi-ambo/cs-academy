@@ -1,0 +1,506 @@
+unit: s2.m06.u05
+python_min: '3.9'
+steps:
+- id: st01
+  type: read
+  title: Keep server IDs in search order
+  body: |
+    A service stores active IDs. New IDs arrive, old IDs leave, and checks ask if an ID exists.
+    A **key** is the value used for those comparisons.
+    A **binary search tree (BST)** keeps all left keys smaller and all right keys larger at every node.
+    This rule is an **invariant**, a condition every operation must preserve.
+    In this unit, a **duplicate** is a repeated key. Keep only one copy of each key.
+    You will insert, search, delete, and check the rule for a whole tree.
+- id: st02
+  type: read
+  title: Use one branch per comparison
+  body: |
+    Start at the root. On a match, search is done. A smaller key goes left. A larger key goes right.
+    An empty link ends a failed search. The nodes visited form the **search path**.
+    Each Node now stores its comparison value in .key. Insertion puts a new leaf where search would stop.
+    Return the root after insertion so the caller can keep it, even for an empty tree.
+    A function can be passed as an argument. Here `make_node(key)` creates a node with empty links.
+- id: st03
+  type: predict
+  title: Follow a search for 65
+  code: |
+    class Node:
+        def __init__(self, key, left=None, right=None):
+            self.key = key
+            self.left = left
+            self.right = right
+
+    tree = Node(40, Node(15, None, Node(23)), Node(70, Node(65)))
+
+    def trace(root, key):
+        path = []
+        while root is not None:
+            path.append(root.key)
+            if key == root.key:
+                break
+            if key < root.key:
+                root = root.left
+            else:
+                root = root.right
+        return path
+
+    print(trace(tree, 65))
+  choices:
+  - text: '[40, 15, 23]'
+    why: 65 is greater than 40, so the search skips the left side.
+  - text: '[40, 70, 65]'
+    why: Go right at 40, then left at 70. Stop on the match.
+  - text: '[40, 70]'
+    why: 65 is smaller than 70, whose left link exists.
+  - text: '[40, 65]'
+    why: 65 is below 70, so the path visits 70 before 65.
+  answer: 1
+- id: st04
+  type: try
+  title: Trace a missing ID
+  starter: |
+    class Node:
+        def __init__(self, key, left=None, right=None):
+            self.key = key
+            self.left = left
+            self.right = right
+
+    tree = Node(40, Node(15, None, Node(23)), Node(70, Node(65)))
+
+    def trace(root, key):
+        path = []
+        while root is not None:
+            path.append(root.key)
+            if key == root.key:
+                break
+            if key < root.key:
+                root = root.left
+            else:
+                root = root.right
+        return path
+
+    print(trace(tree, 65))
+  task: Search for 22 and check the visited keys. The search stops at the empty left link of 23.
+  check:
+    stdout_line: '[40, 15, 23]'
+- id: st05
+  type: parsons
+  title: Follow one branch with recursion
+  task: In the tuple, index 0 is the key, 1 is left, and 2 is right. Test for None before reading the key.
+  lines:
+  - 'def has(node, key):'
+  - '    if node is None:'
+  - '        return False'
+  - '    if node[0] == key:'
+  - '        return True'
+  - '    if key < node[0]:'
+  - '        return has(node[1], key)'
+  - '    return has(node[2], key)'
+  - print(has((9, None, (14, None, None)), 14))
+  expected_stdout: 'True'
+  accepted_orders:
+  - - 0
+    - 1
+    - 2
+    - 5
+    - 6
+    - 3
+    - 4
+    - 7
+    - 8
+- id: st06
+  type: code
+  title: Search for one key
+  task: Return True if the integer key exists in the BST, or False otherwise. Follow only one branch per
+    comparison. Do not change the tree. For Node(8, Node(4)), search(root, 4) is True and search(root, 5)
+    is False.
+  exercise: exercises/practice.py
+  function: search
+  test_class: Search
+  hint_levels:
+  - Choose a direction with the current key.
+  - Handle a match before taking a child link.
+  - Keep moving while the node exists. A missing node means return False.
+- id: st07
+  type: code
+  title: Insert a key and return the root
+  task: Insert an integer key into the BST and return its root. Use make_node(key) to make a leaf. Keep
+    only one copy of each key. For insert(None, 8, Node), return a node with key 8. Adding 4 to that root
+    sets its left link.
+  exercise: exercises/practice.py
+  function: insert
+  test_class: Insert
+  hint_levels:
+  - Search until you find an empty link or the key itself.
+  - Use make_node at the empty link. Assign the returned subtree to its parent.
+  - For a smaller key, set root.left = insert(root.left, key, make_node). Mirror this for a larger key.
+- id: st08
+  type: predict
+  title: Insert an existing key
+  code: |
+    class Node:
+        def __init__(self, key, left=None, right=None):
+            self.key = key
+            self.left = left
+            self.right = right
+
+    def add(root, key):
+        if root is None:
+            return Node(key)
+        if key < root.key:
+            root.left = add(root.left, key)
+        elif key > root.key:
+            root.right = add(root.right, key)
+        return root
+
+    root = Node(8, Node(3))
+    root = add(root, 3)
+    print(root.left.right is None)
+  choices:
+  - text: 'False'
+    why: An equal key takes neither branch.
+  - text: '3'
+    why: The print call checks whether the link is empty.
+  - text: 'True'
+    why: The call at key 3 returns the same leaf.
+  - text: None
+    why: The link is None, but the comparison prints a Boolean.
+  answer: 2
+- id: st09
+  type: read
+  title: Delete by returning the new subtree root
+  body: |
+    Delete first follows the usual search path. Return None if the path has no match.
+    If the matched node has no children, replace it with None.
+    If it has one child, replace it with that child. This keeps every key below it attached.
+    At the parent, store the returned link. At the top, keep the returned root in your own variable.
+- id: st10
+  type: fix
+  title: Keep the only child
+  task: Fix deletion for a BST where the key to delete has zero or one child, or is absent. Return the new
+    root. Deleting 8 from Node(8, Node(4)) returns the node with key 4.
+  starter: |
+    class Node:
+        def __init__(self, key, left=None, right=None):
+            self.key = key
+            self.left = left
+            self.right = right
+
+    def cut(root, key):
+        if root is None:
+            return None
+        if key < root.key:
+            root.left = cut(root.left, key)
+        elif key > root.key:
+            root.right = cut(root.right, key)
+        else:
+            return None
+        return root
+  solution: |
+    class Node:
+        def __init__(self, key, left=None, right=None):
+            self.key = key
+            self.left = left
+            self.right = right
+
+    def cut(root, key):
+        if root is None:
+            return None
+        if key < root.key:
+            root.left = cut(root.left, key)
+        elif key > root.key:
+            root.right = cut(root.right, key)
+        else:
+            if root.left is not None:
+                return root.left
+            return root.right
+        return root
+  tests: |
+    assert cut(Node(8, Node(4)), 8).key == 4
+    root = cut(Node(8, Node(4, None, Node(6))), 4)
+    assert root.left.key == 6
+    assert cut(Node(1), 1) is None
+    assert cut(None, 8) is None
+    assert cut(Node(1), 3).key == 1
+  hint_levels:
+  - What else is lost when you return None at a match?
+  - Choose the one child that exists, if there is one.
+  - Return root.left when it exists. Otherwise return root.right, which may itself be None.
+  explanation: Returning the child promotes its whole subtree. The search and recursive stack both cost
+    O(h).
+- id: st11
+  type: read
+  title: Use the next key when both children exist
+  body: |
+    With two children, use the **successor**, the next key in sorted order.
+    Start on the right and follow left links until there is no further left link.
+    Copy that key to the matched node. Then delete the old copy from the right subtree.
+    The successor has no left child. Its right child, if present, must stay in the tree.
+- id: st12
+  type: predict
+  title: Find a successor below the right child
+  code: |
+    class Node:
+        def __init__(self, key, left=None, right=None):
+            self.key = key
+            self.left = left
+            self.right = right
+
+    def next_key(root):
+        node = root.right
+        while node.left is not None:
+            node = node.left
+        return node.key
+
+    root = Node(20, Node(11), Node(60, Node(35, None, Node(42))))
+    print(next_key(root))
+  choices:
+  - text: '35'
+    why: Start at 60 and follow its left link to 35. That node has no left child.
+  - text: '60'
+    why: The first node on the right has a smaller key below it.
+  - text: '42'
+    why: Moving right from 35 would increase the key.
+  - text: '11'
+    why: 11 is below 20 on the left, so it comes before 20.
+  answer: 0
+- id: st13
+  type: code
+  title: Delete any key
+  task: Delete an integer key from a strict BST and return the new root. Use the successor for two children,
+    and preserve its right child. Deleting 8 from Node(8, Node(4), Node(11)) returns a root with key 11
+    and left key 4.
+  exercise: exercises/practice.py
+  function: delete
+  test_class: Delete
+  hint_levels:
+  - First find the key. Treat a missing child as a simple replacement.
+  - For two children, walk down the left edge of the right subtree.
+  - Copy the successor key, then assign root.right = delete(root.right, successor.key).
+- id: st14
+  type: read
+  title: Carry bounds down from every ancestor
+  body: |
+    An **ancestor** is a node above the current node on the path to the root.
+    A child can fit its parent and still break a rule from an ancestor.
+    A **bound** limits the keys allowed in a subtree. Keep a lower and an upper bound.
+    An absent bound can be None. Each real bound is strict: equality fails.
+    Going left tightens the upper bound to the current key. Going right tightens the lower bound.
+- id: st15
+  type: predict
+  title: Spot a key that crosses the root's limit
+  code: |
+    class Node:
+        def __init__(self, key, left=None, right=None):
+            self.key = key
+            self.left = left
+            self.right = right
+
+    root = Node(20, Node(9, None, Node(25)))
+
+    print(root.left.right.key > root.left.key, root.left.right.key < root.key)
+  choices:
+  - text: True True
+    why: 25 exceeds both 9 and 20.
+  - text: False True
+    why: 25 exceeds 9 and is too large for the left subtree of 20.
+  - text: False False
+    why: The check against its direct parent passes.
+  - text: True False
+    why: 25 fits on the right of 9 but breaks the upper bound from 20.
+  answer: 3
+- id: st16
+  type: fix
+  title: Keep the outer bounds
+  task: Fix valid to check a strict integer BST. Return True for None and leave links unchanged. Node(8,
+    Node(4, None, Node(9))) is invalid because 9 lies in the left subtree of 8.
+  starter: |
+    class Node:
+        def __init__(self, key, left=None, right=None):
+            self.key = key
+            self.left = left
+            self.right = right
+
+    def valid(root, low=None, high=None):
+        if root is None:
+            return True
+        if low is not None and root.key <= low:
+            return False
+        if high is not None and root.key >= high:
+            return False
+        return valid(root.left, None, root.key) and valid(root.right, root.key, None)
+  solution: |
+    class Node:
+        def __init__(self, key, left=None, right=None):
+            self.key = key
+            self.left = left
+            self.right = right
+
+    def valid(root, low=None, high=None):
+        if root is None:
+            return True
+        if low is not None and root.key <= low:
+            return False
+        if high is not None and root.key >= high:
+            return False
+        return valid(root.left, low, root.key) and valid(root.right, root.key, high)
+  tests: |
+    assert not valid(Node(8, Node(4, None, Node(9))))
+    assert not valid(Node(8, None, Node(12, Node(8))))
+    assert valid(Node(8, Node(4, None, Node(7)), Node(12)))
+    assert valid(None)
+  hint_levels: &id001
+  - Follow the upper bound on the left-then-right path.
+  - On each call, only one end of the allowed range changes.
+  - Pass (low, root.key) to the left and (root.key, high) to the right.
+  explanation: A subtree inherits a bound even when there is no direct link to the node that set it. Validation
+    takes O(n) worst-case time and O(h) stack space.
+- id: st17
+  type: code
+  title: Check whether the whole tree is a BST
+  task: Return True only if all integer keys obey both subtree rules with no duplicates. Keep the tree unchanged.
+    None is valid. Node(8, Node(4, None, Node(8))) is invalid.
+  exercise: exercises/practice.py
+  function: is_bst
+  test_class: IsBst
+  hint_levels:
+  - A node must fit every limit from above it.
+  - Pass two bounds to a helper. Use None for either missing limit.
+  - Reject keys at or beyond either bound. Tighten high on the left and low on the right.
+- id: st18
+  type: read
+  title: Sorted input can make a chain
+  body: |
+    Insert 1, 2, 3, 4 into an empty tree. Each new key is larger than all keys already there.
+    Every key joins the far right. This **degenerate tree** is a chain, with height n for n keys.
+    Search, insert, and delete can take O(n) time there. A short tree can give O(log n) paths.
+- id: st19
+  type: predict
+  title: Start with sorted keys
+  code: |
+    class Node:
+        def __init__(self, key, left=None, right=None):
+            self.key = key
+            self.left = left
+            self.right = right
+
+    def add(root, key):
+        if root is None:
+            return Node(key)
+        if key < root.key:
+            root.left = add(root.left, key)
+        elif key > root.key:
+            root.right = add(root.right, key)
+        return root
+
+    root = None
+    for key in [1, 2, 3, 4]:
+        root = add(root, key)
+    print(root.key, root.right.right.right.key)
+  choices:
+  - text: 4 1
+    why: The last key takes a leaf position. It does not become the root.
+  - text: 1 4
+    why: Each key is larger, so the path from 1 follows three right links.
+  - text: 2 4
+    why: Normal insertion keeps the first root.
+  - text: 1 3
+    why: The third right link holds the fourth key.
+  answer: 1
+- id: st20
+  type: try
+  title: The first key changes the root
+  starter: |
+    class Node:
+        def __init__(self, key, left=None, right=None):
+            self.key = key
+            self.left = left
+            self.right = right
+
+    def add(root, key):
+        if root is None:
+            return Node(key)
+        if key < root.key:
+            root.left = add(root.left, key)
+        elif key > root.key:
+            root.right = add(root.right, key)
+        return root
+
+    root = None
+    for key in [1, 2, 3, 4]:
+        root = add(root, key)
+    print(root.key)
+  task: Change the input order to [2, 1, 3, 4]. Run it and check the root. Which key now goes to its left?
+  check:
+    stdout_line: '2'
+- id: st21
+  type: explain
+  title: Explain a two-child deletion
+  prompt: Write 2–4 English sentences. Explain how to delete a key with two children. Compare your draft
+    with the model in the lesson.
+  rubric:
+  - Describe where to find the successor.
+  - Say how to remove its original copy and keep any child.
+  model_answer: Go right once, then go left until the path ends. Copy that key to the node being deleted.
+    Remove the old copy from the right subtree and keep its right child if it has one.
+- id: st22
+  type: terminal
+  title: 'Hands-on: run the example'
+  guide: handson.md
+  check: Match the expected output, then explain the change in one English sentence.
+- id: st23
+  type: boss
+  title: 'Mini boss: explain and repair'
+  time_limit_minutes: 10
+  pass_rule: Answer four of five review questions correctly and pass the repair checks.
+  draws_from: &id002
+  - st03
+  - st08
+  - st12
+  - st15
+  - st19
+  plus:
+  - type: fix
+    task: Fix valid to check a strict integer BST. Return True for None and leave links unchanged. Node(8,
+      Node(4, None, Node(9))) is invalid because 9 lies in the left subtree of 8.
+    starter: |
+      class Node:
+          def __init__(self, key, left=None, right=None):
+              self.key = key
+              self.left = left
+              self.right = right
+
+      def valid(root, low=None, high=None):
+          if root is None:
+              return True
+          if low is not None and root.key <= low:
+              return False
+          if high is not None and root.key >= high:
+              return False
+          return valid(root.left, None, root.key) and valid(root.right, root.key, None)
+    solution: |
+      class Node:
+          def __init__(self, key, left=None, right=None):
+              self.key = key
+              self.left = left
+              self.right = right
+
+      def valid(root, low=None, high=None):
+          if root is None:
+              return True
+          if low is not None and root.key <= low:
+              return False
+          if high is not None and root.key >= high:
+              return False
+          return valid(root.left, low, root.key) and valid(root.right, root.key, high)
+    tests: |
+      assert not valid(Node(8, Node(4, None, Node(9))))
+      assert not valid(Node(8, None, Node(12, Node(8))))
+      assert valid(Node(8, Node(4, None, Node(7)), Node(12)))
+      assert valid(None)
+    hint_levels: *id001
+    explanation: A subtree inherits a bound even when there is no direct link to the node that set it. Validation
+      takes O(n) worst-case time and O(h) stack space.
+review_cards:
+  from_steps: *id002
+  vocab: true

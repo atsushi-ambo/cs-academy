@@ -1,0 +1,352 @@
+unit: s2.m08.u06
+python_min: '3.9'
+steps:
+- id: st01
+  type: read
+  title: Turn raw logs into a short report
+  body: |
+    Your team wants a report of service delays from error logs.
+    Start with many rows and keep only the ones you need.
+    Then turn each row into a delay and combine those delays into one total.
+    A **pipeline** connects small steps so one step feeds the next.
+    You will use and write three helpers: map, filter, and reduce.
+- id: st02
+  type: read
+  title: Transform each item with a rule
+  body: |
+    To **transform** an item means to turn it into a new value.
+    `map(rule, items)` applies the rule to every item.
+    An **iterable** gives items one at a time to a for loop. Lists and tuples are examples.
+    `iter(items)` gives an iterator over the input.
+    In Python 3, map returns an **iterator**. Ask it for items to do the work.
+    This delay is called **lazy** evaluation.
+    `list(map(rule, items))` collects every result into a list.
+    `[rule(item) for item in items]` makes an equivalent list at once.
+- id: st03
+  type: predict
+  title: The callback runs while the iterator is consumed
+  code: |
+    calls = []
+    def double(n):
+        calls.append(n)
+        return n * 2
+
+    result = map(double, [2, 3])
+    print(len(calls))
+    print(list(result))
+  choices:
+  - text: '0
+
+      [4, 6]'
+    why: Creating map does not call double. The list call consumes the items.
+  - text: '2
+
+      [4, 6]'
+    why: The callback has not run at the first print.
+  - text: '0
+
+      [2, 3]'
+    why: Each item passes through double when list asks for it.
+  - text: '0
+
+      []'
+    why: The iterator still has both items when list first reads it.
+  answer: 0
+- id: st04
+  type: code
+  title: Implement my_map with a loop or comprehension
+  task: 'Apply a one-argument rule once to each item of a finite iterable, in order. Return a new list
+    and leave input lists unchanged. Implement it without built-in map. Example: my_map(lambda n: n *
+    2, [3, 3, 2]) returns [6, 6, 4].'
+  exercise: exercises/practice.py
+  function: my_map
+  test_class: MyMap
+  hint_levels:
+  - Make a list for the transformed items.
+  - Loop through the input. Call rule once on each item.
+  - Append rule(item) to result on each pass, then return result.
+- id: st05
+  type: read
+  title: Keep the items that pass a test
+  body: |
+    A **predicate** is a rule that decides whether to keep an item.
+    `filter(keep, items)` keeps an original item when the rule is **truthy**.
+    A truthy value acts like True in an if statement. Nonempty strings and nonzero numbers pass.
+    Use `[item for item in items if keep(item)]` for the same filter as a list.
+    To combine a filter and a map, use `[rule(item) for item in items if keep(item)]`.
+- id: st06
+  type: predict
+  title: Which values does filter return?
+  code: |
+    records = [("api", 5), ("db", 1), ("ops", 7)]
+    print(list(filter(lambda row: row[1] > 3, records)))
+  choices:
+  - text: '[True, False, True]'
+    why: These are test results. The iterator yields the kept records.
+  - text: '[(''api'', 5), (''ops'', 7)]'
+    why: The two original records pass the delay test.
+  - text: '[5, 7]'
+    why: The code uses the delay to test each row and keeps the full row.
+  - text: '[(''db'', 1)]'
+    why: The rule keeps delays greater than 3.
+  answer: 1
+- id: st07
+  type: fix
+  title: Keep matching items instead of test results
+  task: 'Return a new list of original items in input order when keep(item) is truthy. Call keep once
+    per item. Do not change input lists. Example: select([3, 0, 3], lambda n: n) returns [3, 3].'
+  starter: |
+    def select(items, keep):
+        result = []
+        for item in items:
+            decision = keep(item)
+            if decision:
+                result.append(decision)
+        return result
+  solution: |
+    def select(items, keep):
+        result = []
+        for item in items:
+            if keep(item):
+                result.append(item)
+        return result
+  tests: |
+    items = [3, 0, 3, -1]
+    assert select(items, lambda n: n > 0) == [3, 3]
+    assert select(items, lambda n: n) == [3, 3, -1]
+    assert select([], bool) == []
+    assert items == [3, 0, 3, -1]
+  hint_levels:
+  - Separate the thing you test from the thing you collect.
+  - Use the callback result only as the if condition.
+  - Append item, rather than decision, when the condition passes.
+  explanation: Filter keeps the whole original item. For n inputs, time is O(n) plus predicate work, and
+    output space is O(n) in the worst case.
+- id: st08
+  type: code
+  title: Implement my_filter for a stream of records
+  task: 'Return a new list of items for which keep(item) is truthy, in their original order. items is
+    a finite iterable. Call keep once per item. Do not call built-in filter or change input lists. Example:
+    my_filter(lambda n: n % 2, [2, 3, 3]) returns [3, 3].'
+  exercise: exercises/practice.py
+  function: my_filter
+  test_class: MyFilter
+  hint_levels:
+  - Test each item before you save it.
+  - Test keep(item) as an if condition.
+  - Append item only in that branch. Return the accumulated list.
+- id: st09
+  type: predict
+  title: A consumed iterator is empty on its second pass
+  code: |
+    values = filter(lambda n: n > 0, [3, -1, 2])
+    print(list(values), list(values))
+  choices:
+  - text: '[3, 2] [3, 2]'
+    why: The same filter iterator does not restart.
+  - text: '[] [3, 2]'
+    why: The first list call gets the positive values.
+  - text: '[3, 2] []'
+    why: The first list call consumes all the items. The second has nothing left.
+  - text: '[3, -1, 2] []'
+    why: The first list collects only values that pass the condition.
+  answer: 2
+- id: st10
+  type: try
+  title: Save the results to use them twice
+  task: Store list(filter(...)) in values. Now both list calls should copy the same kept values.
+  starter: |
+    values = filter(lambda n: n > 0, [3, -1, 2])
+    print(list(values), list(values))
+  check:
+    stdout_line: '[3, 2] [3, 2]'
+- id: st11
+  type: read
+  title: Combine values one at a time with reduce
+  body: |
+    To **reduce** items is to combine them into one result.
+    Import `reduce` from functools.
+    Call `reduce(combine, items, start)` with an **initial value** named start.
+    The **accumulator** is the result so far.
+    For each item, replace the accumulator with `combine(accumulator, item)`.
+    With no items, the result is the initial value.
+- id: st12
+  type: predict
+  title: Subtract in left-to-right order
+  code: |
+    from functools import reduce
+
+    print(reduce(lambda total, n: total - n, [2, 3], 10))
+  choices:
+  - text: '11'
+    why: This would group the two input values before combining with 10.
+  - text: '-1'
+    why: The explicit initial value 10 is used before item 2.
+  - text: '-5'
+    why: The first argument to the rule holds the running total.
+  - text: '5'
+    why: Starting at 10 gives (10 - 2) - 3 = 5.
+  answer: 3
+- id: st13
+  type: parsons
+  title: Build a reduction from a running value
+  task: Set the initial value and define the rule. Apply it to each number from left to right.
+  lines:
+  - 'def combine(total, value):'
+  - '    return total * 10 + value'
+  - total = 0
+  - 'for item in [3, 7]:'
+  - '    total = combine(total, item)'
+  - print(total)
+  expected_stdout: '37'
+  accepted_orders:
+  - - 2
+    - 0
+    - 1
+    - 3
+    - 4
+    - 5
+- id: st14
+  type: fix
+  title: Keep each new accumulator value
+  task: 'Return the result of combining the initial value with each item, in order. The rule accepts two
+    arguments. Leave input lists unchanged. Example: fold([2, 3], lambda a, n: a * 10 + n, 1) returns
+    123. With empty items, return initial.'
+  starter: |
+    def fold(items, combine, initial):
+        total = initial
+        for item in items:
+            combine(total, item)
+        return total
+  solution: |
+    def fold(items, combine, initial):
+        total = initial
+        for item in items:
+            total = combine(total, item)
+        return total
+  tests: |
+    items = [2, 3]
+    assert fold(items, lambda a, n: a * 10 + n, 1) == 123
+    assert fold([], lambda a, n: a + n, 7) == 7
+    assert fold([3], lambda a, n: a - n, 2) == -1
+    assert items == [2, 3]
+  hint_levels: &id001
+  - Find where the return value from combine goes.
+  - Carry the returned value forward to the next item.
+  - Assign total = combine(total, item) inside the loop.
+  explanation: Each step consumes the previous accumulator. For n items, the loop adds O(n) time and O(1)
+    space beyond the callback and values.
+- id: st15
+  type: code
+  title: Implement my_reduce with an explicit initial value
+  task: 'Return a left-to-right combination of a finite iterable. Use initial first, then call combine(accumulator,
+    item) once per item. For empty input return initial. Do not use functools.reduce or change input lists.
+    Example: my_reduce(lambda a, n: a - n, (2, 3), 10) returns 5.'
+  exercise: exercises/practice.py
+  function: my_reduce
+  test_class: MyReduce
+  hint_levels:
+  - Carry one result between loop passes.
+  - Start with initial and apply the rule to the current result and item.
+  - Set result = combine(result, item) each time. Return result when the loop ends.
+- id: st16
+  type: read
+  title: Build an error log pipeline
+  body: |
+    An **incident** is a problem such as a failed server request.
+    Keep incident rows first. You can then map a kept row to its delay.
+    Reduce those delays to get a total.
+    When you need two passes, **materialize** the kept rows once, such as with a list comprehension.
+    Sort those rows with a tuple key for a predictable order.
+    Use `(-row[2], row[0])` to sort by descending delay and then ascending host.
+- id: st17
+  type: predict
+  title: Filter first, then use the chosen delays twice
+  code: |
+    from functools import reduce
+
+    logs = [("web", 500, 7), ("api", 200, 20), ("db", 503, 7)]
+    errors = [row for row in logs if 500 <= row[1] <= 599]
+    total = reduce(lambda a, n: a + n, map(lambda row: row[2], errors), 0)
+    view = sorted(errors, key=lambda row: (-row[2], row[0]))
+    print(total, view[0][0])
+  choices:
+  - text: 14 db
+    why: The status 200 row is dropped. db wins the name tie among the two delays of 7.
+  - text: 34 api
+    why: Status 200 does not enter the report.
+  - text: 14 web
+    why: The host name breaks the tie. db comes before web.
+  - text: 7 db
+    why: Both kept rows contribute their delay to the total.
+  answer: 0
+- id: st18
+  type: code
+  title: 'Boss: build an incident report from raw logs'
+  task: 'Return (total_delay, ordered_errors). Each input row is (host, status, delay), with a string
+    host and nonnegative integers. Keep status 500 through 599 inclusive. Order kept rows by descending
+    delay, then ascending host, with equal keys in input order. Keep duplicates and leave logs unchanged.
+    Example: incident_report([(''a'', 500, 4), (''b'', 200, 9)]) returns (4, [(''a'', 500, 4)]).'
+  exercise: exercises/practice.py
+  function: incident_report
+  test_class: IncidentReport
+  hint_levels:
+  - First select records whose status is in the error range.
+  - Keep those records for both the sum and the sorted view.
+  - Map their delay fields and add them with reduce from 0. Sort errors by (-row[2], row[0]).
+- id: st19
+  type: explain
+  title: Explain it to a teammate
+  prompt: Write 2–4 English sentences. Explain how you would use these operations to make an error report.
+    After writing, compare with the model answer in the lesson.
+  rubric:
+  - Name the rule for each of filter, map, and reduce.
+  - Say when to save a list for reuse.
+  model_answer: I filter the log for error statuses and save the kept rows in a list. I map those rows
+    to delays and reduce the delays to a total. I can reuse the kept rows to make the sorted view.
+- id: st20
+  type: terminal
+  title: 'Hands-on: run and change the sample'
+  guide: handson.md
+  check: The original sample prints the expected output in the guide.
+- id: st21
+  type: boss
+  title: 'Mini boss: review and repair'
+  time_limit_minutes: 15
+  pass_rule: Answer at least 4 of 5 predicts and pass the bug-fix tests.
+  draws_from: &id002
+  - st03
+  - st06
+  - st09
+  - st12
+  - st17
+  plus:
+  - type: fix
+    title: Keep each new accumulator value
+    task: 'Return the result of combining the initial value with each item, in order. The rule accepts
+      two arguments. Leave input lists unchanged. Example: fold([2, 3], lambda a, n: a * 10 + n, 1) returns
+      123. With empty items, return initial.'
+    starter: |
+      def fold(items, combine, initial):
+          total = initial
+          for item in items:
+              combine(total, item)
+          return total
+    solution: |
+      def fold(items, combine, initial):
+          total = initial
+          for item in items:
+              total = combine(total, item)
+          return total
+    tests: |
+      items = [2, 3]
+      assert fold(items, lambda a, n: a * 10 + n, 1) == 123
+      assert fold([], lambda a, n: a + n, 7) == 7
+      assert fold([3], lambda a, n: a - n, 2) == -1
+      assert items == [2, 3]
+    hint_levels: *id001
+    explanation: Each step consumes the previous accumulator. For n items, the loop adds O(n) time and
+      O(1) space beyond the callback and values.
+review_cards:
+  from_steps: *id002
+  vocab: true

@@ -1,0 +1,64 @@
+id: s2.m06.u04
+title: Shortest paths (Dijkstra)
+stage: 2
+module: Trees and Graphs
+version: 1
+status: draft
+estimated_minutes: 95
+prerequisites:
+- s2.m06.u02
+- s2.m06.u03
+- s2.m02.u01
+objectives:
+- Choose routes by total latency with Dijkstra's algorithm.
+- Update tentative distances in a heap and skip old entries.
+- Reconstruct a lowest-latency path and state which weights are supported.
+skills:
+- algorithms.dijkstra
+- algorithms.path-reconstruction
+- english.explain-code
+parts:
+- steps.yaml
+- lesson.md
+- handson.md
+- exercises/
+- tests/
+- solutions/solutions.md
+references:
+- kind: official_doc
+  title: Python heap queues
+  url: https://docs.python.org/3.13/library/heapq.html
+- kind: official_doc
+  title: Python dictionaries and tuple comparisons
+  url: https://docs.python.org/3.13/tutorial/datastructures.html
+vocab:
+- en: weight
+  ja: 重み
+- en: weighted graph
+  ja: 重み付きグラフ
+- en: latency
+  ja: 遅延時間
+- en: total cost
+  ja: 合計コスト
+- en: Dijkstra's algorithm
+  ja: ダイクストラ法
+- en: tentative distance
+  ja: 暫定距離
+- en: relaxation
+  ja: 辺を通った場合の距離の更新
+- en: min-heap
+  ja: 最小値を先頭に置くヒープ
+- en: priority queue
+  ja: 優先度付きキュー
+- en: stale entry
+  ja: 更新前の古い候補
+- en: settled distance
+  ja: 最短と確定した距離
+- en: predecessor
+  ja: 経路上の直前の頂点
+- en: path reconstruction
+  ja: 経路復元
+- en: unreachable
+  ja: 到達不能の
+- en: nonnegative
+  ja: 負でない

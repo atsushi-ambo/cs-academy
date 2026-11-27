@@ -1,0 +1,80 @@
+id: s2.m06.u03
+title: 'Graphs: BFS and DFS'
+stage: 2
+module: Trees and Graphs
+version: 1
+status: draft
+estimated_minutes: 110
+prerequisites:
+- s1.m03.u03
+- s1.m03.u04
+- s2.m02.u01
+- s2.m03.u02
+- s2.m05.u01
+objectives:
+- Represent connected machines as a list of neighbors or a matrix.
+- Find minimum hop counts with BFS and visit nodes with DFS.
+- Find groups and fill grids without visiting a point twice.
+skills:
+- algorithms.graph-traversal
+- algorithms.flood-fill
+- english.explain-code
+parts:
+- steps.yaml
+- lesson.md
+- handson.md
+- exercises/
+- tests/
+- solutions/solutions.md
+references:
+- kind: official_doc
+  title: Python lists, sets, and dictionaries
+  url: https://docs.python.org/3.13/tutorial/datastructures.html
+- kind: official_doc
+  title: Python collections.deque
+  url: https://docs.python.org/3.13/library/collections.html#collections.deque
+vocab:
+- en: graph
+  ja: グラフ
+- en: vertex
+  ja: 頂点
+- en: edge
+  ja: 辺
+- en: neighbor
+  ja: 隣接頂点
+- en: undirected
+  ja: 無向の
+- en: directed
+  ja: 有向の
+- en: adjacency list
+  ja: 隣接リスト
+- en: adjacency matrix
+  ja: 隣接行列
+- en: traversal
+  ja: 走査
+- en: BFS
+  ja: 幅優先探索
+- en: DFS
+  ja: 深さ優先探索
+- en: hop
+  ja: 辺を1本進むこと
+- en: queue
+  ja: キュー（先入れ先出し）
+- en: stack
+  ja: スタック（後入れ先出し）
+- en: frontier
+  ja: 次に調べる候補集合
+- en: visited set
+  ja: 訪問済み集合
+- en: cycle
+  ja: 閉路
+- en: parent
+  ja: 直前の頂点
+- en: connected component
+  ja: 連結成分
+- en: grid
+  ja: 格子
+- en: flood fill
+  ja: つながった領域の塗りつぶし
+- en: recursion depth
+  ja: 再帰の深さ

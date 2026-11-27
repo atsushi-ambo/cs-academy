@@ -1,0 +1,318 @@
+unit: s2.m03.u02
+python_min: '3.9'
+steps:
+- id: st01
+  type: read
+  title: Serve requests in arrival order
+  body: |
+    A server can hold requests until a worker is free.
+    A **queue** serves the first request first. This is **FIFO**, first in, first out.
+    A **stack** serves the last item first. This is **LIFO**, last in, first out.
+    Think of a line at a shop and a pile of plates.
+    You will use both orders to build job and log tools.
+- id: st02
+  type: predict
+  title: Take the top item from a stack
+  code: |
+    jobs = []
+    jobs.append("scan")
+    jobs.append("mail")
+    print(jobs.pop(), jobs[-1])
+  choices:
+  - text: mail scan
+    why: Pop returns the last job and removes it.
+  - text: scan mail
+    why: This would remove from the front.
+  - text: mail mail
+    why: Pop removes the value it returns.
+  - text: scan scan
+    why: Mail is at the top when pop runs.
+  answer: 0
+- id: st03
+  type: read
+  title: Use the end of a Python list as the top
+  body: |
+    To **push**, use append. To **pop**, remove and return the last item with pop().
+    Check whether the list is empty before you pop.
+    Our stack returns None on empty input. It stores only integers.
+    Push takes amortized O(1) time. A pop at the end takes amortized O(1) time.
+    Using pop(0) on a Python list shifts the old items left in O(n) time.
+- id: st04
+  type: code
+  title: Build a stack from a list
+  task: 'Return a fresh empty stack object. Store integers in a Python list.
+
+    push(value) adds at the end. pop() removes and returns the top or None when empty.
+
+    Example: push(4), push(8), pop(), pop(), pop() returns 8, 4, None from the pops.'
+  exercise: exercises/practice.py
+  function: make_stack
+  test_class: MakeStack
+  hint_levels:
+  - The list end is the top.
+  - Use only the list end when adding or removing.
+  - Call self.items.pop() only if self.items has values.
+- id: st05
+  type: read
+  title: Reverse arrival order with a second stack
+  body: |
+    To **enqueue** means to add at the back. A **dequeue** removes the front item.
+    Push each new item onto an input stack.
+    For dequeue, use the top of an output stack. When empty, move every input item there.
+    The move reverses the order. The oldest item is now on top of the output stack.
+    Leave that stack in place until it runs out.
+- id: st06
+  type: predict
+  title: Read the old stack before moving new jobs
+  code: |
+    incoming = ["retry"]
+    outgoing = ["mail", "scan"]
+    first = outgoing.pop()
+    incoming.append("sync")
+    print(first, outgoing.pop())
+  choices:
+  - text: mail scan
+    why: The top is at the end of the outgoing list.
+  - text: scan sync
+    why: A new input job waits behind the outgoing jobs.
+  - text: scan mail
+    why: The queue removes scan and mail before newer arrivals.
+  - text: retry sync
+    why: Only the incoming stack holds those jobs.
+  answer: 2
+- id: st07
+  type: parsons
+  title: Transfer a batch to turn the order around
+  task: Use every line. Move both jobs to the output stack, then print the oldest one.
+  lines:
+  - incoming = ["scan", "mail"]
+  - outgoing = []
+  - 'while incoming:'
+  - '    outgoing.append(incoming.pop())'
+  - print(outgoing.pop())
+  expected_stdout: scan
+  hint_levels:
+  - Initialize both stacks before moving jobs.
+  - Move jobs until incoming is empty.
+  - Pop from outgoing after the loop.
+  accepted_orders:
+  - - 1
+    - 0
+    - 2
+    - 3
+    - 4
+- id: st08
+  type: fix
+  title: Keep the front item at the top
+  task: 'Dequeue one time from two stacks of integers. Transfer input only when output is empty. Return None if
+    both are empty. Example: incoming=[6], outgoing=[4] must return 4.'
+  starter: |
+    def take(incoming, outgoing):
+        while incoming:
+            outgoing.append(incoming.pop())
+        if outgoing:
+            return outgoing.pop()
+        return None
+  solution: |
+    def take(incoming, outgoing):
+        if not outgoing:
+            while incoming:
+                outgoing.append(incoming.pop())
+        if outgoing:
+            return outgoing.pop()
+        return None
+  tests: |
+    incoming, outgoing = [6], [4]
+    assert take(incoming, outgoing) == 4
+    assert incoming == [6] and outgoing == []
+    assert take(incoming, outgoing) == 6
+    assert take(incoming, outgoing) is None
+    incoming = [2, 2, 3]
+    assert [take(incoming, outgoing) for i in range(3)] == [2, 2, 3]
+  hint_levels:
+  - Look at the output stack first.
+  - New input waits until the old output is empty.
+  - Wrap the transfer loop in if not outgoing.
+  explanation: A single transfer takes O(n) time. Each job crosses once, so dequeue takes amortized O(1)
+    time. The stacks use O(n) space.
+- id: st09
+  type: code
+  title: Build a queue with two stacks
+  task: 'Return a fresh empty FIFO queue. Use two Python lists as stacks.
+
+    enqueue(value) pushes an integer. dequeue() returns the oldest value or None.
+
+    Use append and pop at the end, with a transfer only when the output stack is empty.
+
+    Example: enqueue(4), enqueue(8), dequeue(), enqueue(2), dequeue() removes 4 then 8.'
+  exercise: exercises/practice.py
+  function: make_two_stack_queue
+  test_class: MakeTwoStackQueue
+  hint_levels:
+  - Keep two independent stacks.
+  - Push onto input. Pop from output first.
+  - If output is empty, repeatedly append incoming.pop() to outgoing before popping.
+- id: st10
+  type: read
+  title: Check the open bracket on top
+  body: |
+    For **matching brackets**, each closer must match the last unclosed opener.
+    Push openers like '(' onto a stack. On ')', pop and check the opener.
+    If the stack is empty or the top is wrong, return False.
+    At the end, the stack must be empty. Use '(' and '[' as the two opener types.
+    A small dict can map each closer to the opener that matches it.
+- id: st11
+  type: predict
+  title: Counted pairs can still cross
+  code: |
+    top = []
+    for ch in "([":
+        top.append(ch)
+    print(top.pop() == "(")
+  choices:
+  - text: 'True'
+    why: The last opener is [, so a ) cannot close it.
+  - text: 'False'
+    why: Pop gives [, which differs from the required opener (.
+  - text: (
+    why: The print compares two values.
+  - text: '['
+    why: Pop returns [, but print receives the comparison result.
+  answer: 1
+- id: st12
+  type: code
+  title: Match brackets with a stack
+  task: 'Text has only (, ), [, and ], with up to 1,000 characters.
+
+    Return True if brackets match in order and every opener closes. Use one stack.
+
+    Example: ''([])[]'' gives True. ''([)]'' gives False.'
+  exercise: exercises/practice.py
+  function: brackets_match
+  test_class: BracketsMatch
+  hint_levels:
+  - Keep only unclosed openers.
+  - On a closer, compare its partner with the top of the stack.
+  - Return False for an empty stack at a closer. At the end return not stack.
+- id: st13
+  type: read
+  title: Wrap around a fixed block
+  body: |
+    A **circular buffer** uses a fixed list of slots. Treat the first slot as next after the last.
+    To **wrap around**, take the **remainder** with %. For capacity 4, 4 % 4 is 0.
+    Keep head as the oldest position and size as the count.
+    Add at (head + size) % capacity. Remove at head, then advance head by one with %.
+    Size tells full and empty apart when the next write position equals head.
+- id: st14
+  type: predict
+  title: Find a slot after the end
+  code: |
+    head, size, capacity = 3, 2, 4
+    print((head + size) % capacity)
+  choices:
+  - text: '5'
+    why: Five counts past the end of the block.
+  - text: '3'
+    why: Head still points to the oldest slot.
+  - text: '0'
+    why: One wrap from 3 reaches 0. There are two steps here.
+  - text: '1'
+    why: After slots 3 and 0, the next free slot is 1.
+  answer: 3
+- id: st15
+  type: try
+  title: Trace a ring position
+  starter: |
+    head = 3
+    size = 1
+    capacity = 4
+    print((head + size) % capacity)
+  task: Change size to 2. Find the next write slot.
+  check:
+    stdout_line: '1'
+- id: st16
+  type: fix
+  title: Advance a head past the last slot
+  task: 'Return the position after head in a ring of capacity 1 to 100. The head is a valid index. Example: advance(3,
+    4) gives 0.'
+  starter: |
+    def advance(head, capacity):
+        return head + 1
+  solution: |
+    def advance(head, capacity):
+        return (head + 1) % capacity
+  tests: |
+    assert advance(3, 4) == 0
+    assert advance(0, 1) == 0
+    assert advance(0, 4) == 1
+    assert advance(2, 4) == 3
+  hint_levels:
+  - The last slot needs a different next index.
+  - Use the remainder after adding one.
+  - Return (head + 1) % capacity.
+  explanation: One addition and remainder take O(1) time and O(1) space in this index range.
+- id: st17
+  type: predict
+  title: Distinguish a full ring from an empty one
+  code: |
+    head, size, capacity = 1, 3, 3
+    write_at = (head + size) % capacity
+    print(write_at == head, size == capacity)
+  choices:
+  - text: True True
+    why: The index wraps back to head. The count shows that every slot is in use.
+  - text: True False
+    why: The count equals capacity, so the ring is full.
+  - text: False True
+    why: Adding a full turn returns to head.
+  - text: False False
+    why: Both the position and the count match.
+  answer: 0
+- id: st18
+  type: code
+  title: Build a fixed circular-buffer queue
+  task: 'Capacity is 1 to 100. Store integers in a fixed list named slots.
+
+    enqueue(value) returns True unless full. A full enqueue returns False and keeps all values.
+
+    dequeue() returns None if empty. Otherwise return the oldest value and clear its slot to None.
+
+    Use O(1) time per call. Example with capacity 2: enqueue(4), enqueue(8), dequeue(), enqueue(9)
+
+    leaves 8 then 9 in FIFO order.'
+  exercise: exercises/practice.py
+  function: make_ring_queue
+  test_class: MakeRingQueue
+  hint_levels:
+  - Reserve the slots once.
+  - Write after the live items. Track the count through each successful edit.
+  - Use (head + size) % capacity to write. Clear head and advance it on a read.
+- id: st19
+  type: explain
+  title: Explain it to a teammate
+  prompt: Write 2–4 English sentences. How can a two-stack queue serve the oldest job first? Compare with the model
+    in the lesson after writing.
+  rubric:
+  - Say where new jobs go.
+  - Say when work moves to the output and how its order changes.
+  model_answer: New jobs go onto the input stack. When the output stack is empty, I move all input jobs to it. This
+    puts the oldest job on top of the output stack.
+- id: st20
+  type: terminal
+  title: 'Hands-on: Trace a ring position'
+  guide: handson.md
+  check: The demo prints 1.
+- id: st21
+  type: boss
+  title: 'Mini boss: Build a fixed circular-buffer queue'
+  time_limit_minutes: 15
+  draws_from: [st02, st06, st11, st14, st17, st18]
+  pass_rule: Get four of five predicts right and pass the selected Code exercise.
+review_cards:
+  from_steps:
+  - st02
+  - st06
+  - st11
+  - st14
+  - st17
+  vocab: true

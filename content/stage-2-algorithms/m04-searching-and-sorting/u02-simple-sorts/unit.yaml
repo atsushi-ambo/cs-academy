@@ -1,0 +1,59 @@
+id: s2.m04.u02
+title: Simple sorts and why they are slow
+stage: 2
+module: Searching and Sorting
+version: 1
+status: draft
+estimated_minutes: 90
+prerequisites:
+- s1.m03.u01
+- s1.m03.u02
+- s2.m02.u01
+- s2.m02.u05
+objectives:
+- Implement selection sort, insertion sort, and bubble sort.
+- Count value comparisons and explain why the count can grow quadratically.
+- Track the order of records that share a key.
+skills:
+- algo.simple-sorts
+- english.explain-code
+parts:
+- steps.yaml
+- lesson.md
+- handson.md
+- exercises/
+- solutions/solutions.md
+references:
+- kind: official_doc
+  title: Python sorting and stability
+  url: https://docs.python.org/3.13/howto/sorting.html
+- kind: official_doc
+  title: Python lists
+  url: https://docs.python.org/3.13/tutorial/datastructures.html
+vocab:
+- en: selection sort
+  ja: 選択ソート
+- en: insertion sort
+  ja: 挿入ソート
+- en: bubble sort
+  ja: バブルソート
+- en: comparison
+  ja: 比較
+- en: pass
+  ja: 走査の1周
+- en: swap
+  ja: 交換
+- en: shift
+  ja: 要素をずらすこと
+- en: sorted prefix
+  ja: 整列済みの先頭部分
+- en: record
+  ja: 複数の値をまとめた1件分のデータ
+- en: key
+  ja: 比較に使う値
+- en: tie
+  ja: 比較キーが同じ項目
+- en: stable sort
+  ja: 同じキーの順序を保つソート
+- en: quadratic growth
+  ja: 入力サイズの二乗に比例する増え方

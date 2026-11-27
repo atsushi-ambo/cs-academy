@@ -1,0 +1,331 @@
+unit: s3.m04.u01
+python_min: '3.9'
+steps:
+- id: st01
+  type: read
+  title: Who are you, and may you read this?
+  body: |
+    A dashboard shows incident reports for two operations teams.
+    Authentication checks identity. Think of it as showing your staff badge at the door.
+    Authorization checks permission. It decides whether you may act on a resource, such as a report.
+    You will write both checks and use them before returning a report.
+- id: st02
+  type: predict
+  title: A known identity and another owner's report
+  code: |
+    user = {"id": "lee"}
+    report = {"owner": "kai"}
+    print(user is not None, user["id"] == report["owner"])
+  choices:
+  - text: False False
+    why: The user record is present.
+  - text: True True
+    why: Being logged in gives no ownership of this report.
+  - text: True False
+    why: Lee has an identity. The report belongs to Kai.
+  - text: False True
+    why: The user exists and the owner IDs differ.
+  answer: 2
+- id: st03
+  type: try
+  title: Change the resource owner
+  task: Set the report owner to lee. The owner check should print True.
+  starter: |
+    user = {"id": "lee"}
+    report = {"owner": "kai"}
+    print(user["id"] == report["owner"])
+  check:
+    stdout_line: 'True'
+- id: st04
+  type: read
+  title: Trust the server's session lookup
+  body: |
+    A session is a server record for a login. A cookie can carry a key into this table.
+    In this toy app, sessions map keys to user records. A missing key means no identity.
+    Use dict.get(key) to return None for a missing key.
+    Look up the role and organization on the server too. A role describes a person's job in the app.
+- id: st05
+  type: predict
+  title: A missing session key
+  code: |
+    sessions = {"active": {"id": "lee", "role": "member"}}
+    print(sessions.get("expired"))
+  choices:
+  - text: None
+    why: The expired key has no matching server record.
+  - text: expired
+    why: get returns the stored value, not the key.
+  - text: member
+    why: Only the active key maps to this identity.
+  - text: KeyError
+    why: get returns None when the key is missing.
+  answer: 0
+- id: st06
+  type: parsons
+  title: Look up the identity and report
+  task: Look up both records before comparing their IDs.
+  lines:
+  - 'sessions = {"active": "lee"}'
+  - 'report = {"owner": "lee"}'
+  - user_id = sessions.get("active")
+  - print(user_id == report["owner"])
+  accepted_orders:
+  - - 1
+    - 0
+    - 2
+    - 3
+  - - 0
+    - 2
+    - 1
+    - 3
+  expected_stdout: 'True'
+- id: st07
+  type: fix
+  title: Reject requests with no session
+  task: |
+    Return the user ID string for a known, nonempty session key. Return None otherwise.
+    sessions maps strings to trusted user ID strings. key is a string or None.
+    Example: identify({"ok": "lee"}, "ok") returns "lee". A blank key returns None.
+  starter: |
+    def identify(sessions, key):
+        return sessions.get(key, "guest")
+  solution: |
+    def identify(sessions, key):
+        if not key:
+            return None
+        return sessions.get(key)
+  tests: |
+    sessions = {"ok": "lee", "": "kai", "other": "lee"}
+    assert identify(sessions, "ok") == "lee"
+    assert identify(sessions, "other") == "lee"
+    assert identify(sessions, "unknown") is None
+    assert identify(sessions, "") is None
+    assert identify({}, None) is None
+    assert sessions == {"ok": "lee", "": "kai", "other": "lee"}
+  hint_levels:
+  - An invented user can reach protected code.
+  - Reject absent or blank keys first.
+  - Use sessions.get(key) without a default user.
+  explanation: Missing identities stop at the first check. Average time and extra space are O(1) for bounded
+    keys.
+- id: st08
+  type: read
+  title: Write the policy as a short list
+  body: |
+    The owner is the person who controls a report. Staff admins may read reports in their own organization.
+    Only owners may edit. Both actions need a matching organization and a known role.
+    Our known roles are member and admin. The only allowed action names are read and edit.
+    Deny by default means every case outside an explicit allow rule returns False.
+- id: st09
+  type: predict
+  title: The same role across two organizations
+  code: |
+    user = {"role": "admin", "org": "north"}
+    report = {"org": "south"}
+    print(user["role"] == "admin" and user["org"] == report["org"])
+  choices:
+  - text: 'True'
+    why: The role alone gives no access across organizations.
+  - text: north
+    why: The expression compares values and returns a Boolean.
+  - text: south
+    why: The resource organization is used in a comparison.
+  - text: 'False'
+    why: Both checks must pass. The organizations differ.
+  answer: 3
+- id: st10
+  type: code
+  title: Write authorize for a report
+  task: |
+    authorize(user, action, resource) returns a bool. user and resource are trusted records or None.
+    The user has id, role, org. The resource has owner, org. Values and action are short strings.
+    Deny a missing record, unknown role, different org, or unknown action. Both roles may read or edit their own.
+    An admin may read any report in their org. An admin may edit only their own. Keep records unchanged.
+    Example: a north admin reading a south report returns False.
+  exercise: exercises/practice.py
+  function: authorize
+  test_class: Authorize
+  hint_levels:
+  - Check the organization before any allow rule.
+  - Split the read and edit rules after computing ownership.
+  - For read return is_owner or role == 'admin'. For edit return is_owner. End with False.
+- id: st11
+  type: fix
+  title: Repair the missing per-report check
+  task: |
+    read_owned(user_id, reports, report_id) returns a report body or None.
+    reports maps short IDs to records with owner and body strings. user_id is a trusted ID or None.
+    Return a body only to its owner. Keep the input unchanged. An owner can read an empty body.
+    Example: if r1 belongs to lee, read_owned("kai", reports, "r1") returns None.
+  starter: |
+    def read_owned(user_id, reports, report_id):
+        report = reports.get(report_id)
+        if report is None:
+            return None
+        return report["body"]
+  solution: |
+    def read_owned(user_id, reports, report_id):
+        report = reports.get(report_id)
+        if user_id is None or report is None or report["owner"] != user_id:
+            return None
+        return report["body"]
+  tests: |
+    reports = {"r1": {"owner": "lee", "body": ""}, "r2": {"owner": "kai", "body": "up"}}
+    assert read_owned("lee", reports, "r1") == ""
+    assert read_owned("kai", reports, "r2") == "up"
+    assert read_owned("lee", reports, "r2") is None
+    assert read_owned(None, reports, "r1") is None
+    assert read_owned("lee", {}, "r1") is None
+    assert reports["r2"] == {"owner": "kai", "body": "up"}
+  hint_levels:
+  - Knowing the ID says nothing about who owns the report.
+  - Check that the actor and report exist. Compare the owner to the actor.
+  - Add user_id is None and report['owner'] != user_id as rejection conditions.
+  explanation: Access is checked even when a valid report ID is supplied. Average time and extra space
+    are O(1) for bounded IDs.
+- id: st12
+  type: read
+  title: Check each object at the point of use
+  body: |
+    An IDOR is missing authorization on an object named by the caller.
+    A random report ID may reduce guesses, but a copied URL can still include that ID.
+    Every handler must check the actual record. Apply the same rule when listing reports or reading one.
+    A list can skip records the actor may not see.
+- id: st13
+  type: predict
+  title: An owner requests a new action
+  code: |
+    owner = True
+    actions = ("read", "edit")
+    print(owner and "publish" in actions)
+  choices:
+  - text: 'True'
+    why: Ownership does not extend the list of allowed actions.
+  - text: 'False'
+    why: The policy has no rule for publishing.
+  - text: publish
+    why: Membership returns a Boolean, not the action.
+  - text: edit
+    why: The expression does not pick a different action.
+  answer: 1
+- id: st14
+  type: code
+  title: Filter the report list
+  task: |
+    visible_ids(actor, reports, allowed) returns a new list of readable report IDs in input order.
+    reports is a list of report dictionaries with an id string. actor is a trusted user record or None.
+    Call the supplied function allowed(actor, "read", report). Keep duplicate permitted IDs and leave reports unchanged.
+    Example: if only a is allowed in [b, a, a], return ["a", "a"].
+  exercise: exercises/practice.py
+  function: visible_ids
+  test_class: VisibleIds
+  hint_levels:
+  - Collect IDs only after checking the policy.
+  - Visit the reports in order and ask for read permission.
+  - Inside the loop use if allowed(actor, 'read', report), then append report['id'].
+- id: st15
+  type: read
+  title: Connect the checks in a handler
+  body: |
+    The request provides a session key and a report ID. Neither value proves permission.
+    Look up the identity and document before applying the policy.
+    If the check fails, return the same result as a missing document in this app.
+    In an audit log, record the decision and safe IDs. Keep the session key out.
+- id: st16
+  type: predict
+  title: Can a copied report ID grant access?
+  code: |
+    report_id = "r4"
+    report = {"id": "r4", "owner": "lee"}
+    actor = "kai"
+    print(report_id == report["id"], actor == report["owner"])
+  choices:
+  - text: True True
+    why: Locating the report gives no ownership.
+  - text: False True
+    why: The ID matches, and Kai is not the owner.
+  - text: True False
+    why: The ID locates the report. The owner check still fails.
+  - text: False False
+    why: The report ID does match.
+  answer: 2
+- id: st17
+  type: code
+  title: 'Checkpoint: return a report through the policy'
+  task: |
+    report_body(sessions, reports, key, report_id, allowed) returns the body string or None.
+    Both maps are trusted. sessions maps keys to users. reports maps IDs to records with body.
+    key and report_id are short strings. Reject an empty or unknown key or missing report.
+    Call allowed(user, "read", report) before returning a body. Leave the maps unchanged.
+    Example: a valid key and a policy rejection return None. An allowed empty body returns "".
+  exercise: exercises/practice.py
+  function: report_body
+  test_class: ReportBody
+  hint_levels:
+  - Separate finding records from deciding access.
+  - Look up both records and handle missing values before calling the policy.
+  - Reject if not allowed(user, 'read', report). Otherwise return report['body'].
+- id: st18
+  type: predict
+  title: Admin permission for a read and an edit
+  code: |
+    role = "admin"
+    owner = False
+    same_org = True
+    print(same_org and (owner or role == "admin"))
+    print(same_org and owner)
+  choices:
+  - text: |-
+      True
+      False
+    why: A same-org admin may read. The edit rule needs ownership.
+  - text: |-
+      True
+      True
+    why: The admin exception applies to reads only.
+  - text: |-
+      False
+      True
+    why: The edit has the stricter rule.
+  - text: |-
+      False
+      False
+    why: The role is enough for a read in the same organization.
+  answer: 0
+- id: st19
+  type: explain
+  title: Explain the two checks
+  prompt: Write 2–4 English sentences. Explain why a logged-in user still needs a report-level check.
+    Check the model answer in the lesson after writing.
+  rubric:
+  - Name the identity check.
+  - Use an owner or organization example.
+  - State the fallback decision.
+  model_answer: The session tells the server who made the request. The report policy checks that identity
+    against the requested report. If no rule allows the action, the server denies it.
+- id: st20
+  type: terminal
+  title: Hands-on in the Python sandbox
+  guide: handson.md
+  check: Run each sample and match the stated output.
+- id: st21
+  type: boss
+  title: Module checkpoint
+  draws_from:
+  - st02
+  - st05
+  - st09
+  - st13
+  - st16
+  - st18
+  - st17
+  pass_rule: Answer five predicts correctly and pass the final Code tests.
+review_cards:
+  from_steps:
+  - st02
+  - st05
+  - st09
+  - st13
+  - st16
+  - st18
+  vocab: true

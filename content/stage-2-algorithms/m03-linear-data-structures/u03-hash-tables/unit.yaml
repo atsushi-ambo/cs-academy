@@ -1,0 +1,55 @@
+id: s2.m03.u03
+title: Hash tables
+stage: 2
+module: Linear Data Structures
+version: 1
+status: draft
+estimated_minutes: 85
+prerequisites:
+- s2.m03.u07
+- s1.m03.u03
+- s1.m03.u04
+- s2.m02.u05
+objectives:
+- Use dict and set for fast lookup.
+- Count, group, and find a two-sum pair in one pass.
+skills:
+- python.hash-tables
+- english.explain-code
+parts:
+- steps.yaml
+- lesson.md
+- handson.md
+- exercises/
+- tests/
+- solutions/solutions.md
+references:
+- kind: official_doc
+  title: Built-in types
+  url: https://docs.python.org/3.13/library/stdtypes.html
+- kind: official_doc
+  title: Python data structures
+  url: https://docs.python.org/3.13/tutorial/datastructures.html
+vocab:
+- en: hash table
+  ja: ハッシュ表
+- en: hash function
+  ja: ハッシュ関数
+- en: slot
+  ja: 格納位置
+- en: lookup
+  ja: 検索
+- en: key
+  ja: キー
+- en: collision
+  ja: 異なるキーの格納先の衝突
+- en: hashable
+  ja: ハッシュ可能
+- en: membership
+  ja: 所属の確認
+- en: group
+  ja: 分類してまとめる
+- en: two-sum
+  ja: 和が指定値になる二要素探し
+- en: complement
+  ja: 目標値までの差

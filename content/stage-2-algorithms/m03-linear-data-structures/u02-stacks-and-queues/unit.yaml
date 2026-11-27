@@ -1,0 +1,56 @@
+id: s2.m03.u02
+title: Stacks and queues
+stage: 2
+module: Linear Data Structures
+version: 1
+status: draft
+estimated_minutes: 105
+prerequisites:
+- s2.m03.u05
+- s2.m03.u06
+- s1.m03.u03
+objectives:
+- Implement a stack, a queue with two stacks, and a circular queue.
+- Match brackets and explain amortized queue cost.
+skills:
+- python.stacks-and-queues
+- english.explain-code
+parts:
+- steps.yaml
+- lesson.md
+- handson.md
+- exercises/
+- tests/
+- solutions/solutions.md
+references:
+- kind: official_doc
+  title: Python data structures
+  url: https://docs.python.org/3.13/tutorial/datastructures.html
+- kind: official_doc
+  title: Collections
+  url: https://docs.python.org/3.13/library/collections.html
+vocab:
+- en: stack
+  ja: スタック
+- en: queue
+  ja: キュー
+- en: LIFO
+  ja: 後入れ先出し
+- en: FIFO
+  ja: 先入れ先出し
+- en: push
+  ja: 末尾へ積む
+- en: pop
+  ja: 取り出して削除する
+- en: enqueue
+  ja: キューに追加する
+- en: dequeue
+  ja: キューの先頭を取り出す
+- en: matching brackets
+  ja: 対応する括弧
+- en: circular buffer
+  ja: リングバッファ
+- en: wrap around
+  ja: 末尾から先頭に戻る
+- en: remainder
+  ja: 余り
