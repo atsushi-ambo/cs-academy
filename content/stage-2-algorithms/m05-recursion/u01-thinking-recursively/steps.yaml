@@ -1,0 +1,422 @@
+unit: s2.m05.u01
+python_min: '3.9'
+steps:
+- id: st01
+  type: read
+  title: From a loop to a smaller copy of the same job
+  body: |
+    A job queue sends 3 files, then 2, then 1. You need the total number
+    of files sent. You will solve this with a loop, then with **recursion**.
+    Recursion means a function calls itself with a smaller job.
+
+    ```python
+    def files(n):
+        total = 0
+        while n > 0:
+            total += n
+            n -= 1
+        return total
+    ```
+
+    Think of `files(3)` as 3 plus the answer for 2. For 0 there
+    is no work. In recursion, that direct answer is the **base case**.
+- id: st02
+  type: predict
+  title: Check the loop you already know
+  code: |
+    total = 0
+    for batch in range(1, 4):
+        total += batch
+    print(total)
+  choices:
+  - text: '0'
+    why: Each pass changes the total.
+  - text: '6'
+    why: The total grows from 0 to 1, then 3, then 6.
+  - text: '3'
+    why: 3 is the last value added, not the full total.
+  - text: '10'
+    why: The stop 4 is left out.
+  answer: 1
+- id: st03
+  type: try
+  title: Change the number of batches
+  starter: |
+    total = 0
+    for batch in range(1, 4):
+        total += batch
+    print(total)
+  task: Change the stop so the loop adds batches 1 through 4. Check the new total.
+  check:
+    stdout_line: '10'
+- id: st04
+  type: read
+  title: Write the same sum as a call
+  body: |
+    ```python
+    def files(n):
+        if n == 0:
+            return 0
+        return n + files(n - 1)
+    ```
+
+    The second return is the **recursive case**. It asks for a smaller sum.
+    Each call has its own **frame**. A frame holds that call's value of n.
+    Follow the calls down. Then carry the answers back up.
+
+    ```text
+    calls:   files(3) -> files(2) -> files(1) -> files(0)
+    returns: 6        <- 3        <- 1        <- 0
+    ```
+
+    The call with 0 returns first. The call with 3 returns last.
+- id: st05
+  type: predict
+  title: What does the base case give back?
+  code: |
+    def files(n):
+        if n == 0:
+            return 0
+        return n + files(n - 1)
+
+    print(files(2))
+  choices:
+  - text: '0'
+    why: Only the deepest call has result 0.
+  - text: None
+    why: Every path reaches a return with a value.
+  - text: '3'
+    why: The base gives 0. Then the waiting calls add 1 and 2.
+  - text: '2'
+    why: The call with n = 1 also adds its value.
+  answer: 2
+- id: st06
+  type: parsons
+  title: Put the base case first
+  task: Make the function add 1 through n. Use all lines.
+  lines:
+  - 'def files(n):'
+  - '    if n == 0:'
+  - '        return 0'
+  - '    return n + files(n - 1)'
+  - print(files(2))
+  expected_stdout: '3'
+- id: st07
+  type: code
+  title: Total pages in shrinking print batches
+  exercise: exercises/practice.py
+  function: batch_pages
+  test_class: BatchPages
+  hint_levels:
+  - Solve the zero-batch job directly.
+  - Ask for the sum with one fewer batch and add the current size.
+  - Return n + batch_pages(n - 1) after the zero check.
+- id: st08
+  type: read
+  title: Trace up and down
+  body: |
+    A call finishes only when its child call returns. A print before
+    the call runs on the way down. A print after it runs on the way back.
+
+    ```text
+    scan(2) enters -> scan(1) enters -> scan(0) returns
+    scan(2) exits  <- scan(1) exits
+    ```
+
+    The last call to enter is the first one to finish.
+    A base case can return immediately, with no print.
+- id: st09
+  type: predict
+  title: Read the entry and exit log
+  code: |
+    def scan(n):
+        if n == 0:
+            return
+        print("in", n)
+        scan(n - 1)
+        print("out", n)
+
+    scan(2)
+  choices:
+  - text: |
+      in 2
+      out 2
+      in 1
+      out 1
+    why: The call with 2 waits between its two prints.
+  - text: |
+      in 2
+      in 1
+      out 2
+      out 1
+    why: The last active call finishes first.
+  - text: |
+      in 2
+      in 1
+      in 0
+      out 0
+      out 1
+      out 2
+    why: The base case returns before either print.
+  - text: |
+      in 2
+      in 1
+      out 1
+      out 2
+    why: The call with 1 must finish before the call with 2 can print out 2.
+  answer: 3
+- id: st10
+  type: try
+  title: Add one level of logging
+  starter: |
+    def scan(n):
+        if n == 0:
+            return
+        print("in", n)
+        scan(n - 1)
+        print("out", n)
+
+    scan(2)
+  task: Call scan(3). Check that out 3 is the last line.
+  check:
+    stdout_line: out 3
+- id: st11
+  type: predict
+  title: Where did the result go?
+  code: |
+    def checks(n):
+        if n == 0:
+            return 0
+        n + checks(n - 1)
+
+    print(checks(1))
+  choices:
+  - text: None
+    why: Python computes 1 + 0, then reaches the end with no return. It returns None.
+  - text: '1'
+    why: A bare expression does not return its value.
+  - text: '0'
+    why: That is the result of checks(0) only.
+  - text: RecursionError
+    why: The input gets smaller and reaches zero.
+  answer: 0
+- id: st12
+  type: fix
+  title: Return the result to the caller
+  task: Return the number of checks from n counts down to 0. At 0, return 0.
+  starter: |
+    def checks(n):
+        if n == 0:
+            return 0
+        1 + checks(n - 1)
+  solution: |
+    def checks(n):
+        if n == 0:
+            return 0
+        return 1 + checks(n - 1)
+  tests: |
+    import ast
+    import inspect
+
+    nodes = ast.walk(ast.parse(inspect.getsource(checks)))
+    assert any(isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
+               and node.func.id == "checks" for node in nodes), (
+        "This exercise must use recursion: checks never calls itself."
+    )
+
+    assert checks(1) == 1
+    assert checks(5) == 5
+    assert checks(0) == 0
+  hint_levels:
+  - Find where the addition happens.
+  - Send the value back to the caller.
+  - Put return before 1 + checks(n - 1).
+  explanation: The caller gets None when a function reaches the end with no return. Return the sum explicitly.
+- id: st13
+  type: read
+  title: The right base value depends on the job
+  body: |
+    To add no numbers, start with 0. To multiply no numbers, start with 1.
+    A factor of 1 leaves the result unchanged. This matters for the
+    **factorial**, the product of the integers from 1 through n.
+
+    ```text
+    calls:   factorial(3) -> factorial(2) -> factorial(1) -> factorial(0)
+    returns: 6            <- 2            <- 1            <- 1
+    ```
+
+    Now the waiting frames multiply their value of n instead of adding it.
+    For three jobs, there are 3 choices for first, then 2, then 1.
+- id: st14
+  type: predict
+  title: A zero at the bottom
+  code: |
+    def product(n):
+        if n == 0:
+            return 0
+        return n * product(n - 1)
+
+    print(product(3))
+  choices:
+  - text: '3'
+    why: The first call returns n times a smaller product.
+  - text: '0'
+    why: All the multiplications use the zero from the base case.
+  - text: '6'
+    why: The base must be 1 for the product to be 6.
+  - text: '1'
+    why: The starter returns 0 at zero.
+  answer: 1
+- id: st15
+  type: fix
+  title: Fix the base value for a product
+  task: Return the factorial of n. The product with no factors is 1.
+  starter: |
+    def factorial(n):
+        if n == 0:
+            return 0
+        return n * factorial(n - 1)
+  solution: |
+    def factorial(n):
+        if n == 0:
+            return 1
+        return n * factorial(n - 1)
+  tests: |
+    import ast
+    import inspect
+
+    nodes = ast.walk(ast.parse(inspect.getsource(factorial)))
+    assert any(isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
+               and node.func.id == "factorial" for node in nodes), (
+        "This exercise must use recursion: factorial never calls itself."
+    )
+
+    assert factorial(0) == 1
+    assert factorial(4) == 24
+  hint_levels:
+  - The base case already stops at the right time.
+  - Choose a value that leaves a factor unchanged.
+  - Return 1 in the base case.
+  explanation: Multiplying by 1 keeps the previous product. A zero would wipe it out.
+- id: st16
+  type: code
+  title: Count possible orders for a tiny job batch
+  exercise: exercises/practice.py
+  function: job_orders
+  test_class: JobOrders
+  hint_levels:
+  - There is one way to arrange zero jobs.
+  - Multiply the first choice count by the smaller answer.
+  - After the base case, return n * job_orders(n - 1).
+- id: st17
+  type: read
+  title: A call can split into two choices
+  body: |
+    You can climb a step or jump two steps. Count the ways to reach
+    step n. The first move leaves n - 1 or n - 2 steps. Add the two counts.
+    Zero steps left means one finished route. Fewer than zero means no route.
+
+    ```text
+    ways(3) waits for ways(2) and ways(1)
+      ways(2) waits for ways(1) and ways(0)
+        ways(1) gets 1 from ways(0) and 0 from ways(-1), then returns 1
+      ways(2) gets 1 from ways(1) and 1 from ways(0), then returns 2
+      ways(1) gets 1 from ways(0) and 0 from ways(-1), then returns 1
+    ways(3) gets 2 and 1, then returns 3
+    ```
+
+    Both branches ask for ways(1). Each returns 1. ways(2) returns 2
+    and ways(3) returns 3. Repeated work grows fast as n grows.
+- id: st18
+  type: predict
+  title: Count three-step routes
+  code: |
+    def ways(n):
+        if n == 0:
+            return 1
+        if n < 0:
+            return 0
+        return ways(n - 1) + ways(n - 2)
+
+    print(ways(3))
+  choices:
+  - text: '4'
+    why: Paths that go past the target count as zero.
+  - text: '6'
+    why: The branches add counts; they do not multiply them.
+  - text: '3'
+    why: The routes are 1+1+1, 1+2, and 2+1. Their order matters.
+  - text: '2'
+    why: Jumps of 1 then 2 and 2 then 1 are different routes.
+  answer: 2
+- id: st19
+  type: try
+  title: Count how often the same job returns
+  starter: |
+    def ways(n):
+        if n == 0:
+            return 1
+        if n < 0:
+            return 0
+        if n == 1:
+            print("one step")
+        return ways(n - 1) + ways(n - 2)
+
+    print(ways(3))
+  task: Change ways(3) at the bottom to ways(4). Count the "one step" lines before the final result.
+  check:
+    stdout_line: '5'
+- id: st20
+  type: code
+  title: Count stairs routes
+  exercise: exercises/practice.py
+  function: stair_routes
+  test_class: StairRoutes
+  hint_levels:
+  - Start by counting finished and impossible routes.
+  - Split on the first move and add both counts.
+  - Return stair_routes(n - 1) + stair_routes(n - 2) after both base cases.
+- id: st21
+  type: explain
+  title: Explain it to a teammate
+  prompt: Write 2–3 English sentences. Show why a recursive print-batch sum eventually stops.
+  rubric:
+  - State the base case and the answer it returns.
+  - Describe the smaller input and what each waiting call adds.
+review_cards:
+  from_steps:
+  - st02
+  - st05
+  - st09
+  - st11
+  - st14
+  - st18
+  vocab: true
+placement:
+  title: 'Placement: pages left to scan'
+  questions:
+  - st02
+  - st05
+  - st09
+  - st11
+  minimum_correct: 3
+  starter: |
+    def scan_pages(n):
+        """Return 2 + 4 + ... + 2*n for n from 0 to 100.
+        Use a base case and recursion. Example: scan_pages(3) -> 12.
+        """
+        raise NotImplementedError
+  tests: |
+    import ast
+    import inspect
+
+    nodes = ast.walk(ast.parse(inspect.getsource(scan_pages)))
+    assert any(isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
+               and node.func.id == "scan_pages" for node in nodes), (
+        "This exercise must use recursion: scan_pages never calls itself."
+    )
+
+    assert scan_pages(0) == 0
+    assert scan_pages(1) == 2
+    assert scan_pages(3) == 12
+    assert scan_pages(6) == 42

@@ -1,0 +1,41 @@
+id: s1.m02.u04
+title: 'Loop patterns: counting, accumulating, searching, nested loops'
+stage: 1
+module: Control Flow
+version: 1
+status: draft
+estimated_minutes: 85
+prerequisites:
+- s1.m02.u03
+objectives:
+- Count matching items and add their values.
+- Stop a search at the first match.
+- Visit rows with a loop inside a loop.
+- Filter a list without changing its indexes.
+skills:
+- python.loop-patterns
+- english.explain-code
+parts:
+- steps.yaml
+- lesson.md
+- exercises/
+- solutions/solutions.md
+references:
+- kind: official_doc
+  title: Python control flow
+  url: https://docs.python.org/3.13/tutorial/controlflow.html
+vocab:
+- en: count
+  ja: 個数を数える
+- en: accumulate
+  ja: 値を積み上げる
+- en: match
+  ja: 条件に合う項目
+- en: sentinel
+  ja: 特別な意味を持つ目印の値
+- en: nested loop
+  ja: 入れ子のループ
+- en: filter
+  ja: 条件で絞り込む
+- en: in place
+  ja: 元の値をその場で変更して

@@ -1,8 +1,16 @@
+import sys
 import unittest
+from contextlib import redirect_stderr
+from io import StringIO
+from pathlib import Path
+from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
-from app.content import LISTS
+from app.content import load_catalog
+from runner import sandbox
 from runner.host import IMAGE, WALL_TIMEOUT, command, execute
+
+from .support import LISTS, RECURSION
 
 
 class RunnerCommandTest(unittest.TestCase):
@@ -48,3 +56,53 @@ class RunnerCommandTest(unittest.TestCase):
         self.assertEqual(isolated_environment["DOCKER_HOST"], "unix:///local-engine.sock")
         self.assertNotIn("DOCKER_CONTEXT", isolated_environment)
         self.assertNotEqual(isolated_environment["DOCKER_CONFIG"], "/original-config")
+
+
+class TechniqueTest(unittest.TestCase):
+    def grade_fixture(self, problem, source):
+        output = StringIO()
+        payload = {
+            "source": source, "test_body": problem.test_body,
+            "module": problem.module, "test_class": problem.test_class,
+        }
+        with TemporaryDirectory(prefix="academy-technique-") as root:
+            unit = Path(root) / "unit"
+            with patch.object(sandbox, "Path", return_value=unit):
+                argv, _ = sandbox.prepare(payload)
+                with (patch.object(sys, "argv", argv), patch.object(sys, "path", sys.path.copy()),
+                      patch.dict(sys.modules), redirect_stderr(output)):
+                    sys.modules.pop(problem.module, None)
+                    status = sandbox.grade()
+        return status, output.getvalue()
+
+    def test_batch_pages_enforces_recursion_and_prohibits_loops_and_sum(self):
+        problem = load_catalog().problems[f"{RECURSION}/st07"]
+        cases = {
+            "iterative": (
+                "    total = 0\n"
+                "    for page in range(1, n + 1):\n"
+                "        total += page\n"
+                "    return total\n",
+                "This exercise must use recursion: batch_pages never calls itself.",
+            ),
+            "closed formula": (
+                "    return n * (n + 1) // 2\n",
+                "This exercise must use recursion: batch_pages never calls itself.",
+            ),
+            "comprehension": (
+                "    return 0 if n == 0 else [n for _ in range(1)][0] + batch_pages(n - 1)\n",
+                "batch_pages must not use loops.",
+            ),
+            "sum": (
+                "    return 0 if n == 0 else sum((n, batch_pages(n - 1)))\n",
+                "batch_pages must not use sum().",
+            ),
+        }
+        for technique, (body, message) in cases.items():
+            with self.subTest(technique=technique):
+                status, output = self.grade_fixture(problem, "def batch_pages(n):\n" + body)
+                self.assertEqual(status, sandbox.TESTS_FAILED, output)
+                self.assertIn(message, output)
+                self.assertIn("failures=1", output)
+        status, output = self.grade_fixture(problem, problem.solution)
+        self.assertEqual(status, sandbox.TESTS_PASSED, output)

@@ -7,9 +7,8 @@ from pathlib import Path
 import yaml
 
 ROOT = Path(__file__).resolve().parent.parent
-LISTS = "s1.m03.u01"
 STEP_TYPES = frozenset("read predict try parsons fix code terminal explain boss".split())
-PLAY_TYPES = STEP_TYPES - {"terminal", "explain", "boss"}
+PLAY_TYPES = STEP_TYPES - {"terminal", "boss"}
 SOURCE_LIMIT = 16 * 1024
 STDIN_LIMIT = 4 * 1024
 ID = re.compile(r"[a-z0-9][a-z0-9.-]{0,79}")
@@ -180,7 +179,12 @@ def load_unit(catalog, directory, metadata):
         and metadata.get("title") == unit["title"],
         f"Unit metadata does not match curriculum: {uid}",
     )
-    unit.update(version=version, status=string(metadata.get("status")))
+    status = metadata.get("status")
+    require(status in ("draft", "published"), f"Invalid unit status: {uid}")
+    prerequisites = tuple(map(string, sequence(metadata.get("prerequisites", []))))
+    require(uid not in prerequisites and len(set(prerequisites)) == len(prerequisites)
+            and all(key in catalog.units for key in prerequisites), f"Invalid prerequisites: {uid}")
+    unit.update(version=version, status=status, prerequisites=prerequisites)
     play_file = yaml_file(directory / "steps.yaml")
     require(play_file.get("unit") == uid, f"Wrong unit in steps.yaml: {uid}")
 
@@ -207,6 +211,11 @@ def load_unit(catalog, directory, metadata):
             require(len(hints) == 3, f"{sid}: expected three hints")
         if kind == "read":
             string(step.get("body"))
+        if kind == "explain":
+            string(step.get("prompt"))
+            require(bool(sequence(step.get("rubric"))), f"Missing rubric: {sid}")
+            for item in step["rubric"]:
+                string(item)
         if kind == "parsons":
             lines = tuple(map(string, sequence(step.get("lines"))))
             require(len(lines) >= 2 and len(set(lines)) == len(lines), f"Invalid lines: {sid}")
@@ -215,7 +224,7 @@ def load_unit(catalog, directory, metadata):
         catalog.steps[key] = step
         if kind in {"code", "fix", "try"}:
             catalog.problems[key] = code_problem(step, directory)
-        if kind in PLAY_TYPES:
+        if kind in PLAY_TYPES and not (kind == "explain" and step.get("optional") is True):
             playable.append(key)
 
     require(playable, f"No playable steps: {uid}")
@@ -231,6 +240,7 @@ def load_unit(catalog, directory, metadata):
         load_vocab(catalog, uid, metadata.get("vocab"))
     catalog.resources[uid] = {
         "lesson": asset(directory, "lesson.md", "", ".md"),
+        "vocab": metadata.get("vocab", []),
         **{
             "handson": asset(directory, step["guide"], "", ".md")
             for key, step in catalog.steps.items()
@@ -298,4 +308,9 @@ def load_catalog(root=ROOT / "content"):
                                       "version": 1, "status": "outline"}
     for path in sorted(root.rglob("unit.yaml")):
         load_unit(catalog, path.parent, yaml_file(path))
+    ready = set(catalog.units) - set(catalog.play)
+    for _ in catalog.play:
+        ready.update(uid for uid in catalog.play
+                     if all(key in ready for key in catalog.units[uid]["prerequisites"]))
+    require(len(ready) == len(catalog.units), "Cyclic unit prerequisites")
     return catalog

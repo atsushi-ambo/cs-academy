@@ -4,19 +4,18 @@ from contextlib import closing
 from datetime import date, timedelta
 from unittest.mock import patch
 
-from app.content import LISTS
 from app.fsrs import Grade, update
 from app.learning import RequestError
 from app.storage import BACKUP_DB, MIGRATIONS, Store, connect, migrate
 
-from .support import PLACEMENT_SOURCE, AcademyCase, result
+from .support import LISTS, PLACEMENT_SOURCE, AcademyCase, result
 
 
 class LearningTest(AcademyCase):
     def play(self, step, action, **fields):
         with self.store.transaction() as db:
             return self.learning.play(
-                db, {"step": f"{LISTS}/{step}", "action": action, **fields}, self.date,
+                db, {"unit": LISTS, "step": f"{LISTS}/{step}", "action": action, **fields}, self.date,
             )
 
     def today(self):
@@ -131,8 +130,8 @@ class LearningTest(AcademyCase):
         self.date = date.today()
         key = f"{LISTS}/st09"
         with self.store.transaction() as db:
-            self.learning.place(db, {"answers": [2, 0, 3, 2], "source": PLACEMENT_SOURCE}, self.date)
-            self.learning.skip(db, self.date)
+            self.learning.place(db, {"unit": LISTS, "answers": [2, 0, 3, 2], "source": PLACEMENT_SOURCE}, self.date)
+            self.learning.skip(db, {"unit": LISTS}, self.date)
         step = self.store.catalog.steps[key]
         step["answer"] = (step["answer"] + 1) % len(step["choices"])
         self.store.initialize()
@@ -188,19 +187,19 @@ class LearningTest(AcademyCase):
             "passed", stdout="['web01', 'web02', 'web04']\n3\n",
         )):
             self.assertFalse(self.play("st02", "run", source="unused", stdin="")["complete"])
-        self.assertEqual(self.today()["completed"], 1)
+        self.assertEqual(self.today()["unit"]["completed"], 1)
         with patch.object(self.learning, "runner", return_value=result(
             "passed", stdout="['web01', 'web02', 'web03', 'db01']\n4\n",
         )):
             self.assertTrue(self.play("st02", "run", source="unused", stdin="")["complete"])
-        self.assertEqual(self.today()["completed"], 2)
+        self.assertEqual(self.today()["unit"]["completed"], 2)
 
     def test_quest_targets_fit_remaining_work(self):
         self.assertEqual(self.today()["quests"]["code"]["target"], 1)
         with self.store.transaction() as db:
             db.executemany(
                 "INSERT INTO step_progress (step_id, unit_version, complete) VALUES (?, ?, 1)",
-                ((key, self.learning.version) for key in self.learning.sequence
+                ((key, self.learning.version(LISTS)) for key in self.store.catalog.play[LISTS]
                  if key != f"{LISTS}/st18"),
             )
         self.assertEqual(
@@ -223,22 +222,22 @@ class LearningTest(AcademyCase):
             good_day = db.execute("SELECT due_day FROM review_cards WHERE id=?",
                                   (f"{LISTS}/st04",)).fetchone()[0]
             with self.assertRaises(RequestError):
-                self.learning.skip(db, self.date)
-            fail = self.learning.place(db, {"answers": [2, 0, 3, 2], "source": "starter"}, self.date)
+                self.learning.skip(db, {"unit": LISTS}, self.date)
+            fail = self.learning.place(db, {"unit": LISTS, "answers": [2, 0, 3, 2], "source": "starter"}, self.date)
             self.assertFalse(fail["passed"])
-            low = self.learning.place(db, {"answers": [0, 1, 0, 0], "source": PLACEMENT_SOURCE},
+            low = self.learning.place(db, {"unit": LISTS, "answers": [0, 1, 0, 0], "source": PLACEMENT_SOURCE},
                                       self.date)
             self.assertFalse(low["passed"])
-            good = self.learning.place(db, {"answers": [2, 0, 3, 0], "source": PLACEMENT_SOURCE},
+            good = self.learning.place(db, {"unit": LISTS, "answers": [2, 0, 3, 0], "source": PLACEMENT_SOURCE},
                                        self.date)
             self.assertTrue(good["passed"])
-            self.assertTrue(self.learning.placement(db)["can_skip"])
-            self.assertFalse(self.learning.today(db, self.date)["skipped"])
-            self.assertEqual(self.learning.today(db, self.date)["completed"], 4)
-            self.learning.skip(db, self.date)
-            self.learning.skip(db, self.date)
-            self.assertTrue(self.learning.today(db, self.date)["skipped"])
-            self.assertEqual(self.learning.today(db, self.date)["completed"], 4)
+            self.assertTrue(self.learning.placement(db, LISTS)["can_skip"])
+            self.assertFalse(self.learning.today(db, self.date)["unit"]["skipped"])
+            self.assertEqual(self.learning.today(db, self.date)["unit"]["completed"], 4)
+            self.learning.skip(db, {"unit": LISTS}, self.date)
+            self.learning.skip(db, {"unit": LISTS}, self.date)
+            self.assertIsNone(self.learning.today(db, self.date)["unit"])
+            self.assertEqual(len(self.learning.step_view(db, LISTS)["completed_steps"]), 4)
             self.assertEqual(good_day, (self.date + timedelta(days=3)).isoformat())
             rows = db.execute(
                 "SELECT due_day, COUNT(*) FROM review_cards WHERE due_day IS NOT NULL GROUP BY due_day"
@@ -247,8 +246,9 @@ class LearningTest(AcademyCase):
             key = self.learning.reviews(db, self.date)["due"][0]["id"]
             wrong = (self.learning.card(key)["answer"] + 1) % 4
             self.learning.review(db, {"card": key, "retry": False, "choice": wrong}, self.date)
-            self.learning.place(db, {"answers": [2, 0, 3, 2], "source": PLACEMENT_SOURCE}, self.date)
-            self.assertTrue(self.learning.today(db, self.date)["recommend"])
+            self.learning.place(db, {"unit": LISTS, "answers": [2, 0, 3, 2], "source": PLACEMENT_SOURCE}, self.date)
+            self.assertEqual([unit["id"] for unit in self.learning.today(db, self.date)["recommended"]],
+                             [LISTS])
             self.assertEqual(db.execute("SELECT COUNT(*) FROM review_logs").fetchone()[0], 2)
 
     def test_backup_online_round_trip_and_rejects_invalid_backup(self):

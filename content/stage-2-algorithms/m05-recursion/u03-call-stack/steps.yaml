@@ -1,0 +1,360 @@
+unit: s2.m05.u03
+python_min: '3.9'
+steps:
+- id: st01
+  type: read
+  title: Read a log of calls that wait
+  body: |
+    A file check may call itself for another level of folders. The calls
+    that wait form a **call stack**. You will trace that stack, recognize
+    a depth error, and write a function that needs fewer frames.
+
+    Each call adds a **frame** with its own values and a place to return.
+    The newest frame runs first. Its caller waits for it to return.
+- id: st02
+  type: read
+  title: Follow the returns
+  body: |
+    Think of `minutes(n)`, which returns 3 minutes per check:
+    `minutes(0) = 0`, and `minutes(n) = 3 + minutes(n - 1)`.
+
+    ```text
+    frames:  minutes(2) -> minutes(1) -> minutes(0)
+    returns: 6           <- 3           <- 0
+    ```
+
+    The deepest frame returns 0. Its caller adds 3. Finally, the first
+    frame adds 3 again. Peak **depth** is the largest number of active frames.
+- id: st03
+  type: predict
+  title: Which frame prints next?
+  code: |
+    def audit(n):
+        print("open", n)
+        if n > 0:
+            audit(n - 1)
+        print("close", n)
+
+    audit(1)
+  choices:
+  - text: |
+      open 1
+      close 1
+      open 0
+      close 0
+    why: The call with 0 runs before close 1.
+  - text: |
+      open 1
+      open 0
+      close 1
+      close 0
+    why: The older frame cannot finish before its child.
+  - text: |
+      open 1
+      close 1
+    why: At 0 the function skips the call, but runs both prints.
+  - text: |
+      open 1
+      open 0
+      close 0
+      close 1
+    why: The first close comes from the newest frame. The older frame is still waiting.
+  answer: 3
+- id: st04
+  type: try
+  title: Watch a stack grow by one
+  starter: |
+    def audit(n):
+        print("open", n)
+        if n > 0:
+            audit(n - 1)
+        print("close", n)
+
+    audit(1)
+  task: Change the call to audit(2). The last line should come from the oldest frame.
+  check:
+    stdout_line: close 2
+- id: st05
+  type: parsons
+  title: Label the exit after the call
+  task: Build a trace where one child frame prints before the parent closes.
+  lines:
+  - 'def audit(n):'
+  - '    print("open", n)'
+  - '    if n > 0:'
+  - '        audit(n - 1)'
+  - '    print("close", n)'
+  - audit(1)
+  expected_stdout: |
+    open 1
+    open 0
+    close 0
+    close 1
+- id: st06
+  type: code
+  title: Make the exit log
+  exercise: exercises/practice.py
+  function: exit_log
+  test_class: ExitLog
+  hint_levels:
+  - The deepest frame closes first.
+  - Let the smaller call make the list. Append your own frame number after the return.
+  - Start with [0]. Use log = exit_log(n - 1), log.append(n), then return log.
+- id: st07
+  type: read
+  title: A missing base case hits a limit
+  body: |
+    Python raises `RecursionError` when the call stack gets too deep.
+    This can happen even with a correct base case if it is too far away.
+    The **traceback** shows calls that were active when the error occurred.
+
+    `sys.getrecursionlimit()` tells you the interpreter's current limit.
+    Some frames are already in use when your function starts.
+    Use a loop or reduce the depth. Raising the limit is not a repair
+    for a function that never stops.
+- id: st08
+  type: predict
+  title: A call with no way back
+  code: |
+    def wait():
+        return wait()
+
+    try:
+        wait()
+    except RecursionError:
+        print("too deep")
+  choices:
+  - text: too deep
+    why: The calls keep adding frames. The except block reports the depth error.
+  - text: None
+    why: No call reaches a normal return.
+  - text: no output forever
+    why: The interpreter stops the chain at its limit.
+  - text: '0'
+    why: There is no base result of 0 in this function.
+  answer: 0
+- id: st09
+  type: try
+  title: See RecursionError, then stop in time
+  starter: |
+    import sys
+
+    def down(n):
+        if n == 0:
+            return "safe"
+        return down(n - 1)
+
+    print(sys.getrecursionlimit())
+    try:
+        print(down(sys.getrecursionlimit() + 10))
+    except RecursionError:
+        print("RecursionError")
+  task: Run once to see the limit and error. Change the argument of down to 4 and run again.
+  check:
+    stdout_line: safe
+- id: st10
+  type: fix
+  title: Find the base case that is never reached
+  task: Return n plus all lower non-negative integers. n is non-negative.
+  starter: |
+    def plus(n):
+        if n == -1:
+            return 0
+        return n + plus(n - 2)
+  solution: |
+    def plus(n):
+        if n == 0:
+            return 0
+        return n + plus(n - 1)
+  tests: |
+    import ast
+    import inspect
+
+    nodes = ast.walk(ast.parse(inspect.getsource(plus)))
+    assert any(isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
+               and node.func.id == "plus" for node in nodes), (
+        "This exercise must use recursion: plus never calls itself."
+    )
+
+    assert plus(0) == 0
+    assert plus(4) == 10
+    assert plus(5) == 15
+  hint_levels:
+  - Trace the inputs from an even starting value.
+  - Subtract 1 so you visit every integer. Stop at zero.
+  - Use if n == 0 and return n + plus(n - 1).
+  explanation: An even number minus 2 stays even. It cannot reach -1, so the even input fails with RecursionError.
+- id: st11
+  type: read
+  title: A tail call still uses a frame
+  body: |
+    In `return down(n - 1)`, the call is the last action. This is a
+    **tail call**. There is no addition or print left when it returns.
+    Python still keeps the caller's frame. This keeps the chain of calls
+    visible in a traceback. Python has no tail-call optimisation.
+
+    For a straight countdown, a loop can reuse one value of n. It needs
+    no new function frame for each update.
+- id: st12
+  type: predict
+  title: Does moving the work into the argument help depth?
+  code: |
+    def total(n, so_far):
+        if n == 0:
+            return so_far
+        return total(n - 1, so_far + n)
+
+    print(total(2, 0))
+  choices:
+  - text: None
+    why: The return in each frame passes the value back.
+  - text: '3'
+    why: The frames receive (2, 0), (1, 2), and (0, 3). Each returns the same 3.
+  - text: '2'
+    why: The call with n = 1 also adds 1.
+  - text: '0'
+    why: The base frame returns its own so_far, which is 3.
+  answer: 1
+- id: st13
+  type: code
+  title: Count a deep chain with one frame
+  exercise: exercises/practice.py
+  function: loop_total
+  test_class: LoopTotal
+  hint_levels:
+  - Keep the current n and the accumulated answer.
+  - Add n, then reduce n by one while it is positive.
+  - On each pass do total += n and n -= 1. Return after the loop.
+- id: st14
+  type: read
+  title: Halve the exponent to save depth
+  body: |
+    An **exponent** says how many times to multiply a base.
+    To get 2 to the power 6, first find 2 to the power 3. Square it.
+    With odd exponent 7, multiply that square by 2 once more.
+    Use `n // 2` for the whole number part and `n % 2` for the remainder.
+
+    ```text
+    calls:   power(2, 7) -> power(2, 3) -> power(2, 1) -> power(2, 0)
+    returns: 128         <- 8           <- 2           <- 1
+    ```
+
+    Each waiting frame uses the smaller answer twice by saving it once.
+- id: st15
+  type: predict
+  title: How many frames do the halves need?
+  code: |
+    def calls(n):
+        if n == 0:
+            return 1
+        return 1 + calls(n // 2)
+
+    print(calls(8))
+  choices:
+  - text: '9'
+    why: The exponent halves each time; it does not go down by one.
+  - text: '3'
+    why: The chain continues after 2, through 1 and 0.
+  - text: '5'
+    why: The frames hold 8, 4, 2, 1, and 0. The base frame counts too.
+  - text: '4'
+    why: That counts only the edges between frames.
+  answer: 2
+- id: st16
+  type: try
+  title: Cross a halving boundary
+  starter: |
+    def calls(n):
+        if n == 0:
+            return 1
+        return 1 + calls(n // 2)
+
+    print(calls(7))
+  task: Change 7 to 8. Check that crossing this boundary needs one more frame.
+  check:
+    stdout_line: '5'
+- id: st17
+  type: fix
+  title: Keep the extra factor for an odd exponent
+  task: Return base to the power n. n is a non-negative integer.
+  starter: |
+    def scale(base, n):
+        if n == 0:
+            return 1
+        half = scale(base, n // 2)
+        return half * half
+  solution: |
+    def scale(base, n):
+        if n == 0:
+            return 1
+        half = scale(base, n // 2)
+        square = half * half
+        if n % 2:
+            return square * base
+        return square
+  tests: |
+    import ast
+    import inspect
+
+    nodes = ast.walk(ast.parse(inspect.getsource(scale)))
+    assert any(isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
+               and node.func.id == "scale" for node in nodes), (
+        "This exercise must use recursion: scale never calls itself."
+    )
+
+    assert scale(3, 0) == 1
+    assert scale(3, 4) == 81
+    assert scale(3, 3) == 27
+  hint_levels:
+  - Integer division rounds an odd n down.
+  - At odd n, the square accounts for n - 1 factors.
+  - Multiply the square by base if n % 2 is 1.
+  explanation: After squaring the half power, multiply once more only for an odd exponent.
+- id: st18
+  type: code
+  title: Scale a batch with fast exponentiation
+  exercise: exercises/practice.py
+  function: fast_power
+  test_class: FastPower
+  hint_levels:
+  - Solve the power with half the exponent.
+  - Save the recursive answer, square it, then check whether n is odd.
+  - Return square * base if n % 2 == 1, else square.
+- id: st19
+  type: predict
+  title: Tell peak depth from the total number of calls
+  code: |
+    def depth(n):
+        if n == 0:
+            return 1
+        left = depth(n - 1)
+        right = depth(n - 1)
+        return 1 + max(left, right)
+
+    print(depth(2))
+  choices:
+  - text: "7"
+    why: Seven calls run in total. The left call has returned before the right call begins.
+  - text: "2"
+    why: This leaves out the deepest frame, which counts as 1.
+  - text: "3"
+    why: max picks the deeper branch, then 1 counts the current frame. The active values can be 2, 1, and 0.
+  - text: "1"
+    why: Each waiting caller still uses a frame while a child runs.
+  answer: 2
+- id: st20
+  type: explain
+  title: Explain it to a teammate
+  prompt: Write 2–3 English sentences. Explain to a teammate why a correct recursive countdown can still
+    fail.
+  rubric:
+  - Distinguish a missing stop from a stop that is too deep.
+  - Name a rewrite that keeps the number of active frames small.
+review_cards:
+  from_steps:
+  - st03
+  - st08
+  - st12
+  - st15
+  - st19
+  vocab: true

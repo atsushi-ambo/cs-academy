@@ -1,0 +1,48 @@
+id: s2.m05.u03
+title: 'The call stack: how recursion runs, and recursion depth'
+stage: 2
+module: Recursion
+version: 1
+status: draft
+estimated_minutes: 85
+prerequisites:
+- s2.m05.u01
+objectives:
+- Track a value in each call frame.
+- Read a recursion depth error.
+- Cut the depth of powers by halving the exponent.
+skills:
+- python.call-stack
+- english.explain-code
+parts:
+- steps.yaml
+- lesson.md
+- exercises/
+- solutions/solutions.md
+references:
+- kind: official_doc
+  title: Python recursion limit
+  url: https://docs.python.org/3.13/library/sys.html#sys.getrecursionlimit
+- kind: official_doc
+  title: Python exceptions
+  url: https://docs.python.org/3.13/library/exceptions.html#RecursionError
+- kind: official_doc
+  title: Tail recursion elimination
+  url: https://neopythonic.blogspot.com/2009/04/tail-recursion-elimination.html
+vocab:
+- en: call stack
+  ja: 呼び出しスタック
+- en: frame
+  ja: 呼び出しごとの作業領域
+- en: depth
+  ja: 深さ
+- en: traceback
+  ja: エラーまでの呼び出し履歴
+- en: tail call
+  ja: 末尾呼び出し
+- en: exponent
+  ja: 指数
+- en: integer division
+  ja: 整数除算
+- en: remainder
+  ja: 余り

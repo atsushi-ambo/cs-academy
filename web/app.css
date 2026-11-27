@@ -147,6 +147,11 @@ legend { font-weight: 700; }
 .radio { display: flex; gap: 8px; align-items: center; padding: 5px 0; }
 details { padding: 10px 0; border-top: 1px solid var(--line); }
 summary { cursor: pointer; color: var(--accent); }
+.path-units { padding: 0; list-style: none; }
+.path-units li { border-top: 1px solid var(--line); padding: 9px 0; }
+.path-units .meta { display: inline-block; margin-inline: 10px; }
+.path-units p { color: var(--muted); margin: 4px 0; }
+.rubric { padding: 0; list-style: none; }
 blockquote { margin-left: 0; border-left: 2px solid var(--accent); padding-left: 12px; color: var(--muted); }
 .table-scroll { overflow-x: auto; }
 table { border-collapse: collapse; }

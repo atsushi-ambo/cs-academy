@@ -1,0 +1,310 @@
+unit: s1.m02.u04
+python_min: '3.9'
+steps:
+- id: st01
+  type: read
+  title: Choose a loop pattern for a log report
+  body: |
+    A log report may need a count of slow requests and a sum of their times.
+    It may also need the first error in the log. You will learn a short plan
+    for each job. Then you will handle a report with several rows.
+
+    A **count** adds 1 per match. A **sum** adds the matching value itself.
+    Set the answer to zero before looking at any item.
+- id: st02
+  type: predict
+  title: Count or sum?
+  code: |
+    count = 0
+    for ms in [80, 150, 240]:
+        if ms > 100:
+            count += 1
+    print(count)
+  choices:
+  - text: '2'
+    why: Both 150 and 240 match. Each adds 1.
+  - text: '390'
+    why: That would sum the matching times.
+  - text: '3'
+    why: 80 fails the test and adds nothing.
+  - text: '1'
+    why: The loop keeps counting after its first match.
+  answer: 0
+- id: st03
+  type: try
+  title: Turn a count into a sum
+  starter: |
+    count = 0
+    for ms in [80, 150, 240]:
+        if ms > 100:
+            count += 1
+    print(count)
+  task: Change what you add so the output is the total time of slow requests.
+  check:
+    stdout_line: '390'
+- id: st04
+  type: code
+  title: Count errors in a status log
+  exercise: exercises/practice.py
+  function: error_count
+  test_class: ErrorCount
+  hint_levels:
+  - Choose the counter's value before the first log line.
+  - Test the range for every code.
+  - If 500 <= code <= 599, increase count by 1. Return after the loop.
+- id: st05
+  type: read
+  title: Trace a running total
+  body: |
+    In a sum, the **accumulator** holds the total of items seen so far.
+
+    ```text
+    value seen:    —    6    2    5
+    total after:   0    6    8   13
+    ```
+
+    Follow the bottom row from left to right. Initializing inside the loop
+    would erase the earlier columns.
+- id: st06
+  type: predict
+  title: Find the lost totals
+  code: |
+    for value in [6, 2, 5]:
+        total = 0
+        total += value
+    print(total)
+  choices:
+  - text: '8'
+    why: The first two values never share a total.
+  - text: '5'
+    why: The last pass sets total to 0 and then adds 5.
+  - text: '13'
+    why: The total is cleared before each addition.
+  - text: '0'
+    why: The last reset is followed by an addition.
+  answer: 1
+- id: st07
+  type: fix
+  title: Save the subtotal across all rows
+  task: Return the total cents of entries at least 100. Return 0 if there are no matches.
+  starter: |
+    def subtotal(cents):
+        total = 0
+        for value in cents:
+            total = 0
+            if value >= 100:
+                total += value
+        return total
+  solution: |
+    def subtotal(cents):
+        total = 0
+        for value in cents:
+            if value >= 100:
+                total += value
+        return total
+  tests: |
+    assert subtotal([105, 100, 5]) == 205
+    assert subtotal([]) == 0
+    assert subtotal([10]) == 0
+  hint_levels:
+  - Find the line that wipes the result.
+  - Set total to 0 once, outside the loop.
+  - Remove only the inner total = 0.
+  explanation: After each pass, total includes all matching prices so far.
+- id: st08
+  type: read
+  title: Stop a search at the first match
+  body: |
+    Use `return` inside the loop to leave the whole function at the first
+    match. If the loop ends without a match, return `-1` after the loop.
+    Here `-1` is a **sentinel**. It means “no match.” Check for it before
+    using the value as an index. Python otherwise reads the last item.
+- id: st09
+  type: predict
+  title: Trace the first match
+  code: |
+    def first_slow(times):
+        for i in range(len(times)):
+            if times[i] >= 100:
+                return i
+        return -1
+
+    print(first_slow([90, 100, 180]))
+  choices:
+  - text: '100'
+    why: The return gives the position, not the time.
+  - text: '-1'
+    why: The final return only runs when no item matches.
+  - text: '1'
+    why: The first matching value is 100 at index 1.
+  - text: '2'
+    why: The function returns before it reads index 2.
+  answer: 2
+- id: st10
+  type: parsons
+  title: Put the fallback last
+  task: Build a search that says True when it sees a ready status.
+  lines:
+  - 'def ready(states):'
+  - '    for state in states:'
+  - '        if state == "ready":'
+  - '            return True'
+  - '    return False'
+  - print(ready(["busy", "ready"]))
+  expected_stdout: 'True'
+- id: st11
+  type: code
+  title: Find when a service came back
+  exercise: exercises/practice.py
+  function: first_recovery
+  test_class: FirstRecovery
+  hint_levels:
+  - Use indexes because you must report a position.
+  - Test one status per visit. Return as soon as it equals 200.
+  - Keep return -1 outside the for block.
+- id: st12
+  type: read
+  title: Use two loops for a list of lists
+  body: |
+    Each row in a report can hold a different number of entries.
+    An outer loop selects a row. A **nested loop** visits entries in that row.
+
+    ```text
+    rows = [[4, 7], [], [9]]
+    visits: 4 -> 7 | no visits | 9
+    ```
+
+    The second row is empty, so that inner loop takes zero steps.
+    A count of cells belongs outside both loops.
+- id: st13
+  type: predict
+  title: Trace the outer and inner loop
+  code: |
+    for row in [[4, 7], [], [9]]:
+        for value in row:
+            print(value)
+        print("-")
+  choices:
+  - text: |
+      4
+      7
+      -
+      9
+      -
+    why: The empty row still reaches the outer print.
+  - text: |
+      4
+      -
+      7
+      -
+      9
+      -
+    why: The dash does not run for each cell.
+  - text: |
+      4
+      7
+      9
+      -
+    why: The dash is inside the outer loop.
+  - text: |
+      4
+      7
+      -
+      -
+      9
+      -
+    why: A dash is printed once for every row, including the empty one.
+  answer: 3
+- id: st14
+  type: try
+  title: Add another cell to a report row
+  starter: |
+    rows = [[4, 7], [], [9]]
+    total = 0
+    for row in rows:
+        for value in row:
+            total += value
+    print(total)
+  task: Add 5 to the empty row and run. The total should become 25.
+  check:
+    stdout_line: '25'
+- id: st15
+  type: code
+  title: Count large files across folders
+  exercise: exercises/practice.py
+  function: large_files
+  test_class: LargeFiles
+  hint_levels:
+  - Use one counter for the whole report.
+  - Loop over folders, then each file size in a folder.
+  - 'Inside both loops, use if size >= limit: count += 1.'
+- id: st16
+  type: read
+  title: Filter into a new list
+  body: |
+    Changing a list while a for loop moves through it can skip items.
+    Removing the first item shifts later items left. The loop still moves
+    to the next index. Build a new list instead. Add each item you want
+    to keep. This is called **filtering**.
+- id: st17
+  type: predict
+  title: Trace an item that gets skipped
+  code: |
+    codes = [500, 503, 200]
+    for code in codes:
+        if code >= 500:
+            codes.remove(code)
+    print(codes)
+  choices:
+  - text: '[503, 200]'
+    why: 503 shifts to index 0. The next visit is to index 1, now 200.
+  - text: '[200]'
+    why: The shifted 503 is skipped.
+  - text: '[500, 503, 200]'
+    why: remove changes the original list.
+  - text: '[]'
+    why: The rule never removes 200.
+  answer: 0
+- id: st18
+  type: fix
+  title: Keep good statuses without touching the log
+  task: Return a new list of codes below 500 in input order. Keep repeats and leave codes unchanged.
+  starter: |
+    def good(codes):
+        for code in codes:
+            if code >= 500:
+                codes.remove(code)
+        return codes
+  solution: |
+    def good(codes):
+        kept = []
+        for code in codes:
+            if code < 500:
+                kept.append(code)
+        return kept
+  tests: |
+    codes = [500, 503, 200, 200]
+    assert good(codes) == [200, 200]
+    assert codes == [500, 503, 200, 200]
+    empty = []
+    assert good(empty) is not empty
+  hint_levels:
+  - Which list may you change?
+  - Start a fresh list and collect the good codes.
+  - If code < 500, append it to kept.
+  explanation: The input indexes stay still. A new list also keeps duplicates in order.
+- id: st19
+  type: explain
+  title: Explain it to a teammate
+  prompt: Write 2–3 English sentences. Describe when a log report should count, sum, or search.
+  rubric:
+  - Explain the difference between adding 1 and adding the value.
+  - Name when to stop in a first-match search and where the fallback belongs.
+review_cards:
+  from_steps:
+  - st02
+  - st06
+  - st09
+  - st13
+  - st17
+  vocab: true

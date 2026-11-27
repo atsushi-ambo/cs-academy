@@ -22,8 +22,10 @@ class Element {
 
 const now = 1_000_000;
 const zeroQuest = {progress: 0, target: 0};
+const uid = "s1.m03.u01";
 const summary = {
-  unit: "Lists", xp: 0, completed: 2, total: 2, due: 0, streak: 0,
+  unit: {id: uid, title: "Lists", completed: 2, total: 2, status: "completed"},
+  recommended: [], xp: 0, due: 0, streak: 0,
   quests: {step: zeroQuest, code: zeroQuest, review: zeroQuest},
 };
 
@@ -83,7 +85,7 @@ test("Today only selects quests with work left in 15-minute mode", async () => {
   await load("today");
   assert.ok(main.all("li").some((item) => item.textContent === "今日取り組めるクエストはありません。"));
   assert.equal(main.all("li").length, 1);
-  data = {...summary, completed: 1, quests: {
+  data = {...summary, unit: {...summary.unit, completed: 1, status: "draft"}, quests: {
     step: {progress: 0, target: 1}, code: zeroQuest, review: {progress: 1, target: 1},
   }};
   await load("today");
@@ -99,15 +101,15 @@ test("Play reopens a completed code solution in read-only mode", async () => {
   const {main, load} = await boot((method, path, body) => {
     if (path === "/api/today") return summary;
     if (method === "POST") {
-      assert.deepEqual(JSON.parse(body), {step: id, action: "solution"});
+      assert.deepEqual(JSON.parse(body), {unit: uid, step: id, action: "solution"});
       return {solution, explanation: "Explanation"};
     }
-    if (path === `/api/play?step=${encodeURIComponent(id)}`) return {
+    if (path === `/api/play?unit=${uid}&step=${encodeURIComponent(id)}`) return {
       ...play, index: 1, step: {
         id, type: "code", title, starter: "pass", complete: true, can_open_solution: true,
       },
     };
-    if (path === "/api/play") return {...play, step: null};
+    if (path === `/api/play?unit=${uid}`) return {...play, step: null};
   });
   await load("play");
   const [select] = main.all("select");
@@ -120,4 +122,48 @@ test("Play reopens a completed code solution in read-only mode", async () => {
   assert.equal(open.textContent, "模範解答を開く");
   await open.events.click();
   assert.ok(main.all("code").some((item) => item.textContent === solution));
+});
+
+
+test("Path shows prerequisites and only links playable units that are open", async () => {
+  const stages = [{number: 1, title: "Python", modules: [{title: "Control flow", units: [
+    {id: "outline", title: "Conditions", status: "outline", blockers: [], total: 0},
+    {id: "for", title: "For loops", status: "published", blockers: [], total: 20, placement: true},
+    {id: "while", title: "While loops", status: "draft", blockers: [{id: "for", title: "For loops"}], total: 20},
+  ]}]}];
+  const {main, load} = await boot((_, path) => path === "/api/today" ? summary : {stages});
+  await load("path");
+  assert.deepEqual(main.all("strong").map((item) => item.textContent), ["Conditions", "For loops", "While loops"]);
+  assert.deepEqual(main.all("a").map((item) => item.href), ["#play/for", "#placement/for"]);
+  assert.ok(main.all("p").some((item) => item.textContent.includes("For loops")));
+});
+
+test("Opening a unit and submitting a checked explanation use the same unit ID", async () => {
+  const unit = "s2.m05.u01";
+  const step = {
+    id: unit + "/st21", type: "explain", title: "Explain", prompt: "Write 2–3 sentences.",
+    rubric: ["Name the base case."],
+  };
+  const posts = [];
+  const {main, load} = await boot((method, path, body) => {
+    if (path === "/api/today") return summary;
+    if (method === "POST") {
+      posts.push(JSON.parse(body));
+      return {complete: true};
+    }
+    assert.equal(path, `/api/play?unit=${unit}`);
+    return {unit: "Thinking recursively", total: 1, index: 1, completed_steps: [], step};
+  });
+  await load("play", unit, undefined, true);
+  main.all("textarea")[0].value = "The base case ends the work. Here it returns zero.";
+  const [finish] = main.all("button");
+  await finish.events.click();
+  assert.equal(posts.length, 1);
+  main.all("input")[0].checked = true;
+  await finish.events.click();
+  assert.deepEqual(posts, [
+    {unit, action: "start"},
+    {unit, step: step.id, action: "explain", self_checked: true,
+      response: "The base case ends the work. Here it returns zero."},
+  ]);
 });
