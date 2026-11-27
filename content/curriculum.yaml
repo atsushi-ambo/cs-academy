@@ -55,7 +55,7 @@ stages:
 
   - stage: 1
     title: Programming in Python
-    hours: 100
+    hours: 110
     modules:
       - id: s1.m01
         title: Values and Variables
@@ -70,6 +70,7 @@ stages:
           - {id: s1.m02.u01, title: "if, elif, else", ex: [exercism/meltdown-mitigation, exercism/leap]}
           - {id: s1.m02.u02, title: "for loops and range", ex: [exercism/raindrops, exercism/sum-of-multiples]}
           - {id: s1.m02.u03, title: "while loops", ex: [exercism/collatz-conjecture]}
+          - {id: s1.m02.u04, title: "Loop patterns: counting, accumulating, searching, nested loops"}
       - id: s1.m03
         title: Collections
         units:
@@ -99,6 +100,7 @@ stages:
           - {id: s1.m06.u02, title: "Parsing a log file", ex: [exercism/log-levels]}
           - {id: s1.m06.u03, title: "CSV and JSON"}
           - {id: s1.m06.u04, title: "Regular expressions (basics)", ex: [exercism/phone-number, exercism/acronym]}
+          - {id: s1.m06.u05, title: "Standard streams and command-line arguments (stdin, stdout, argv)"}
       - id: s1.m07
         title: Objects and Modules
         units:
@@ -113,7 +115,7 @@ stages:
 
   - stage: 2
     title: Math and Algorithms
-    hours: 160
+    hours: 240
     modules:
       - id: s2.m01
         title: Math You Need
@@ -128,27 +130,43 @@ stages:
         units:
           - {id: s2.m02.u01, title: "Measuring cost: Big-O"}
           - {id: s2.m02.u02, title: "Comparing O(n), O(n log n), O(n^2) with real timings"}
+          - {id: s2.m02.u03, title: "Complexity classes: constant, log, linear, polynomial, exponential, factorial"}
+          - {id: s2.m02.u04, title: "Space complexity: counting the memory an algorithm needs"}
+          - {id: s2.m02.u05, title: "Best, average, and worst cases"}
       - id: s2.m03
         title: Linear Data Structures
         units:
           - {id: s2.m03.u01, title: "Arrays vs linked lists", ex: [exercism/simple-linked-list, exercism/linked-list], next: [LeetCode Explore Linked List]}
+          - {id: s2.m03.u04, title: "How memory holds data: addresses, references, stack and heap"}
+          - {id: s2.m03.u05, title: "Fixed, multidimensional, and dynamic arrays (amortized growth)"}
+          - {id: s2.m03.u06, title: "Singly and doubly linked lists: build them yourself", ex: [exercism/linked-list]}
           - {id: s2.m03.u02, title: "Stacks and queues", ex: [exercism/matching-brackets, exercism/circular-buffer], next: [LeetCode Explore Queue & Stack]}
+          - {id: s2.m03.u07, title: "Deques: both ends in O(1)"}
           - {id: s2.m03.u03, title: "Hash tables", next: [LeetCode Explore Hash Table]}
+          - {id: s2.m03.u08, title: "Hash functions and collisions (chaining, open addressing)"}
+          - {id: s2.m03.u09, title: "Caching with a hash table: memo and LRU cache"}
       - id: s2.m04
         title: Searching and Sorting
         units:
           - {id: s2.m04.u01, title: "Binary search", ex: [exercism/binary-search], next: [LeetCode Explore Binary Search]}
           - {id: s2.m04.u02, title: "Simple sorts and why they are slow"}
           - {id: s2.m04.u03, title: "Merge sort and quicksort", next: [LeetCode Explore Sorting]}
+          - {id: s2.m04.u04, title: "Divide and conquer: split, solve, combine"}
+          - {id: s2.m04.u05, title: "Heap sort and comparing all sorts"}
       - id: s2.m05
         title: Recursion
         units:
           - {id: s2.m05.u01, title: "Thinking recursively", ex: [exercism/flatten-array], next: [LeetCode Explore Recursion I, Recursion 中級 再帰]}
+          - {id: s2.m05.u03, title: "The call stack: how recursion runs, and recursion depth"}
+          - {id: s2.m05.u04, title: "Recursion on lists and strings: sum, reverse, palindrome, flatten"}
+          - {id: s2.m05.u05, title: "From recursion to loops: tail calls and an explicit stack"}
           - {id: s2.m05.u02, title: "Backtracking", ex: [exercism/queen-attack, exercism/word-search], next: [LeetCode Explore Recursion II]}
       - id: s2.m06
         title: Trees and Graphs
         units:
           - {id: s2.m06.u01, title: "Binary trees and traversal", ex: [exercism/binary-search-tree], next: [LeetCode Explore Binary Tree]}
+          - {id: s2.m06.u05, title: "Binary search trees: insert, search, delete"}
+          - {id: s2.m06.u06, title: "Balanced binary search trees (AVL rotations, the idea of red-black)"}
           - {id: s2.m06.u02, title: "Heaps and priority queues", next: [LeetCode Explore Heap]}
           - {id: s2.m06.u03, title: "Graphs: BFS and DFS", ex: [exercism/connect], next: [LeetCode Explore Graph]}
           - {id: s2.m06.u04, title: "Shortest paths (Dijkstra)"}
@@ -165,6 +183,7 @@ stages:
           - {id: s2.m08.u03, title: "Prefix sums", next: [LeetCode 75 Prefix Sum]}
           - {id: s2.m08.u04, title: "Monotonic stack", next: [LeetCode 75 Monotonic Stack]}
           - {id: s2.m08.u05, title: "Intervals and greedy choices", next: [LeetCode 75 Intervals]}
+          - {id: s2.m08.u06, title: "Higher-order functions on collections: map, filter, reduce, sorting with keys"}
       - id: s2.boss
         title: "Boss: timed problem set"
         units:
@@ -172,7 +191,7 @@ stages:
 
   - stage: 3
     title: Web and Databases
-    hours: 150
+    hours: 190
     modules:
       - id: s3.m01
         title: How the Web Works
@@ -181,11 +200,15 @@ stages:
           - {id: s3.m01.u02, title: "Status codes, headers, cookies"}
           - {id: s3.m01.u03, title: "HTML and CSS basics"}
           - {id: s3.m01.u04, title: "JavaScript in the browser: DOM and fetch"}
+          - {id: s3.m01.u05, title: "JSON, browser storage, and single-page apps"}
       - id: s3.m02
         title: SQL and Relational Databases
         units:
           - {id: s3.m02.u01, title: "SELECT, WHERE, ORDER BY", next: [LeetCode Explore SQL, HackerRank SQL]}
           - {id: s3.m02.u02, title: "JOIN and GROUP BY"}
+          - {id: s3.m02.u07, title: "Subqueries, HAVING, and SQL operators"}
+          - {id: s3.m02.u08, title: "Entity relationships: one-to-one, one-to-many, many-to-many (ER diagrams)"}
+          - {id: s3.m02.u09, title: "Schema migrations and seeding"}
           - {id: s3.m02.u03, title: "Designing tables: keys and normalization", read: [First database design (C)]}
           - {id: s3.m02.u04, title: "Indexes and EXPLAIN"}
           - {id: s3.m02.u05, title: "Transactions and isolation"}
@@ -198,6 +221,9 @@ stages:
           - {id: s3.m03.u03, title: "Validation and error responses"}
           - {id: s3.m03.u04, title: "Connecting to PostgreSQL safely (parameters)"}
           - {id: s3.m03.u05, title: "Testing an API"}
+          - {id: s3.m03.u06, title: "Routing, middleware, and MVC / three-tier structure"}
+          - {id: s3.m03.u07, title: "Data access layer: DAO and ORM, and when to use each"}
+          - {id: s3.m03.u08, title: "Background jobs: sending email and cron schedules"}
       - id: s3.m04
         title: Web Security
         units:
@@ -205,6 +231,9 @@ stages:
           - {id: s3.m04.u02, title: "SQL injection: break it, then fix it"}
           - {id: s3.m04.u03, title: "XSS and CSRF: break it, then fix it"}
           - {id: s3.m04.u04, title: "Passwords, sessions, and secrets"}
+          - {id: s3.m04.u05, title: "Cookies, server sessions, and token authentication"}
+          - {id: s3.m04.u06, title: "Hashing and signatures (HMAC): integrity of data you send"}
+          - {id: s3.m04.u07, title: "Input validation and query safety, everywhere"}
       - id: s3.boss
         title: "Project: a small web app with AI"
         units:
@@ -212,7 +241,7 @@ stages:
 
   - stage: 4
     title: How Computers and Networks Work
-    hours: 120
+    hours: 135
     modules:
       - id: s4.m01
         title: C and Memory
@@ -231,6 +260,8 @@ stages:
         title: Operating Systems
         units:
           - {id: s4.m03.u01, title: "Processes and system calls", read: [OSTEP (C)], next: [Recursion CSプロジェクト1]}
+          - {id: s4.m03.u05, title: "Child processes and pipes (anonymous and named)"}
+          - {id: s4.m03.u06, title: "Unix domain sockets and RPC"}
           - {id: s4.m03.u02, title: "Virtual memory"}
           - {id: s4.m03.u03, title: "Files and file descriptors"}
           - {id: s4.m03.u04, title: "Permissions and users"}
@@ -245,13 +276,15 @@ stages:
         units:
           - {id: s4.m05.u01, title: "Layers: from Ethernet to HTTP", read: [TCP/IP Illustrated (C)]}
           - {id: s4.m05.u02, title: "IP addresses, subnets, routing (netns lab in a Linux VM)", read: [Learning TCP/IP networking by exercise on Linux (C)]}
+          - {id: s4.m05.u06, title: "NAT and the OSI model in practice"}
           - {id: s4.m05.u03, title: "TCP vs UDP: write a socket server", next: [Recursion CSプロジェクト2]}
           - {id: s4.m05.u04, title: "DNS"}
           - {id: s4.m05.u05, title: "TLS and certificates", next: [Recursion CSプロジェクト3]}
+          - {id: s4.m05.u07, title: "HTTP/2 and HTTP/3: what changed"}
 
   - stage: 5
     title: Software Engineering and Upstream
-    hours: 80
+    hours: 115
     modules:
       - id: s5.m01
         title: From Idea to Requirements
@@ -260,6 +293,7 @@ stages:
           - {id: s5.m01.u02, title: "Writing requirements and user stories in English", read: [Systems Analysis and Design (C)]}
           - {id: s5.m01.u03, title: "Use cases and non-functional requirements"}
           - {id: s5.m01.u04, title: "Estimating work"}
+          - {id: s5.m01.u05, title: "Development processes: waterfall and agile"}
       - id: s5.m02
         title: Design Documents
         units:
@@ -273,6 +307,16 @@ stages:
           - {id: s5.m03.u02, title: "Refactoring safely with tests", ex: [exercism/tree-building]}
           - {id: s5.m03.u03, title: "Object-oriented design and SOLID"}
           - {id: s5.m03.u04, title: "Code review: giving and receiving"}
+      - id: s5.m05
+        title: Object-Oriented Design
+        units:
+          - {id: s5.m05.u01, title: "Encapsulation and immutable objects"}
+          - {id: s5.m05.u02, title: "Association, aggregation, and composition"}
+          - {id: s5.m05.u03, title: "Inheritance and polymorphism"}
+          - {id: s5.m05.u04, title: "Abstract classes and interfaces (ABC and Protocol)"}
+          - {id: s5.m05.u05, title: "Generics with type hints"}
+          - {id: s5.m05.u06, title: "Design patterns: creational, structural, behavioral"}
+          - {id: s5.m05.u07, title: "Anti-patterns and UML class diagrams"}
       - id: s5.m04
         title: Delivery
         units:
@@ -283,7 +327,7 @@ stages:
 
   - stage: 6
     title: Infrastructure and Operations
-    hours: 120
+    hours: 135
     modules:
       - id: s6.m01
         title: Linux Operations
@@ -291,6 +335,10 @@ stages:
           - {id: s6.m01.u01, title: "Services, logs, and systemd"}
           - {id: s6.m01.u02, title: "Disk, memory, and CPU troubleshooting", read: [Systems Performance (C)]}
           - {id: s6.m01.u03, title: "SSH and secure access"}
+          - {id: s6.m01.u04, title: "NGINX as web server and reverse proxy"}
+          - {id: s6.m01.u05, title: "Deploy to a VM: domain, DNS records, subdomains, HTTPS with Let's Encrypt"}
+          - {id: s6.m01.u06, title: "Moving files safely: scp and SFTP"}
+          - {id: s6.m01.u07, title: "Caching servers: memcached and Redis"}
       - id: s6.m02
         title: Containers
         units:
