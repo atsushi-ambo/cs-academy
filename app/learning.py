@@ -102,7 +102,7 @@ class Learning:
         skip = self.skipped(db)
         quest = dict(db.execute("SELECT kind, progress FROM daily_quest WHERE day=?", (day,)))
         due = len(self.due(db, day))
-        reviewed = quest.get("review", 0)
+        reviewed = min(DAILY_REVIEW_LIMIT, quest.get("review", 0))
         steps = quest.get("step", 0)
         code = quest.get("code", 0)
         return {
@@ -308,9 +308,7 @@ class Learning:
 
     def due(self, db, day):
         reviewed = db.execute(
-            """SELECT COUNT(*) FROM review_logs AS log
-               JOIN review_cards AS card ON card.id=log.card_id AND card.revision=log.revision
-               WHERE log.day=? AND log.event='due'""", (day,)
+            "SELECT COUNT(*) FROM review_logs WHERE day=? AND event='due'", (day,),
         ).fetchone()[0]
         room = max(0, DAILY_REVIEW_LIMIT - reviewed)
         rows = db.execute("SELECT id, due_day FROM review_cards WHERE due_day<=? ORDER BY due_day,id",

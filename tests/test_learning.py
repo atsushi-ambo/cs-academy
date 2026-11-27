@@ -81,9 +81,8 @@ class LearningTest(AcademyCase):
                              (None, None, None))
             self.assertEqual(card["due_day"], day)
             self.assertEqual(self.learning.retries(db, day), [])
-            with patch("app.learning.DAILY_REVIEW_LIMIT", 1):
-                self.assertEqual(self.learning.due(db, day), [(key, day)])
-                self.learning.review(db, {"card": key, "choice": 0, "retry": False}, self.date)
+            self.assertEqual(self.learning.due(db, day), [(key, day)])
+            self.learning.review(db, {"card": key, "choice": 0, "retry": False}, self.date)
             history, current = [dict(row) for row in db.execute("SELECT * FROM review_logs ORDER BY id")]
             self.assertEqual(history, old_log)
             self.assertGreater(current["revision"], history["revision"])
@@ -95,6 +94,51 @@ class LearningTest(AcademyCase):
             card = db.execute("SELECT * FROM review_cards WHERE id=?", (key,)).fetchone()
             self.assertEqual(card["revision"], current["revision"])
             self.assertEqual(card["last_day"], day)
+
+    def test_review_cap_counts_old_revisions(self):
+        self.date = date.today()
+        key = f"{LISTS}/st04"
+        step = self.store.catalog.steps[key]
+        revised_answer = (step["answer"] + 1) % len(step["choices"])
+        with self.store.transaction() as db:
+            db.execute("UPDATE review_cards SET due_day=?", (self.date.isoformat(),))
+            queue = self.learning.reviews(db, self.date)["due"]
+            self.assertEqual(len(queue), 10)
+            self.assertIn(key, [item["id"] for item in queue])
+            for item in queue:
+                card = item["id"]
+                answer = self.learning.card(card)["answer"]
+                choice = revised_answer if card == key else answer
+                self.learning.review(db, {"card": card, "retry": False, "choice": choice}, self.date)
+
+        step["answer"] = revised_answer
+        self.store.initialize()
+        with self.store.transaction() as db:
+            with self.assertRaises(RequestError) as error:
+                self.learning.review(
+                    db, {"card": key, "retry": False, "choice": revised_answer}, self.date,
+                )
+            self.assertEqual(error.exception.status, 409)
+            self.assertEqual(self.learning.reviews(db, self.date), {"due": [], "retries": []})
+        self.assertEqual(self.today()["quests"]["review"], {"progress": 10, "target": 10})
+
+    def test_review_quest_caps_preexisting_excess_progress(self):
+        with self.store.transaction() as db:
+            db.execute("INSERT INTO daily_quest VALUES (?, 'review', 11)", (self.date.isoformat(),))
+        self.assertEqual(self.today()["quests"]["review"], {"progress": 10, "target": 10})
+
+    def test_predict_revision_preserves_unanswered_placement_due_day(self):
+        self.date = date.today()
+        key = f"{LISTS}/st09"
+        with self.store.transaction() as db:
+            self.learning.place(db, {"answers": [2, 0, 3, 2], "source": PLACEMENT_SOURCE}, self.date)
+            self.learning.skip(db, self.date)
+        step = self.store.catalog.steps[key]
+        step["answer"] = (step["answer"] + 1) % len(step["choices"])
+        self.store.initialize()
+        with self.store.transaction() as db:
+            card = db.execute("SELECT revision, due_day FROM review_cards WHERE id=?", (key,)).fetchone()
+            self.assertEqual(tuple(card), (1, (self.date + timedelta(days=1)).isoformat()))
 
     def test_restore_legacy_backup_detects_changed_choice_text(self):
         key = f"{LISTS}/st04"
@@ -260,6 +304,7 @@ class LearningTest(AcademyCase):
         for statement, message in [
             ("DROP TABLE xp_events", "missing table xp_events"),
             ("ALTER TABLE attempts DROP COLUMN answer", "missing columns in attempts: answer"),
+            ("DROP INDEX attempts_by_action", "missing index in attempts"),
         ]:
             with self.subTest(statement=statement):
                 identifier = self.store.backup()
@@ -269,3 +314,22 @@ class LearningTest(AcademyCase):
                 with self.assertRaisesRegex(ValueError, message):
                     self.store.restore(identifier)
                 self.assertEqual(self.store.path.read_bytes(), before)
+
+    def test_backup_missing_review_log_unique_index_leaves_live_db_unchanged(self):
+        identifier = self.store.backup()
+        backup = self.store.backups / identifier / BACKUP_DB
+        with closing(sqlite3.connect(backup)) as damaged, damaged:
+            definition = damaged.execute(
+                "SELECT sql FROM sqlite_schema WHERE name='review_logs'",
+            ).fetchone()[0]
+            damaged.execute("DROP TABLE review_logs")
+            damaged.execute(definition.replace(",\n    UNIQUE (card_id, day, event, revision)", ""))
+            damaged.execute("CREATE INDEX review_logs_day ON review_logs(day, event)")
+            damaged.execute(
+                "CREATE INDEX review_logs_revision ON review_logs(card_id, day, event, revision)",
+            )
+        self.play("st01", "continue")
+        before = self.store.path.read_bytes()
+        with self.assertRaisesRegex(ValueError, "missing unique index in review_logs"):
+            self.store.restore(identifier)
+        self.assertEqual(self.store.path.read_bytes(), before)

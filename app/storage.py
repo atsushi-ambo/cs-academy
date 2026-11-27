@@ -65,10 +65,21 @@ def schema(db):
     )} for (table,) in tables}
 
 
+def index_definitions(db, table):
+    for name, unique, partial in db.execute(
+        'SELECT name, "unique", partial FROM pragma_index_list(?, \'main\')', (table,),
+    ):
+        columns = tuple(row[0] for row in db.execute(
+            "SELECT name FROM pragma_index_info(?, 'main') ORDER BY seqno", (name,),
+        ))
+        yield unique, partial, columns
+
+
 def validate_backup_schema(candidate):
     with closing(sqlite3.connect(":memory:")) as reference:
         migrate(reference)
         expected = schema(reference)
+        expected_indexes = {table: list(index_definitions(reference, table)) for table in expected}
     actual = schema(candidate)
     for table, columns in expected.items():
         if table not in actual:
@@ -77,6 +88,11 @@ def validate_backup_schema(candidate):
         if missing:
             raise ValueError(f"Invalid backup schema: missing columns in {table}: "
                              + ", ".join(sorted(missing)))
+        actual_indexes = set(index_definitions(candidate, table))
+        for unique, partial, indexed_columns in expected_indexes[table]:
+            if (unique, partial, indexed_columns) not in actual_indexes:
+                kind = "unique index" if unique else "index"
+                raise ValueError(f"Invalid backup schema: missing {kind} in {table}: {indexed_columns}")
 
 
 def answer_hash(step):
@@ -104,7 +120,9 @@ def import_review_cards(db, catalog):
                 if previous != fingerprint:
                     db.execute(
                         """UPDATE review_cards SET revision=revision+1,
-                           due_day=CASE WHEN due_day IS NOT NULL THEN ? END,
+                           due_day=CASE WHEN EXISTS (
+                               SELECT 1 FROM review_logs WHERE card_id=review_cards.id
+                           ) THEN ? ELSE due_day END,
                            last_day=NULL, stability=NULL, difficulty=NULL WHERE id=?""",
                         (date.today().isoformat(), key),
                     )

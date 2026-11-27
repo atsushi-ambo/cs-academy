@@ -5,6 +5,7 @@ Python の Lists を、短いステップと復習で学ぶ macOS 向けロー�
 ## 起動
 
 Python 3.13 を使うための uv と、起動済みの Docker Engine（Docker Desktop や OrbStack）が必要です。ランナーは Mac 内の Unix ソケットへ接続します。セットアップで uv が Python 3.13 の環境を選び、`uv.lock` の PyYAML をインストールします。
+テストを実行する場合は Node.js 22 以上も用意します。
 
 ```sh
 make setup
@@ -42,10 +43,13 @@ P0 の永続データは SQLite にあります。エディタの未提出の下
 
 ## 検証
 
+`make test` と `make test-web` の実行前に、`node --version` で Node.js 22 以上を確認します。CI は Node.js 22 を使います。
+
 | コマンド | 成功の目安 |
 | --- | --- |
 | `make lint` | Ruff と教材検証が成功する |
-| `make test` | 教材、FSRS、XP、配置テスト、バックアップと復元、HTTP と Docker のテストが成功する |
+| `make test` | Web、教材、FSRS、XP、配置テスト、バックアップと復元、HTTP と Docker のテストが成功する |
+| `make test-web` | Web のテストが成功する |
 | `make test-docker` | Docker の起動、隔離、出力上限、実コードの合否と Lists の TCP e2e が成功する |
 | `make audit` | `uv.lock` から抽出した依存を pip-audit が検査する |
 
