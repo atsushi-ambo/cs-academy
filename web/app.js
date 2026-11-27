@@ -118,14 +118,19 @@ async function today(view) {
   function draw() {
     localStorage.setItem("academy-15-min", compact.checked ? "1" : "0");
     if (!compact.checked) sessionStorage.removeItem("academy-15-deadline");
-    const focus = data.quests.review.target ? "review" : data.completed < data.total ? "step" : "code";
-    const keys = compact.checked ? [focus] : Object.keys(questNames);
+    const focus = ["review", "step", "code"].find((key) => {
+      const {progress, target} = data.quests[key];
+      return progress < target;
+    });
+    const keys = compact.checked ? (focus ? [focus] : [])
+      : Object.keys(questNames).filter((key) => data.quests[key].target > 0);
     list.replaceChildren(...keys.map((key) => {
       const {progress, target} = data.quests[key];
       const item = node("li");
-      item.append(node("span", questNames[key]), node("strong", target ? `${progress} / ${target}` : "今日はなし"));
+      item.append(node("span", questNames[key]), node("strong", `${progress} / ${target}`));
       return item;
     }));
+    if (!focus) list.append(node("li", "今日取り組めるクエストはありません。"));
   }
   compact.addEventListener("change", draw);
   draw();
@@ -267,6 +272,11 @@ function editor(panel, step, send, message) {
   controls.append(runButton("Run", "run"));
   if (step.tests) controls.append(runButton("Run tests", "tests"));
   fields.append(controls);
+  panel.append(fields, hintPanel, resultBox);
+  const showSolution = solutionButton(panel, step, send, message);
+}
+
+function solutionButton(panel, step, send, message) {
   const solution = node("div");
   const showSolution = button("模範解答を開く", () => act(showSolution, message, async () => {
     const result = await send("solution");
@@ -274,11 +284,14 @@ function editor(panel, step, send, message) {
     showSolution.hidden = true;
   }), "button secondary");
   showSolution.hidden = !step.can_open_solution;
-  panel.append(fields, hintPanel, resultBox, showSolution, solution);
+  panel.append(showSolution, solution);
+  return showSolution;
 }
 
 function sessionTimer() {
-  const deadline = Number(sessionStorage.getItem("academy-15-deadline")) || Date.now() + 900000;
+  const now = Date.now();
+  const stored = Number(sessionStorage.getItem("academy-15-deadline"));
+  const deadline = Number.isFinite(stored) && stored > now ? stored : now + 900000;
   sessionStorage.setItem("academy-15-deadline", String(deadline));
   const label = node("span");
   const tick = () => {
@@ -297,8 +310,25 @@ function minutes(seconds) {
   return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
 }
 
-async function play(view) {
-  const {step, unit, index, total} = await api("play");
+async function play(view, selected) {
+  const path = selected ? `play?step=${encodeURIComponent(selected)}` : "play";
+  const {step, unit, index, total, completed_steps: completed} = await api(path);
+  if (completed.length) {
+    const label = node("label", "完了したステップを振り返る ");
+    const select = node("select");
+    const resume = node("option", completed.length === total ? "修了画面" : "続きから");
+    resume.value = "";
+    select.append(resume);
+    for (const {id, title} of completed) {
+      const option = node("option", title);
+      option.value = id;
+      select.append(option);
+    }
+    select.value = selected ?? "";
+    select.addEventListener("change", () => load("play", select.value));
+    label.append(select);
+    view.append(label);
+  }
   if (!step) {
     const done = card(unit, "Unit 修了");
     done.append(node("p", "四択の復習は、出題日に Review Arena に表示されます。"),
@@ -309,7 +339,7 @@ async function play(view) {
   const header = node("div", undefined, "unit-progress");
   header.append(node("span", unit), node("span", `${index} / ${total}`));
   if (localStorage.getItem("academy-15-min") === "1") header.append(sessionTimer());
-  header.append(meter(index - 1, total, "完了したステップ"));
+  header.append(meter(completed.length, total, "完了したステップ"));
   const panel = card(step.title, kinds[step.type]);
   const message = status();
   panel.append(message);
@@ -318,7 +348,12 @@ async function play(view) {
   if (step.body) panel.append(markdown(step.body));
   if (step.task) panel.append(node("p", step.task));
   if (step.code) panel.append(codeBlock(step.code));
-  if (step.type === "read") {
+  if (step.complete) {
+    if (step.choices) feedback(choices(panel, step.choices, () => {}), -1, step.feedback);
+    if (step.lines) panel.append(codeBlock(step.lines.join("\n")));
+    if (step.starter) panel.append(codeBlock(step.starter));
+    if (step.can_open_solution) solutionButton(panel, step, send, message);
+  } else if (step.type === "read") {
     const next = button("次のステップ", () => act(next, message, async () => {
       await send("continue");
       await load("play");
@@ -511,7 +546,7 @@ async function reference(view) {
 }
 
 const pages = {today, play, review, placement, backups, reference};
-async function load(page) {
+async function load(page, selectedStep) {
   const selected = Object.hasOwn(pages, page) ? page : "today";
   for (const item of document.querySelectorAll("nav a")) {
     if (item.hash === `#${selected}`) item.setAttribute("aria-current", "page");
@@ -523,7 +558,7 @@ async function load(page) {
   view.append(loading);
   main.replaceChildren(view);
   try {
-    await pages[selected](view);
+    await pages[selected](view, selectedStep);
     loading.remove();
   } catch (error) {
     loading.textContent = error.message;

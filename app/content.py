@@ -121,7 +121,14 @@ class Catalog:
 def code_problem(step, directory):
     hints = tuple(map(string, sequence(step.get("hint_levels", []))))
     if step["type"] == "try":
-        string(mapping(step.get("check")).get("stdout_contains"))
+        check = mapping(step.get("check"))
+        require(set(check) in ({"stdout_contains"}, {"stdout_line"}),
+                f"{step['id']}: expected one stdout check")
+        if "stdout_line" in check:
+            line = string(check["stdout_line"])
+            require(line.splitlines() == [line], f"{step['id']}: stdout_line must be one line")
+        else:
+            string(check["stdout_contains"])
         return Problem(starter=string(step.get("starter")))
     require(len(hints) == 3, f"{step['id']}: expected three hints")
     if step["type"] == "fix":

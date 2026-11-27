@@ -7,7 +7,8 @@ import sqlite3
 import stat
 import tempfile
 from contextlib import closing, contextmanager
-from datetime import datetime
+from datetime import date, datetime
+from hashlib import sha256
 from pathlib import Path
 from uuid import uuid4
 
@@ -57,6 +58,64 @@ def migrate(db):
         )
 
 
+def schema(db):
+    tables = db.execute("SELECT name FROM sqlite_schema WHERE type = 'table'").fetchall()
+    return {table: {row[0] for row in db.execute(
+        "SELECT name FROM pragma_table_xinfo(?, 'main')", (table,),
+    )} for (table,) in tables}
+
+
+def validate_backup_schema(candidate):
+    with closing(sqlite3.connect(":memory:")) as reference:
+        migrate(reference)
+        expected = schema(reference)
+    actual = schema(candidate)
+    for table, columns in expected.items():
+        if table not in actual:
+            raise ValueError(f"Invalid backup schema: missing table {table}")
+        missing = columns - actual[table]
+        if missing:
+            raise ValueError(f"Invalid backup schema: missing columns in {table}: "
+                             + ", ".join(sorted(missing)))
+
+
+def answer_hash(step):
+    if step["type"] != "predict":
+        return None
+    answer = [step["answer"], [choice["text"] for choice in step["choices"]]]
+    return sha256(json.dumps(answer).encode()).hexdigest()
+
+
+def import_review_cards(db, catalog):
+    for key, card in catalog.cards.items():
+        fingerprint = None
+        if card["kind"] == "predict":
+            fingerprint = answer_hash(catalog.steps[card["step"]])
+            old = db.execute(
+                """SELECT review_cards.answer_hash, steps.definition AS old_step
+                   FROM review_cards LEFT JOIN steps ON steps.id=?
+                   WHERE review_cards.id=?""", (card["step"], key),
+            ).fetchone()
+            if old is not None:
+                previous = old["answer_hash"]
+                if previous is None and old["old_step"] is not None:
+                    # Databases from before migration 003 store the prior question in steps.
+                    previous = answer_hash(json.loads(old["old_step"]))
+                if previous != fingerprint:
+                    db.execute(
+                        """UPDATE review_cards SET revision=revision+1,
+                           due_day=CASE WHEN due_day IS NOT NULL THEN ? END,
+                           last_day=NULL, stability=NULL, difficulty=NULL WHERE id=?""",
+                        (date.today().isoformat(), key),
+                    )
+        db.execute(
+            """INSERT INTO review_cards (id, unit_id, definition, answer_hash) VALUES (?, ?, ?, ?)
+               ON CONFLICT(id) DO UPDATE SET definition=excluded.definition,
+               answer_hash=excluded.answer_hash""",
+            (key, card["unit"], json.dumps(card, ensure_ascii=False), fingerprint),
+        )
+
+
 def import_catalog(db, catalog):
     db.executemany(
         "INSERT INTO stages VALUES (?, ?) ON CONFLICT(number) DO UPDATE SET title=excluded.title",
@@ -74,17 +133,12 @@ def import_catalog(db, catalog):
         ((key, obj["module_id"], obj["title"], obj["version"], obj["status"])
          for key, obj in catalog.units.items()),
     )
+    import_review_cards(db, catalog)
     db.executemany(
         """INSERT INTO steps VALUES (?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET
            position=excluded.position, kind=excluded.kind, definition=excluded.definition""",
         ((key, key.split("/")[0], position, obj["type"], json.dumps(obj, ensure_ascii=False))
          for position, (key, obj) in enumerate(catalog.steps.items())),
-    )
-    db.executemany(
-        """INSERT INTO review_cards (id, unit_id, definition) VALUES (?, ?, ?)
-           ON CONFLICT(id) DO UPDATE SET definition=excluded.definition""",
-        ((key, obj["unit"], json.dumps(obj, ensure_ascii=False))
-         for key, obj in catalog.cards.items()),
     )
 
 
@@ -165,7 +219,11 @@ class Store:
                     with closing(connect(staged)) as candidate:
                         source.backup(candidate)
                 with closing(connect(staged)) as candidate:
-                    migrate(candidate)
+                    try:
+                        migrate(candidate)
+                        validate_backup_schema(candidate)
+                    except sqlite3.Error as error:
+                        raise ValueError(f"Invalid backup schema: {error}") from error
                     with candidate:
                         import_catalog(candidate, self.catalog)
                         if candidate.execute("PRAGMA foreign_key_check").fetchone():

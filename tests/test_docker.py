@@ -40,6 +40,16 @@ class DockerIntegrationTest(AcademyCase):
         self.assertEqual(echo["stdout"], "hello from stdin\n")
         self.assertEqual(echo["status"], "passed")
 
+    def test_all_graded_starters_fail_and_solutions_pass(self):
+        catalog = self.store.catalog
+        for key, step in catalog.steps.items():
+            if step["type"] in {"fix", "code"}:
+                problem = catalog.problems[key]
+                for source, expected in [(problem.starter, "failed"), (problem.solution, "passed")]:
+                    with self.subTest(step=key, expected=expected):
+                        result = run_problem(key, source)
+                        self.assertEqual(result["status"], expected, result)
+
     def test_limits(self):
         key = f"{LISTS}/st02"
         hanging = run_problem(key, "while True:\n    pass", "")

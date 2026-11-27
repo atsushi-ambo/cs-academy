@@ -5,6 +5,7 @@ import socket
 import threading
 from contextlib import contextmanager
 from datetime import timedelta
+from urllib.parse import urlencode
 
 from app.server import HOST, TEST_PORT, Server, handler_for
 
@@ -154,6 +155,18 @@ def play_lists(case, api):
                 case.fail(f"Unexpected step kind: {other}")
         case.assertTrue(finished["complete"], finished)
     case.assertIsNone(api.get("/api/play")["step"])
+    before = api.get("/api/today")
+    play = api.get("/api/play")
+    case.assertEqual(len(play["completed_steps"]), 21)
+    key = next(key for key in case.learning.sequence if case.store.catalog.steps[key]["type"] == "code")
+    past = api.get("/api/play?" + urlencode({"step": key}))["step"]
+    case.assertTrue(past["complete"])
+    case.assertTrue(past["can_open_solution"])
+    case.assertEqual(api.post("/api/play", {"step": key, "action": "solution"})["solution"],
+                     case.store.catalog.problems[key].solution)
+    code = {"step": key, "action": "tests", "source": SOLUTIONS}
+    case.assertEqual(api.request("/api/play", method="POST", body=code)[0], 409)
+    case.assertEqual(api.get("/api/today"), before)
     summary = api.get("/api/today")
     case.assertEqual(summary["completed"], 21)
     case.assertEqual(summary["xp"], 122)

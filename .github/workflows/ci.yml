@@ -27,6 +27,7 @@ jobs:
       - run: uv sync --locked
       - run: make lint
       - run: CS_ACADEMY_REQUIRE_TCP=1 make test-unit
+      - run: make test-web
       - run: make runner-image
       - run: make test-docker
 

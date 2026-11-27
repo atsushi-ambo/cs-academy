@@ -54,7 +54,15 @@ class ContentTest(unittest.TestCase):
             ("exercise: exercises/lists_practice.py", "exercise: ../lists_practice.py",
              "Invalid unit asset"),
             ("from_steps: [st04", "from_steps: [st01", "Invalid review step"),
+            ('stdout_line: "4"', "stdout_line: 4", "non-empty text"),
+            ('stdout_line: "4"', r'stdout_line: "4\n5"', "stdout_line must be one line"),
+            ('stdout_line: "4"', 'stdout_line: "4", stdout_contains: "4"', "expected one stdout check"),
         ]
         for first, replacement, error in variants:
             with self.subTest(replacement=replacement), self.assertRaisesRegex(ContentError, error):
                 self.changed(first, replacement)
+
+    def test_slice_lesson_shows_when_slice_length_rule_applies(self):
+        body = load_catalog().steps[f"{LISTS}/st06"]["body"]
+        self.assertIn("`0 <= start <= stop <= len(x)`", body)
+        self.assertIn("x[3:10]  # [40, 50]", body)

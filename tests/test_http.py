@@ -42,6 +42,8 @@ class HTTPTest(AcademyCase):
                 self.assertEqual(status, expected)
         self.assertEqual(self.api.request("/api/backup")[0], 405)
         self.assertEqual(self.api.request("/api/placement/skip")[0], 405)
+        self.assertEqual(self.api.request(f"/api/play?step={LISTS}/st01")[0], 404)
+        self.assertEqual(self.api.request("/api/play?step=x&step=y")[0], 400)
         self.assertEqual(self.api.get("/api/today")["completed"], 0)
         self.assertFalse(self.store.backups.exists())
         self.assertTrue(self.api.post("/api/play", action)["complete"])

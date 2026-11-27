@@ -26,7 +26,7 @@ steps:
       print(servers)
       print(len(servers))
     task: "Run the code. Then add \"db01\" inside the brackets and run it again. What does len() show now?"
-    check: {stdout_contains: "4"}
+    check: {stdout_line: "4"}
 
   - id: st03
     type: read
@@ -92,9 +92,10 @@ steps:
       x[1:3]   # [20, 30]
       x[:2]    # [10, 20]    from the start
       x[3:]    # [40, 50]    to the end
+      x[3:10]  # [40, 50]    stop is clipped to len(x)
       ```
       Rule: `x[start:stop]`. **start is included. stop is not.**
-      The number of items is `stop - start`.
+      The number of items is `stop - start` when `0 <= start <= stop <= len(x)`.
 
   - id: st07
     type: parsons

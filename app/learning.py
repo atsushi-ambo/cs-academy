@@ -97,44 +97,64 @@ class Learning:
     def today(self, db, today):
         day = today.isoformat()
         done = self.completed(db)
+        remaining = [key for key in self.sequence if key not in done]
+        code_remaining = sum(self.catalog.steps[key]["type"] in {"fix", "code"} for key in remaining)
         skip = self.skipped(db)
         quest = dict(db.execute("SELECT kind, progress FROM daily_quest WHERE day=?", (day,)))
         due = len(self.due(db, day))
         reviewed = quest.get("review", 0)
+        steps = quest.get("step", 0)
+        code = quest.get("code", 0)
         return {
             "unit": self.unit["title"], "total": len(self.sequence),
-            "completed": sum(key in done for key in self.sequence),
+            "completed": len(self.sequence) - len(remaining),
             "skipped": skip is not None, "recommend": skip is not None and bool(skip["recommend"]),
             "xp": db.execute("SELECT COALESCE(SUM(points), 0) FROM xp_events").fetchone()[0],
             "streak": streak(db, today), "due": due, "date": day,
             "quests": {
-                "step": {"progress": quest.get("step", 0), "target": 3},
-                "code": {"progress": quest.get("code", 0), "target": 1},
+                "step": {"progress": steps, "target": min(3, steps + len(remaining))},
+                "code": {"progress": code, "target": min(1, code + code_remaining)},
                 "review": {"progress": reviewed, "target": min(DAILY_REVIEW_LIMIT, due + reviewed)},
             },
         }
 
-    def step_view(self, db):
-        key = self.current(db)
+    def step_view(self, db, selected=None):
+        done = self.completed(db)
+        current = next((key for key in self.sequence if key not in done), None)
+        completed = [
+            {"id": key, "title": f"{index}. {self.step_title(key)}"}
+            for index, key in enumerate(self.sequence, 1) if key in done
+        ]
+        expect(selected is None or (selected in self.sequence and selected in done),
+               "This step is not completed", 404)
+        key = current if selected is None else selected
+        result = {"step": None, "unit": self.unit["title"], "completed_steps": completed,
+                  "total": len(self.sequence)}
         if key is None:
-            return {"step": None, "unit": self.unit["title"]}
+            return result
         raw = self.catalog.steps[key]
         view = {key: raw[key] for key in ("type", "body", "code", "task") if key in raw}
-        view.update(id=key, title=raw.get("title", "What will Python print?"))
+        view.update(id=key, title=self.step_title(key), complete=key in done)
         state = self.state(db, key)
         if "choices" in raw:
             view["choices"] = [item["text"] for item in raw["choices"]]
+            if view["complete"]:
+                view["feedback"] = self.feedback(raw, True)
         if raw["type"] == "parsons":
-            view["lines"] = list(reversed(raw["lines"]))
+            view["lines"] = raw["lines"] if view["complete"] else list(reversed(raw["lines"]))
         if key in self.catalog.problems:
             problem = self.catalog.problems[key]
             view.update(starter=problem.starter, tests=bool(problem.test_body),
-                        can_open_solution=bool(problem.solution and state["failures"] >= 3),
+                        can_open_solution=bool(
+                            problem.solution and (view["complete"] or state["failures"] >= 3)
+                        ),
                         failures=state["failures"])
         hints = self.hints(key)
         view.update(hints=list(hints[:state["hints"]]), max_hints=len(hints))
-        return {"step": view, "index": self.sequence.index(key) + 1, "total": len(self.sequence),
-                "unit": self.unit["title"]}
+        return {**result, "step": view, "index": self.sequence.index(key) + 1}
+
+    def step_title(self, key):
+        return self.catalog.steps[key].get("title", "What will Python print?")
 
     def state(self, db, key):
         return db.execute(
@@ -230,9 +250,14 @@ class Learning:
             fields(body, "step", "action", "source", "stdin")
             source = text(body["source"], SOURCE_LIMIT)
             result = self.runner(key, source, text(body["stdin"], STDIN_LIMIT))
-            check = step.get("check")
-            complete = bool(step["type"] == "try" and result["status"] == "passed"
-                            and check["stdout_contains"] in result["stdout"])
+            complete = False
+            if step["type"] == "try" and result["status"] == "passed":
+                check = step["check"]
+                stdout = result["stdout"]
+                if "stdout_line" in check:
+                    complete = check["stdout_line"] in stdout.splitlines()
+                else:
+                    complete = check["stdout_contains"] in stdout
             if complete:
                 self.complete(db, key, day, 0)
             return {**result, "complete": complete}
@@ -270,9 +295,9 @@ class Learning:
         memory = update(memory, grade, today)
         day = today.isoformat()
         log = db.execute(
-            """INSERT INTO review_logs (card_id, day, event, grade, stability, difficulty)
-               VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(card_id, day, event) DO NOTHING""",
-            (key, day, event, grade, memory.stability, memory.difficulty),
+            """INSERT INTO review_logs (card_id, day, event, grade, stability, difficulty, revision)
+               VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT(card_id, day, event, revision) DO NOTHING""",
+            (key, day, event, grade, memory.stability, memory.difficulty, stored["revision"]),
         )
         if log.rowcount:
             db.execute(
@@ -283,7 +308,9 @@ class Learning:
 
     def due(self, db, day):
         reviewed = db.execute(
-            "SELECT COUNT(*) FROM review_logs WHERE day=? AND event='due'", (day,)
+            """SELECT COUNT(*) FROM review_logs AS log
+               JOIN review_cards AS card ON card.id=log.card_id AND card.revision=log.revision
+               WHERE log.day=? AND log.event='due'""", (day,)
         ).fetchone()[0]
         room = max(0, DAILY_REVIEW_LIMIT - reviewed)
         rows = db.execute("SELECT id, due_day FROM review_cards WHERE due_day<=? ORDER BY due_day,id",
@@ -292,11 +319,13 @@ class Learning:
 
     def retries(self, db, day):
         return [row[0] for row in db.execute(
-            """SELECT card_id FROM review_logs AS missed
-               WHERE day=? AND event='due' AND grade=? AND NOT EXISTS (
+            """SELECT missed.card_id FROM review_logs AS missed
+               JOIN review_cards AS card ON card.id=missed.card_id AND card.revision=missed.revision
+               WHERE missed.day=? AND missed.event='due' AND missed.grade=? AND NOT EXISTS (
                    SELECT 1 FROM review_logs AS retry
                    WHERE retry.card_id=missed.card_id AND retry.day=missed.day AND retry.event='retry'
-               ) ORDER BY id""", (day, Grade.AGAIN),
+                     AND retry.revision=missed.revision
+               ) ORDER BY missed.id""", (day, Grade.AGAIN),
         ) if row[0] in self.catalog.cards]
 
     def card(self, key):

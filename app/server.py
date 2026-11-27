@@ -4,6 +4,7 @@ import re
 import sqlite3
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from threading import BoundedSemaphore
+from urllib.parse import parse_qs
 
 from .content import LISTS, ROOT
 from .learning import RequestError, expect, fields
@@ -97,12 +98,19 @@ def handler_for(learning, port):
             self.send_payload(status, json.dumps(body, ensure_ascii=True).encode(), "application/json")
 
         def get(self):
+            path, separator, query = self.path.partition("?")
+            selected_step = None
+            if path == "/api/play" and separator:
+                params = parse_qs(query, keep_blank_values=True, strict_parsing=True,
+                                  max_num_fields=1)
+                fields(params, "step")
+                selected_step = params["step"][0]
             if self.path == "/api/backups":
                 with learning.store.locked():
                     return {"backups": learning.store.backups_list()}
             if self.path == "/api/reference":
                 return learning.catalog.resources[LISTS]
-            route = GET_ROUTES.get(self.path)
+            route = GET_ROUTES.get("/api/play" if selected_step is not None else self.path)
             if route is None:
                 status = 405 if self.path in POST_ROUTES or self.path in {
                     "/api/backup", "/api/restore",
@@ -112,6 +120,8 @@ def handler_for(learning, port):
                 method = getattr(learning, route)
                 if route in {"today", "reviews"}:
                     return method(db, learning.clock())
+                if route == "step_view":
+                    return method(db, selected_step)
                 return method(db)
 
         def post(self, body):

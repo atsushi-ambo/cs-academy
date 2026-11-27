@@ -1,4 +1,4 @@
-.PHONY: setup run test test-unit test-docker lint backup restore runner-image audit
+.PHONY: setup run test test-unit test-web test-docker lint backup restore runner-image audit
 
 setup:
 	uv sync --locked
@@ -6,8 +6,11 @@ setup:
 run:
 	uv run --locked python -m app run
 
-test:
+test: test-web
 	uv run --locked python -m unittest -v
+
+test-web:
+	node --experimental-vm-modules --test tests/test_web.mjs
 
 test-unit:
 	uv run --locked python -m unittest -v tests.test_content tests.test_fsrs tests.test_learning tests.test_http tests.test_runner

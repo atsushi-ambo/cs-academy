@@ -1,14 +1,15 @@
 import sqlite3
 import stat
 from contextlib import closing
-from datetime import timedelta
+from datetime import date, timedelta
 from unittest.mock import patch
 
 from app.content import LISTS
+from app.fsrs import Grade, update
 from app.learning import RequestError
-from app.storage import BACKUP_DB, MIGRATIONS, Store
+from app.storage import BACKUP_DB, MIGRATIONS, Store, connect, migrate
 
-from .support import PLACEMENT_SOURCE, AcademyCase
+from .support import PLACEMENT_SOURCE, AcademyCase, result
 
 
 class LearningTest(AcademyCase):
@@ -61,6 +62,113 @@ class LearningTest(AcademyCase):
             self.assertEqual(self.learning.reviews(db, self.date)["retries"], [])
         self.assertEqual(self.today()["quests"]["review"], {"progress": 10, "target": 10})
         self.assertEqual(self.today()["xp"], 47)
+
+    def test_predict_revision_resets_memory_and_retires_old_logs(self):
+        self.date = date.today()
+        day = self.date.isoformat()
+        key = f"{LISTS}/st04"
+        with self.store.transaction() as db:
+            db.execute("UPDATE review_cards SET due_day=? WHERE id=?", (day, key))
+            self.learning.review(db, {"card": key, "choice": 0, "retry": False}, self.date)
+            self.assertEqual(self.learning.retries(db, day), [key])
+            old_log = dict(db.execute("SELECT * FROM review_logs").fetchone())
+
+        self.store.catalog.steps[key]["answer"] = 0
+        self.store.initialize()
+        with self.store.transaction() as db:
+            card = db.execute("SELECT * FROM review_cards WHERE id=?", (key,)).fetchone()
+            self.assertEqual((card["last_day"], card["stability"], card["difficulty"]),
+                             (None, None, None))
+            self.assertEqual(card["due_day"], day)
+            self.assertEqual(self.learning.retries(db, day), [])
+            with patch("app.learning.DAILY_REVIEW_LIMIT", 1):
+                self.assertEqual(self.learning.due(db, day), [(key, day)])
+                self.learning.review(db, {"card": key, "choice": 0, "retry": False}, self.date)
+            history, current = [dict(row) for row in db.execute("SELECT * FROM review_logs ORDER BY id")]
+            self.assertEqual(history, old_log)
+            self.assertGreater(current["revision"], history["revision"])
+            memory = update(None, Grade.GOOD, self.date)
+            self.assertEqual(current["stability"], memory.stability)
+            self.assertEqual(current["difficulty"], memory.difficulty)
+        self.store.initialize()
+        with self.store.transaction() as db:
+            card = db.execute("SELECT * FROM review_cards WHERE id=?", (key,)).fetchone()
+            self.assertEqual(card["revision"], current["revision"])
+            self.assertEqual(card["last_day"], day)
+
+    def test_restore_legacy_backup_detects_changed_choice_text(self):
+        key = f"{LISTS}/st04"
+        self.play("st01", "continue")
+        self.play("st02", "run", source="print(4)", stdin="")
+        self.play("st03", "continue")
+        self.play("st04", "answer", choice=2)
+        identifier = self.store.backup()
+        backup = self.store.backups / identifier / BACKUP_DB
+        legacy_path = backup.with_name("legacy.sqlite3")
+        with closing(connect(legacy_path)) as legacy:
+            with patch("app.storage.MIGRATIONS", MIGRATIONS[:2]):
+                migrate(legacy)
+            legacy.execute("ATTACH DATABASE ? AS snapshot", (str(backup),))
+            with legacy:
+                for table in ("stages", "modules", "units", "steps", "review_cards", "review_logs"):
+                    columns = ", ".join(row[1] for row in legacy.execute(f"PRAGMA table_info({table})"))
+                    legacy.execute(f"INSERT INTO {table} SELECT {columns} FROM snapshot.{table}")
+        legacy_path.replace(backup)
+        self.store.catalog.steps[key]["choices"][2]["text"] = "Different correct choice"
+        self.store.restore(identifier)
+        with self.store.transaction() as db:
+            card = db.execute("SELECT * FROM review_cards WHERE id=?", (key,)).fetchone()
+            self.assertEqual(card["revision"], 1)
+            self.assertIsNone(card["last_day"])
+            log = db.execute("SELECT card_id, revision, event FROM review_logs").fetchone()
+            self.assertEqual(tuple(log), (key, 0, "practice"))
+
+    def test_predict_explanation_edit_preserves_schedule(self):
+        key = f"{LISTS}/st04"
+        self.play("st01", "continue")
+        self.play("st02", "run", source="print(4)", stdin="")
+        self.play("st03", "continue")
+        self.play("st04", "answer", choice=2)
+        with self.store.transaction() as db:
+            original = dict(db.execute("SELECT * FROM review_cards WHERE id=?", (key,)).fetchone())
+        self.store.catalog.steps[key]["choices"][2]["why"] = "A revised explanation."
+        self.store.initialize()
+        with self.store.transaction() as db:
+            self.assertEqual(
+                dict(db.execute("SELECT * FROM review_cards WHERE id=?", (key,)).fetchone()), original,
+            )
+
+    def test_try_requires_four_on_its_own_output_line(self):
+        self.play("st01", "continue")
+        with patch.object(self.learning, "runner", return_value=result(
+            "passed", stdout="['web01', 'web02', 'web04']\n3\n",
+        )):
+            self.assertFalse(self.play("st02", "run", source="unused", stdin="")["complete"])
+        self.assertEqual(self.today()["completed"], 1)
+        with patch.object(self.learning, "runner", return_value=result(
+            "passed", stdout="['web01', 'web02', 'web03', 'db01']\n4\n",
+        )):
+            self.assertTrue(self.play("st02", "run", source="unused", stdin="")["complete"])
+        self.assertEqual(self.today()["completed"], 2)
+
+    def test_quest_targets_fit_remaining_work(self):
+        self.assertEqual(self.today()["quests"]["code"]["target"], 1)
+        with self.store.transaction() as db:
+            db.executemany(
+                "INSERT INTO step_progress (step_id, unit_version, complete) VALUES (?, ?, 1)",
+                ((key, self.learning.version) for key in self.learning.sequence
+                 if key != f"{LISTS}/st18"),
+            )
+        self.assertEqual(
+            self.today()["quests"],
+            {"step": {"progress": 0, "target": 1}, "code": {"progress": 0, "target": 0},
+             "review": {"progress": 0, "target": 0}},
+        )
+        self.play("st18", "continue")
+        self.date += timedelta(days=1)
+        with self.store.transaction() as db:
+            db.execute("UPDATE review_cards SET due_day=NULL")
+        self.assertTrue(all(quest["target"] == 0 for quest in self.today()["quests"].values()))
 
     def test_placement_only_queues_unseen_cards_and_keeps_results(self):
         self.play("st01", "continue")
@@ -138,9 +246,26 @@ class LearningTest(AcademyCase):
         fresh = Store(path, self.store.backups, self.store.catalog)
         first = self.store.path.parent / MIGRATIONS[0].name
         first.write_text(MIGRATIONS[0].read_text(encoding="utf-8") + "\nINVALID SQL;", encoding="utf-8")
-        with patch("app.storage.MIGRATIONS", [first, MIGRATIONS[1]]):
+        with patch("app.storage.MIGRATIONS", [first, *MIGRATIONS[1:]]):
             with self.assertRaises(sqlite3.Error):
                 fresh.initialize()
         fresh.initialize()
         with fresh.transaction() as db:
-            self.assertEqual(list(map(tuple, db.execute("SELECT * FROM schema_version"))), [(1,), (2,)])
+            self.assertEqual(list(map(tuple, db.execute("SELECT * FROM schema_version"))),
+                             [(1,), (2,), (3,)])
+
+    def test_incomplete_backup_schema_leaves_live_db_unchanged(self):
+        self.play("st01", "continue")
+        before = self.store.path.read_bytes()
+        for statement, message in [
+            ("DROP TABLE xp_events", "missing table xp_events"),
+            ("ALTER TABLE attempts DROP COLUMN answer", "missing columns in attempts: answer"),
+        ]:
+            with self.subTest(statement=statement):
+                identifier = self.store.backup()
+                backup = self.store.backups / identifier / BACKUP_DB
+                with closing(sqlite3.connect(backup)) as damaged, damaged:
+                    damaged.execute(statement)
+                with self.assertRaisesRegex(ValueError, message):
+                    self.store.restore(identifier)
+                self.assertEqual(self.store.path.read_bytes(), before)
