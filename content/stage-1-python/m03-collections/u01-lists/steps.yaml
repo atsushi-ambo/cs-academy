@@ -60,6 +60,10 @@ steps:
       - text: "An IndexError"
         why: "Negative indexes are valid. -1 works whenever the list is not empty."
     answer: 2
+    hint_levels:
+      - "Which end of the list do negative indexes count from?"
+      - "A negative index counts from the end of the list."
+      - "Index -1 selects the last item, db01."
 
   - id: st05
     type: predict
@@ -141,12 +145,18 @@ steps:
   - id: st10
     type: fix
     title: "Fix the bug"
+    task: "Add the new name to servers and return that list."
     starter: |
       def add_server(servers, name):
           servers = servers.append(name)
           return servers
     tests: |
       assert add_server(["web01"], "web02") == ["web01", "web02"]
+    solution: |
+      def add_server(servers, name):
+          servers.append(name)
+          return servers
+    explanation: "append() changes the original list and returns None. Append first, then return the list."
     hint_levels:
       - "What does append() return?"
       - "append() changes the list and returns None."
@@ -351,3 +361,28 @@ steps:
 review_cards:
   from_steps: [st04, st05, st09, st12, st16, st19]
   vocab: true
+
+placement:
+  questions: [st04, st05, st09, st16]
+  minimum_correct: 3
+  title: "Placement: active server names"
+  starter: |
+    def active_servers(servers, disabled):
+        """Return the server names absent from disabled, in their original order.
+
+        Keep duplicates and leave both lists unchanged. Return a new list.
+
+        >>> active_servers(["web01", "db01", "web02"], ["db01"])
+        ['web01', 'web02']
+        """
+        raise NotImplementedError
+  tests: |
+    servers = ["web01", "db01", "web01", "web02"]
+    disabled = ["db01"]
+    result = active_servers(servers, disabled)
+    assert result == ["web01", "web01", "web02"], "Keep order and duplicates"
+    assert result is not servers, "Return a new list"
+    assert servers == ["web01", "db01", "web01", "web02"] and disabled == ["db01"], "Leave inputs unchanged"
+    assert active_servers([], ["db01"]) == [], "Handle empty lists"
+    assert active_servers(["db01"], ["db01"]) == [], "Handle no active servers"
+    assert active_servers(["db01"], []) == ["db01"], "Handle an empty disabled list"
