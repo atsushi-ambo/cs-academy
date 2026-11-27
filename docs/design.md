@@ -264,7 +264,7 @@ cs-academy/
 
 ### 作り方（量産の流れ）
 
-全体で212 Unit（`content/curriculum.yaml`、8 Stage・46 Module）。Recursion のロードマップの全トピックとの対応は [recursion-roadmap-coverage.md](recursion-roadmap-coverage.md)。1 Unitは20〜30ステップ・60〜120分。学習の進度より1 Stage先まで用意しておけばよく、全部を先に作らない。
+全体で213 Unit（`content/curriculum.yaml`、8 Stage・46 Module）。Recursion のロードマップの全トピックとの対応は [recursion-roadmap-coverage.md](recursion-roadmap-coverage.md)。1 Unitは20〜30ステップ・60〜120分。学習の進度より1 Stage先まで用意しておけばよく、全部を先に作らない。
 
 1. **Module計画**: 学習目標とUnitの並びを決める。参考にするのは CS50 / MIT / OSSU のシラバス、Recursion・LeetCode Exploreの構成、手元の本の目次。
 2. **下書き**: AI（Codex、Claude）がUnitの全ファイルを書く。本から作るときは、kumiteの教材ノートで本人が選んだページを根拠に使い、本文はコピーしない。
