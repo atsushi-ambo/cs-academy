@@ -21,7 +21,7 @@
 
 - 利用者は本人1人。`127.0.0.1` で待ち受ける。
 - 想定: 平日30分×5 + 週末2時間 ≒ **週5時間（年間約250時間）**。
-- 全部を深くやると5〜8年かかる。そこで各Stageを **Core（必修）** と **Deep（任意の深掘り）** に分ける。Coreだけなら約3.5年（`content/curriculum.yaml` の時間予算の合計 920時間。演習だけでなく、ハンズオン・復習・読書・Boss・Gateを含む。週5時間なら約3.7年、週7時間なら約2.5年。実力診断で既習のStage 1前半を飛ばせば、その分短くなる）。
+- 全部を深くやると5〜8年かかる。そこで各Stageを **Core（必修）** と **Deep（任意の深掘り）** に分ける。Coreだけなら約4年（`content/curriculum.yaml` の時間予算の合計 1,115時間。演習だけでなく、ハンズオン・復習・読書・Boss・Gateを含む。週5時間なら約4.3年、週7時間なら約3.1年。実力診断で既習のStage 1前半を飛ばせば、その分短くなる）。
 - 2027年5月の出産前後は「15分モード」（復習と英語だけ）に切り替えられる。中断しても復習の山で潰れないよう、復習数に上限を設ける。
 - 教材は英語が主。ただし最初（Stage 0〜1）は、概念と英語を同時に学ぶ負荷を下げるため、日本語の補足（単語の意味、短い要約）をタップで出せる。Stageが進むごとに日本語補足を減らす。
 - 本は各Moduleで「必読1冊＋参照」に絞る。手元の本を全部読む前提にしない。
@@ -35,12 +35,12 @@
 | Stage | テーマ | Core（必修） | Deep（任意） | 時間予算(Core) | 主な参照先 |
 |---|---|---|---|---|---|
 | 0 | Getting Started | PCの仕組みの概観、ターミナル、**Python環境の作り方（uv、仮想環境）**、Git/GitHubの基本（コミット、ブランチ、PR）、技術英語の読み方 | Vim、シェルスクリプト | 40h | CS50x Week 0、MIT Missing Semester、まんがでわかるLinux |
-| 1 | Programming in Python | 変数〜OOP、例外、ファイル、**pytestで単体テスト**、デバッグ、**最初のLLM APIを1回呼ぶ** | 型ヒント、パッケージ作成 | 100h | CS50P、既存の `learnpython`、HackerRank Python |
-| 2 | Math & Algorithms | **離散数学（論理・集合・対数・指数・証明の読み方）**、計算量、基本データ構造、再帰、ソート・探索、グラフ、DP入門、**解き方のパターン（Two pointers・Sliding window・Prefix sum・Monotonic stack・Intervals）** | 確率、高度なDP、競技プログラミング | 160h | CS50x、MIT 6.1200(Math for CS)、Khan Academy、Recursion、問題解決力を鍛える!アルゴリズムとデータ構造、LeetCode/HackerRank |
-| 3 | Web & Databases | HTML/CSS/JSの基礎、HTTP、Python Webフレームワーク(FastAPI)、REST API、SQL・正規化・ER設計・インデックス・トランザクション、**Web脆弱性（SQLi、XSS、CSRF、認証・認可）** | Django、ORMの内部 | 150h | CS50 Web、CS50 SQL、Real World HTTP、SQL Antipatterns、First database design、Mastering API Architecture、OWASP Top 10 |
-| 4 | How Computers & Networks Work | C言語（メモリとポインタに限定）、CPU・キャッシュの概要、OS（プロセス、スレッド、仮想メモリ）、**並行処理（競合、ロック、async/await）**、TCP/IP、DNS、TLS | Nand2Tetris、OSTEP全章、Linux Kernel、自作シェル | 120h | CS50x(C週)、OSTEPの要点、C Programming Language、TCP/IP Illustrated Vol.1、Learning TCP/IP networking by exercise on Linux |
-| 5 | Software Engineering & Upstream | 要件定義、ユースケース、見積り、設計書、Clean Code、**CIと統合テスト**、コードレビュー、運用・ITサービス管理の基礎 | ドメイン駆動設計 | 80h | Systems Analysis and Design、Clean Code 2nd、Fundamentals of Software Engineering、イシューからはじめよ、ITIL 4 |
-| 6 | Infrastructure & Operations | Linux運用、Docker、Kubernetes（**Capstoneで使う範囲**: Deployment、Service、ConfigMap/Secret、probe、Ingress）、IaCの考え方、AWSの基本、監視、秘密情報管理 | CKAD相当、Ansible、Systems Performance | 120h | Kubernetes公式チュートリアル、Kubernetes Up and Running、AWS for Solutions Architects、インフラ・クラウド大全 |
+| 1 | Programming in Python | 変数〜OOP、例外、ファイル、**pytestで単体テスト**、デバッグ、**最初のLLM APIを1回呼ぶ** | 型ヒント、パッケージ作成 | 110h | CS50P、既存の `learnpython`、HackerRank Python |
+| 2 | Math & Algorithms | **離散数学（論理・集合・対数・指数・証明の読み方）**、計算量（計算量クラス・空間・最良/平均/最悪）、メモリと配列・連結リスト・ハッシュ・デック、再帰とコールスタック、分割統治、ソート・探索、木（BST・平衡木・ヒープ）、グラフ、DP入門、高階関数、**解き方のパターン（Two pointers・Sliding window・Prefix sum・Monotonic stack・Intervals）** | 確率、高度なDP、競技プログラミング | 240h | CS50x、MIT 6.1200(Math for CS)、Khan Academy、Recursion、問題解決力を鍛える!アルゴリズムとデータ構造、LeetCode/HackerRank |
+| 3 | Web & Databases | HTML/CSS/JSの基礎、HTTP、Python Webフレームワーク(FastAPI)、REST API、SQL・正規化・ER設計・インデックス・トランザクション、**Web脆弱性（SQLi、XSS、CSRF、認証・認可）**、Cookie・セッション・トークン認証、ルーティング・MVC・DAO/ORM、マイグレーション | Django、ORMの内部 | 190h | CS50 Web、CS50 SQL、Real World HTTP、SQL Antipatterns、First database design、Mastering API Architecture、OWASP Top 10 |
+| 4 | How Computers & Networks Work | C言語（メモリとポインタに限定）、CPU・キャッシュの概要、OS（プロセス、スレッド、仮想メモリ）、**並行処理（競合、ロック、async/await）**、パイプ・UNIXドメインソケット・RPC、TCP/IP、NAT、DNS、TLS、HTTP/2・3 | Nand2Tetris、OSTEP全章、Linux Kernel、自作シェル | 135h | CS50x(C週)、OSTEPの要点、C Programming Language、TCP/IP Illustrated Vol.1、Learning TCP/IP networking by exercise on Linux |
+| 5 | Software Engineering & Upstream | 要件定義、ユースケース、見積り、設計書、Clean Code、**CIと統合テスト**、コードレビュー、**オブジェクト指向設計とデザインパターン**、開発プロセス、運用・ITサービス管理の基礎 | ドメイン駆動設計 | 115h | Systems Analysis and Design、Clean Code 2nd、Fundamentals of Software Engineering、イシューからはじめよ、ITIL 4 |
+| 6 | Infrastructure & Operations | Linux運用、Docker、Kubernetes（**Capstoneで使う範囲**: Deployment、Service、ConfigMap/Secret、probe、Ingress）、IaCの考え方、AWSの基本、NGINX・VMへのデプロイ（DNS・HTTPS）、キャッシュサーバ、監視、秘密情報管理 | CKAD相当、Ansible、Systems Performance | 135h | Kubernetes公式チュートリアル、Kubernetes Up and Running、AWS for Solutions Architects、インフラ・クラウド大全 |
 | 7 | Architecture, System Design & AI | アーキテクチャスタイル、ADR、分散システムの基本（複製、分割、合意の考え方）、システムデザイン、LLM API・RAG・エージェント・評価（evals）、Capstone | MIT 6.5840、ML基礎 | 150h〜 | Fundamentals of Software Architecture、DDIA 2nd、Designing Distributed Systems、システム設計の面接試験、CS50 AI、AI Engineering(Huyen)、Building Applications with AI Agents、**kumite-system-design** |
 
 並行トラック:
@@ -264,7 +264,7 @@ cs-academy/
 
 ### 作り方（量産の流れ）
 
-全体で167 Unit（`content/curriculum.yaml`、8 Stage・45 Module）。1 Unitは20〜30ステップ・60〜120分。学習の進度より1 Stage先まで用意しておけばよく、全部を先に作らない。
+全体で213 Unit（`content/curriculum.yaml`、8 Stage・46 Module）。Recursion のロードマップの全トピックとの対応は [recursion-roadmap-coverage.md](recursion-roadmap-coverage.md)。1 Unitは20〜30ステップ・60〜120分。学習の進度より1 Stage先まで用意しておけばよく、全部を先に作らない。
 
 1. **Module計画**: 学習目標とUnitの並びを決める。参考にするのは CS50 / MIT / OSSU のシラバス、Recursion・LeetCode Exploreの構成、手元の本の目次。
 2. **下書き**: AI（Codex、Claude）がUnitの全ファイルを書く。本から作るときは、kumiteの教材ノートで本人が選んだページを根拠に使い、本文はコピーしない。
