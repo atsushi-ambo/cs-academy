@@ -1,0 +1,359 @@
+# cs-academy curriculum outline (draft, 2026-11-26)
+# Every unit is a play sequence (steps.yaml): read -> predict -> try/parsons
+# -> code/fix -> hands-on -> explain -> boss. See docs/design.md ch.5 and ch.12.
+#
+# Keys per unit:
+#   ex:   exercises to adapt (exercism/<slug> = MIT, generated tests from
+#         problem-specifications where available)
+#   lab:  hands-on base (k8s:<tutorial> = kubernetes.io tutorials, CC BY 4.0;
+#         ms:<lecture> = MIT Missing Semester, CC BY-NC-SA 4.0)
+#   read: optional deeper reading (C = reference only, see docs/sources.md)
+#   next: practice outside the app (link only)
+# core: true = required path. Deep modules are optional.
+# No unit sets core yet, so every listed unit counts as Core for now.
+# hours = whole stage budget: steps, hands-on, review, reading, boss, gate.
+# next on s2.m08 are LeetCode 75 section names; replace with problem IDs and
+# URLs when the unit is written (design.md ch.9).
+
+stages:
+  - stage: 0
+    title: Getting Started
+    hours: 40
+    modules:
+      - id: s0.m01
+        title: How a Computer Runs Your Code
+        units:
+          - {id: s0.m01.u01, title: "Files, folders, and paths"}
+          - {id: s0.m01.u02, title: "What a program is: source code, interpreter, process"}
+          - {id: s0.m01.u03, title: "Bits and bytes: numbers in binary", next: [Recursion 初級 二進数]}
+      - id: s0.m02
+        title: The Terminal
+        units:
+          - {id: s0.m02.u01, title: "Your first shell commands (pwd, ls, cd, mkdir)", lab: ["ms:shell-tools"]}
+          - {id: s0.m02.u02, title: "Reading and moving files (cat, less, cp, mv, rm)", lab: ["ms:shell-tools"]}
+          - {id: s0.m02.u03, title: "Pipes and redirection", lab: ["ms:data-wrangling"]}
+          - {id: s0.m02.u04, title: "Environment variables and PATH"}
+      - id: s0.m03
+        title: Setting Up Python
+        units:
+          - {id: s0.m03.u01, title: "Installing Python 3.13 with uv"}
+          - {id: s0.m03.u02, title: "Virtual environments: why and how"}
+          - {id: s0.m03.u03, title: "VS Code basics: open, edit, run, debug"}
+      - id: s0.m04
+        title: Git and GitHub
+        units:
+          - {id: s0.m04.u01, title: "Commits: saving snapshots", lab: ["ms:version-control"]}
+          - {id: s0.m04.u02, title: "Branches and merges", lab: ["ms:version-control"]}
+          - {id: s0.m04.u03, title: "GitHub: push, pull, and pull requests"}
+          - {id: s0.m04.u04, title: "Fixing a merge conflict"}
+      - id: s0.m05
+        title: Reading Technical English
+        units:
+          - {id: s0.m05.u01, title: "How to read an error message"}
+          - {id: s0.m05.u02, title: "How to read official documentation"}
+          - {id: s0.m05.u03, title: "Asking good questions (to people and to AI)"}
+
+  - stage: 1
+    title: Programming in Python
+    hours: 100
+    modules:
+      - id: s1.m01
+        title: Values and Variables
+        units:
+          - {id: s1.m01.u01, title: "Numbers and arithmetic", ex: [exercism/guidos-gorgeous-lasagna, exercism/currency-exchange]}
+          - {id: s1.m01.u02, title: "Strings", ex: [exercism/little-sisters-vocab, exercism/two-fer]}
+          - {id: s1.m01.u03, title: "Variables, types, and None", ex: [exercism/restaurant-rozalynn]}
+          - {id: s1.m01.u04, title: "Booleans and comparisons", ex: [exercism/ghost-gobble-arcade-game, exercism/black-jack]}
+      - id: s1.m02
+        title: Control Flow
+        units:
+          - {id: s1.m02.u01, title: "if, elif, else", ex: [exercism/meltdown-mitigation, exercism/leap]}
+          - {id: s1.m02.u02, title: "for loops and range", ex: [exercism/raindrops, exercism/sum-of-multiples]}
+          - {id: s1.m02.u03, title: "while loops", ex: [exercism/collatz-conjecture]}
+      - id: s1.m03
+        title: Collections
+        units:
+          - {id: s1.m03.u01, title: "Lists: Keeping Many Values in Order", status: sample, ex: [exercism/card-games, exercism/chaitanas-colossal-coaster]}
+          - {id: s1.m03.u02, title: "Tuples and unpacking", ex: [exercism/tisbury-treasure-hunt, exercism/locomotive-engineer]}
+          - {id: s1.m03.u03, title: "Dictionaries", ex: [exercism/inventory-management, exercism/word-count, exercism/etl]}
+          - {id: s1.m03.u04, title: "Sets", ex: [exercism/cater-waiter, exercism/isogram, exercism/pangram]}
+          - {id: s1.m03.u05, title: "List comprehensions", ex: [exercism/making-the-grade]}
+      - id: s1.m04
+        title: Functions
+        units:
+          - {id: s1.m04.u01, title: "Defining functions, parameters, return", ex: [exercism/darts, exercism/triangle]}
+          - {id: s1.m04.u02, title: "Scope and side effects"}
+          - {id: s1.m04.u03, title: "Default and keyword arguments"}
+          - {id: s1.m04.u04, title: "Functions as values (lambda, sorted with key)", ex: [exercism/strain]}
+          - {id: s1.m04.u05, title: "Closures and decorators", next: [HackerRank Python Closures and Decorators]}
+      - id: s1.m05
+        title: Errors and Testing
+        units:
+          - {id: s1.m05.u01, title: "Exceptions: raise, try, except", ex: [exercism/error-handling, exercism/isbn-verifier]}
+          - {id: s1.m05.u02, title: "Writing tests with unittest and pytest"}
+          - {id: s1.m05.u03, title: "Debugging with print, the debugger, and logging"}
+      - id: s1.m06
+        title: Files and Text
+        units:
+          - {id: s1.m06.u01, title: "Reading and writing files, with", ex: [exercism/grep]}
+          - {id: s1.m06.u02, title: "Parsing a log file", ex: [exercism/log-levels]}
+          - {id: s1.m06.u03, title: "CSV and JSON"}
+          - {id: s1.m06.u04, title: "Regular expressions (basics)", ex: [exercism/phone-number, exercism/acronym]}
+      - id: s1.m07
+        title: Objects and Modules
+        units:
+          - {id: s1.m07.u01, title: "Classes and objects", ex: [exercism/ellens-alien-game, exercism/clock]}
+          - {id: s1.m07.u02, title: "Dataclasses and enums", ex: [exercism/high-scores]}
+          - {id: s1.m07.u03, title: "Modules, packages, and pip"}
+          - {id: s1.m07.u04, title: "Your first API call (HTTP + JSON, an LLM API)"}
+      - id: s1.boss
+        title: "Project: a command-line tool"
+        units:
+          - {id: s1.boss.u01, title: "Build a server health-check CLI with tests and Git history"}
+
+  - stage: 2
+    title: Math and Algorithms
+    hours: 160
+    modules:
+      - id: s2.m01
+        title: Math You Need
+        units:
+          - {id: s2.m01.u01, title: "Logic and sets"}
+          - {id: s2.m01.u02, title: "Exponents and logarithms (why log n is small)"}
+          - {id: s2.m01.u03, title: "Number bases and bits", ex: [exercism/all-your-base, exercism/secret-handshake]}
+          - {id: s2.m01.u04, title: "Counting and basic probability", ex: [exercism/grains]}
+          - {id: s2.m01.u05, title: "Reading a proof: induction", read: [MIT 6.1200]}
+      - id: s2.m02
+        title: Complexity
+        units:
+          - {id: s2.m02.u01, title: "Measuring cost: Big-O"}
+          - {id: s2.m02.u02, title: "Comparing O(n), O(n log n), O(n^2) with real timings"}
+      - id: s2.m03
+        title: Linear Data Structures
+        units:
+          - {id: s2.m03.u01, title: "Arrays vs linked lists", ex: [exercism/simple-linked-list, exercism/linked-list], next: [LeetCode Explore Linked List]}
+          - {id: s2.m03.u02, title: "Stacks and queues", ex: [exercism/matching-brackets, exercism/circular-buffer], next: [LeetCode Explore Queue & Stack]}
+          - {id: s2.m03.u03, title: "Hash tables", next: [LeetCode Explore Hash Table]}
+      - id: s2.m04
+        title: Searching and Sorting
+        units:
+          - {id: s2.m04.u01, title: "Binary search", ex: [exercism/binary-search], next: [LeetCode Explore Binary Search]}
+          - {id: s2.m04.u02, title: "Simple sorts and why they are slow"}
+          - {id: s2.m04.u03, title: "Merge sort and quicksort", next: [LeetCode Explore Sorting]}
+      - id: s2.m05
+        title: Recursion
+        units:
+          - {id: s2.m05.u01, title: "Thinking recursively", ex: [exercism/flatten-array], next: [LeetCode Explore Recursion I, Recursion 中級 再帰]}
+          - {id: s2.m05.u02, title: "Backtracking", ex: [exercism/queen-attack, exercism/word-search], next: [LeetCode Explore Recursion II]}
+      - id: s2.m06
+        title: Trees and Graphs
+        units:
+          - {id: s2.m06.u01, title: "Binary trees and traversal", ex: [exercism/binary-search-tree], next: [LeetCode Explore Binary Tree]}
+          - {id: s2.m06.u02, title: "Heaps and priority queues", next: [LeetCode Explore Heap]}
+          - {id: s2.m06.u03, title: "Graphs: BFS and DFS", ex: [exercism/connect], next: [LeetCode Explore Graph]}
+          - {id: s2.m06.u04, title: "Shortest paths (Dijkstra)"}
+      - id: s2.m07
+        title: Dynamic Programming
+        units:
+          - {id: s2.m07.u01, title: "Memoization", ex: [exercism/change]}
+          - {id: s2.m07.u02, title: "Tabulation: knapsack", ex: [exercism/knapsack], next: [LeetCode Explore Dynamic Programming]}
+      - id: s2.m08
+        title: Problem-Solving Patterns
+        units:
+          - {id: s2.m08.u01, title: "Two pointers", next: [LeetCode 75 Two Pointers]}
+          - {id: s2.m08.u02, title: "Sliding window", next: [LeetCode 75 Sliding Window]}
+          - {id: s2.m08.u03, title: "Prefix sums", next: [LeetCode 75 Prefix Sum]}
+          - {id: s2.m08.u04, title: "Monotonic stack", next: [LeetCode 75 Monotonic Stack]}
+          - {id: s2.m08.u05, title: "Intervals and greedy choices", next: [LeetCode 75 Intervals]}
+      - id: s2.boss
+        title: "Boss: timed problem set"
+        units:
+          - {id: s2.boss.u01, title: "Solve 5 mixed problems in 90 minutes, explain one in English"}
+
+  - stage: 3
+    title: Web and Databases
+    hours: 150
+    modules:
+      - id: s3.m01
+        title: How the Web Works
+        units:
+          - {id: s3.m01.u01, title: "HTTP requests and responses (curl hands-on)"}
+          - {id: s3.m01.u02, title: "Status codes, headers, cookies"}
+          - {id: s3.m01.u03, title: "HTML and CSS basics"}
+          - {id: s3.m01.u04, title: "JavaScript in the browser: DOM and fetch"}
+      - id: s3.m02
+        title: SQL and Relational Databases
+        units:
+          - {id: s3.m02.u01, title: "SELECT, WHERE, ORDER BY", next: [LeetCode Explore SQL, HackerRank SQL]}
+          - {id: s3.m02.u02, title: "JOIN and GROUP BY"}
+          - {id: s3.m02.u03, title: "Designing tables: keys and normalization", read: [First database design (C)]}
+          - {id: s3.m02.u04, title: "Indexes and EXPLAIN"}
+          - {id: s3.m02.u05, title: "Transactions and isolation"}
+          - {id: s3.m02.u06, title: "SQL anti-patterns", read: [SQL Antipatterns (C)]}
+      - id: s3.m03
+        title: Building a Web API in Python
+        units:
+          - {id: s3.m03.u01, title: "Your first FastAPI app"}
+          - {id: s3.m03.u02, title: "REST design: resources and methods", read: [Mastering API Architecture (C)]}
+          - {id: s3.m03.u03, title: "Validation and error responses"}
+          - {id: s3.m03.u04, title: "Connecting to PostgreSQL safely (parameters)"}
+          - {id: s3.m03.u05, title: "Testing an API"}
+      - id: s3.m04
+        title: Web Security
+        units:
+          - {id: s3.m04.u01, title: "Authentication vs authorization"}
+          - {id: s3.m04.u02, title: "SQL injection: break it, then fix it"}
+          - {id: s3.m04.u03, title: "XSS and CSRF: break it, then fix it"}
+          - {id: s3.m04.u04, title: "Passwords, sessions, and secrets"}
+      - id: s3.boss
+        title: "Project: a small web app with AI"
+        units:
+          - {id: s3.boss.u01, title: "Build a notes API + page that summarizes notes with an LLM API"}
+
+  - stage: 4
+    title: How Computers and Networks Work
+    hours: 120
+    modules:
+      - id: s4.m01
+        title: C and Memory
+        units:
+          - {id: s4.m01.u01, title: "Hello, C: compiling and running", read: [The C Programming Language (C)]}
+          - {id: s4.m01.u02, title: "Types, arrays, and strings in C", ex: [exercism/reverse-string]}
+          - {id: s4.m01.u03, title: "Pointers", ex: [exercism/hamming]}
+          - {id: s4.m01.u04, title: "malloc, free, and memory bugs"}
+      - id: s4.m02
+        title: Inside the Machine
+        units:
+          - {id: s4.m02.u01, title: "CPU, instructions, and the clock", read: [Computer Architecture (C)]}
+          - {id: s4.m02.u02, title: "Memory hierarchy and caches"}
+          - {id: s4.m02.u03, title: "Floating point surprises", next: [Recursion 初級 浮動小数点]}
+      - id: s4.m03
+        title: Operating Systems
+        units:
+          - {id: s4.m03.u01, title: "Processes and system calls", read: [OSTEP (C)], next: [Recursion CSプロジェクト1]}
+          - {id: s4.m03.u02, title: "Virtual memory"}
+          - {id: s4.m03.u03, title: "Files and file descriptors"}
+          - {id: s4.m03.u04, title: "Permissions and users"}
+      - id: s4.m04
+        title: Concurrency
+        units:
+          - {id: s4.m04.u01, title: "Threads and race conditions", ex: [exercism/parallel-letter-frequency]}
+          - {id: s4.m04.u02, title: "Locks and deadlocks", ex: [exercism/bank-account]}
+          - {id: s4.m04.u03, title: "async and await in Python"}
+      - id: s4.m05
+        title: Networking
+        units:
+          - {id: s4.m05.u01, title: "Layers: from Ethernet to HTTP", read: [TCP/IP Illustrated (C)]}
+          - {id: s4.m05.u02, title: "IP addresses, subnets, routing (netns lab in a Linux VM)", read: [Learning TCP/IP networking by exercise on Linux (C)]}
+          - {id: s4.m05.u03, title: "TCP vs UDP: write a socket server", next: [Recursion CSプロジェクト2]}
+          - {id: s4.m05.u04, title: "DNS"}
+          - {id: s4.m05.u05, title: "TLS and certificates", next: [Recursion CSプロジェクト3]}
+
+  - stage: 5
+    title: Software Engineering and Upstream
+    hours: 80
+    modules:
+      - id: s5.m01
+        title: From Idea to Requirements
+        units:
+          - {id: s5.m01.u01, title: "Finding the real problem", read: [イシューからはじめよ (C)]}
+          - {id: s5.m01.u02, title: "Writing requirements and user stories in English", read: [Systems Analysis and Design (C)]}
+          - {id: s5.m01.u03, title: "Use cases and non-functional requirements"}
+          - {id: s5.m01.u04, title: "Estimating work"}
+      - id: s5.m02
+        title: Design Documents
+        units:
+          - {id: s5.m02.u01, title: "Writing a design doc"}
+          - {id: s5.m02.u02, title: "Architecture Decision Records (ADR)"}
+          - {id: s5.m02.u03, title: "Diagrams: sequence, ER, component"}
+      - id: s5.m03
+        title: Code Quality
+        units:
+          - {id: s5.m03.u01, title: "Clean code: names and functions", read: [Clean Code 2nd (C)], ex: [exercism/markdown, exercism/ledger]}
+          - {id: s5.m03.u02, title: "Refactoring safely with tests", ex: [exercism/tree-building]}
+          - {id: s5.m03.u03, title: "Object-oriented design and SOLID"}
+          - {id: s5.m03.u04, title: "Code review: giving and receiving"}
+      - id: s5.m04
+        title: Delivery
+        units:
+          - {id: s5.m04.u01, title: "CI with GitHub Actions"}
+          - {id: s5.m04.u02, title: "Integration tests"}
+          - {id: s5.m04.u03, title: "Releases and versioning"}
+          - {id: s5.m04.u04, title: "Operations and IT service management basics", read: [ITIL 4 (C)]}
+
+  - stage: 6
+    title: Infrastructure and Operations
+    hours: 120
+    modules:
+      - id: s6.m01
+        title: Linux Operations
+        units:
+          - {id: s6.m01.u01, title: "Services, logs, and systemd"}
+          - {id: s6.m01.u02, title: "Disk, memory, and CPU troubleshooting", read: [Systems Performance (C)]}
+          - {id: s6.m01.u03, title: "SSH and secure access"}
+      - id: s6.m02
+        title: Containers
+        units:
+          - {id: s6.m02.u01, title: "What a container is"}
+          - {id: s6.m02.u02, title: "Writing a Dockerfile for your Stage 3 app"}
+          - {id: s6.m02.u03, title: "Docker Compose: app + database"}
+          - {id: s6.m02.u04, title: "Image security and small images"}
+      - id: s6.m03
+        title: Kubernetes
+        units:
+          - {id: s6.m03.u01, title: "Create a cluster with kind", lab: ["k8s:kubernetes-basics/create-cluster"]}
+          - {id: s6.m03.u02, title: "Deployments and Pods", lab: ["k8s:kubernetes-basics/deploy-app", "k8s:kubernetes-basics/explore"]}
+          - {id: s6.m03.u03, title: "Services and Ingress", lab: ["k8s:kubernetes-basics/expose"]}
+          - {id: s6.m03.u04, title: "Scaling and rolling updates", lab: ["k8s:kubernetes-basics/scale", "k8s:kubernetes-basics/update"]}
+          - {id: s6.m03.u05, title: "ConfigMaps and Secrets", lab: ["k8s:configuration"]}
+          - {id: s6.m03.u06, title: "Probes, resources, and failures", read: [Kubernetes Up and Running (C)]}
+          - {id: s6.m03.u07, title: "Stateful apps and volumes", lab: ["k8s:stateful-application"]}
+      - id: s6.m04
+        title: Cloud and Infrastructure as Code
+        units:
+          - {id: s6.m04.u01, title: "Cloud building blocks on AWS", read: [AWS for Solutions Architects (C)]}
+          - {id: s6.m04.u02, title: "Infrastructure as code: the idea", read: [Ansible Up and Running (C)]}
+          - {id: s6.m04.u03, title: "Monitoring, metrics, and alerts"}
+          - {id: s6.m04.u04, title: "Incident drill: find and fix a broken deployment"}
+
+  - stage: 7
+    title: Architecture, System Design, and AI
+    hours: 150
+    modules:
+      - id: s7.m01
+        title: Software Architecture
+        units:
+          - {id: s7.m01.u01, title: "Architecture characteristics (the -ilities)", read: [Fundamentals of Software Architecture (C)]}
+          - {id: s7.m01.u02, title: "Monolith, modular monolith, microservices", read: [Head First Software Architecture (C)]}
+          - {id: s7.m01.u03, title: "Event-driven architecture and queues"}
+      - id: s7.m02
+        title: Distributed Systems
+        units:
+          - {id: s7.m02.u01, title: "Replication", read: [Designing Data-Intensive Applications 2nd (C)]}
+          - {id: s7.m02.u02, title: "Partitioning and sharding"}
+          - {id: s7.m02.u03, title: "Consistency and consensus (the idea)", read: [Think Distributed Systems (C)]}
+          - {id: s7.m02.u04, title: "Caching and CDNs"}
+      - id: s7.m03
+        title: System Design Practice
+        units:
+          - {id: s7.m03.u01, title: "A framework for system design interviews", read: [システム設計の面接試験 (C)], next: [kumite-system-design, LeetCode Explore System Design]}
+          - {id: s7.m03.u02, title: "Design a URL shortener", next: [kumite-system-design]}
+          - {id: s7.m03.u03, title: "Design a news feed", next: [kumite-system-design]}
+          - {id: s7.m03.u04, title: "Design a chat system", next: [kumite-system-design, HackerRank AI mock interview (System Design)]}
+      - id: s7.m04
+        title: AI Engineering
+        units:
+          - {id: s7.m04.u01, title: "How LLMs work (enough to use them well)", read: [AI Engineering (C)]}
+          - {id: s7.m04.u02, title: "LLM APIs: messages, tools, streaming"}
+          - {id: s7.m04.u03, title: "RAG: search your own documents"}
+          - {id: s7.m04.u04, title: "Agents and tool use", read: [Building Applications with AI Agents (C)]}
+          - {id: s7.m04.u05, title: "Evals: measuring quality"}
+          - {id: s7.m04.u06, title: "Cost, latency, and safety"}
+      - id: s7.capstone
+        title: Capstone
+        units:
+          - {id: s7.capstone.u01, title: "Requirements and design doc in English"}
+          - {id: s7.capstone.u02, title: "Build: API + database + LLM feature"}
+          - {id: s7.capstone.u03, title: "Run it on Kubernetes with CI"}
+          - {id: s7.capstone.u04, title: "Incident and postmortem"}
+          - {id: s7.capstone.u05, title: "Five-minute English presentation of the trade-offs"}

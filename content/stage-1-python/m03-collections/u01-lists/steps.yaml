@@ -1,0 +1,353 @@
+# Play sequence for this unit. The app shows one step at a time.
+# Rule: never more than 2 "read" steps in a row.
+# Choice explanations: every choice has its own "why".
+unit: s1.m03.u01
+python_min: "3.9"
+steps:
+  - id: st01
+    type: read
+    title: "Why lists?"
+    body: |
+      You manage five web servers. With variables only, you need five names:
+      `server1`, `server2`, ... This does not work for 500 servers.
+
+      A **list** is one value that holds many values **in order**.
+
+      ```python
+      servers = ["web01", "web02", "web03", "web04", "web05"]
+      ```
+      Each value inside is an **item**.
+
+  - id: st02
+    type: try
+    title: "Make your first list"
+    starter: |
+      servers = ["web01", "web02", "web03"]
+      print(servers)
+      print(len(servers))
+    task: "Run the code. Then add \"db01\" inside the brackets and run it again. What does len() show now?"
+    check: {stdout_contains: "4"}
+
+  - id: st03
+    type: read
+    title: "Indexes start at 0"
+    body: |
+      Each item has a number called an **index**. The first index is **0**.
+      The index means "how many steps from the start".
+
+      ```text
+       index:     0        1        2
+              +--------+--------+--------+
+      servers | "web01"| "web02"| "web03"|
+              +--------+--------+--------+
+       index:    -3       -2       -1
+      ```
+      Text version: index 0 is "web01", index 1 is "web02", index 2 is "web03".
+      Negative indexes count from the end: -1 is the last item.
+
+  - id: st04
+    type: predict
+    code: |
+      servers = ["web01", "web02", "db01"]
+      print(servers[-1])
+    choices:
+      - text: "web01"
+        why: "web01 is at index 0 (the start). -1 counts from the end."
+      - text: "web02"
+        why: "web02 is at index 1, or -2."
+      - text: "db01"
+        why: "Correct. -1 is always the last item."
+      - text: "An IndexError"
+        why: "Negative indexes are valid. -1 works whenever the list is not empty."
+    answer: 2
+
+  - id: st05
+    type: predict
+    code: |
+      ports = [80, 443, 22]
+      print(ports[3])
+    choices:
+      - text: "IndexError: list index out of range"
+        why: "Correct. There are 3 items, so the last index is 3 - 1 = 2. Index 3 does not exist."
+      - text: "22"
+        why: "22 is at index 2. Indexes start at 0, so index 3 would be a 4th item."
+      - text: "None"
+        why: "Python does not return None for a missing index. It stops with an error, so you notice the mistake."
+      - text: "80"
+        why: "Python does not wrap around to the start."
+    answer: 0
+
+  - id: st06
+    type: read
+    title: "Slices"
+    body: |
+      A **slice** gives you a **new list** with part of the items.
+
+      ```python
+      x = [10, 20, 30, 40, 50]
+      x[1:3]   # [20, 30]
+      x[:2]    # [10, 20]    from the start
+      x[3:]    # [40, 50]    to the end
+      ```
+      Rule: `x[start:stop]`. **start is included. stop is not.**
+      The number of items is `stop - start`.
+
+  - id: st07
+    type: parsons
+    title: "Put the lines in order"
+    task: "Make a program that prints the first two servers. Use all lines."
+    lines:
+      - 'servers = ["web01", "web02", "db01"]'
+      - "first_two = servers[:2]"
+      - "print(first_two)"
+    expected_stdout: "['web01', 'web02']"
+
+  - id: st08
+    type: read
+    title: "Lists can change"
+    body: |
+      You can change a list after you make it. We say lists are **mutable**.
+      Watch the list after each line:
+
+      ```python
+      servers = ["web01", "web02"]
+      servers.append("db01")      # ["web01", "web02", "db01"]
+      servers.insert(0, "lb01")   # ["lb01", "web01", "web02", "db01"]
+      servers.remove("web02")     # ["lb01", "web01", "db01"]
+      last = servers.pop()        # last is "db01"; list is ["lb01", "web01"]
+      servers[0] = "lb02"         # ["lb02", "web01"]
+      ```
+      `remove(x)` raises a **ValueError** if `x` is not in the list.
+      `"web01" in servers` gives `True` or `False`.
+
+  - id: st09
+    type: predict
+    title: "A very common mistake"
+    code: |
+      ports = [443, 22, 80]
+      ports = ports.sort()
+      print(ports)
+    choices:
+      - text: "[22, 80, 443]"
+        why: "sort() does sort the list, but then the result of sort() is assigned back to ports."
+      - text: "[443, 22, 80]"
+        why: "The list is sorted first, so it is not the original order. But the bigger problem is the assignment."
+      - text: "An error is raised"
+        why: "No error. This is why the bug is hard to see."
+      - text: "None"
+        why: "Correct. sort() changes the list in place and returns None. Then ports = None. Write ports.sort() alone, or use sorted(ports) to get a new list."
+    answer: 3
+
+  - id: st10
+    type: fix
+    title: "Fix the bug"
+    starter: |
+      def add_server(servers, name):
+          servers = servers.append(name)
+          return servers
+    tests: |
+      assert add_server(["web01"], "web02") == ["web01", "web02"]
+    hint_levels:
+      - "What does append() return?"
+      - "append() changes the list and returns None."
+      - "Call servers.append(name) on its own line, then return servers."
+
+  - id: st11
+    type: read
+    title: "Loop over a list, and range()"
+    body: |
+      ```python
+      for server in servers:
+          print(f"Checking {server}")
+      ```
+      `f"..."` is an **f-string**: the value inside `{ }` is put into the text.
+      `{x:.1f}` shows a number with 1 digit after the point.
+
+      `range(n)` gives the numbers 0, 1, ..., n - 1. So `range(len(servers))`
+      gives every valid index. `range(a, b)` gives a, a+1, ..., b - 1.
+
+      Built-in helpers: `len(x)`, `sum(x)`, `min(x)`, `max(x)`.
+      `max([3, 9, 2])` is `9`.
+
+  - id: st12
+    type: predict
+    code: |
+      for i in range(3):
+          print(i)
+    choices:
+      - text: "1 2 3 (on three lines)"
+        why: "range starts at 0, not 1."
+      - text: "0 1 2 (on three lines)"
+        why: "Correct. range(3) gives 0, 1, 2. The stop value 3 is not included, like slices."
+      - text: "0 1 2 3 (on four lines)"
+        why: "The stop value is never included."
+      - text: "3"
+        why: "range(3) is a sequence of numbers, not one number."
+    answer: 1
+
+  - id: st13
+    type: read
+    title: "The collect pattern"
+    body: |
+      To build a new list from an old one, use four steps:
+      **start empty, loop, decide, collect.**
+
+      ```python
+      response_ms = [120, 950, 80, 1500]
+      slow = []                    # 1. start empty
+      for t in response_ms:        # 2. loop
+          if t > 500:              # 3. decide
+              slow.append(t)       # 4. collect
+      # slow is [950, 1500]
+      ```
+      An empty list counts as **false** in an `if`. So `if not slow:` means
+      "if slow is empty". It is the same as `if len(slow) == 0:`.
+
+  - id: st14
+    type: code
+    title: "Exercise 1: last and first"
+    exercise: exercises/lists_practice.py
+    function: last_and_first
+    test_class: LastAndFirst
+    hint_levels:
+      - "What should happen with an empty list? Check that first."
+      - "items[-1] is the last item. items[0] is the first."
+      - "if not items: return []  then  return [items[-1], items[0]]"
+
+  - id: st15
+    type: read
+    title: "Walking two lists together: zip()"
+    body: |
+      ```python
+      servers = ["web01", "web02"]
+      response_ms = [120, 950]
+      for server, ms in zip(servers, response_ms):
+          print(server, ms)
+      ```
+      `zip` gives pairs: ("web01", 120), then ("web02", 950).
+
+      **Warning:** if the lists have different lengths, `zip` stops at the
+      shorter one **without any error**. Check the lengths yourself when they
+      must match.
+
+      To stop a function with an error, use `raise`:
+      ```python
+      if len(a) != len(b):
+          raise ValueError("a and b must have the same length")
+      ```
+
+  - id: st16
+    type: predict
+    code: |
+      names = ["a", "b", "c"]
+      nums = [1, 2]
+      print(len(list(zip(names, nums))))
+    choices:
+      - text: "3"
+        why: "zip does not fill missing values. It stops at the shorter list."
+      - text: "An error is raised"
+        why: "zip does not check lengths. That is why you must check them yourself."
+      - text: "2"
+        why: "Correct. zip stops when the shorter list (nums, 2 items) ends. \"c\" is silently dropped."
+      - text: "5"
+        why: "zip makes pairs. It does not join the two lists."
+    answer: 2
+
+  - id: st17
+    type: code
+    title: "Exercise 2: slow servers"
+    exercise: exercises/lists_practice.py
+    function: slow_servers
+    test_class: SlowServers
+    hint_levels:
+      - "First, compare the two lengths."
+      - "Use the collect pattern with zip(servers, response_ms)."
+      - "Use > (greater than), not >=. Exactly the limit is not slow."
+
+  - id: st18
+    type: read
+    title: "Two names, one list"
+    body: |
+      ```python
+      a = [1, 2, 3]
+      b = a          # b is NOT a copy
+      b.append(4)
+      print(a)       # [1, 2, 3, 4]
+      ```
+      A variable **refers to** a list. `b = a` makes a second name for the
+      same list. To get an independent list, use `a.copy()` or `a[:]`.
+      (This copy is "shallow": lists inside the list are still shared. You
+      will see this again in Module 4.)
+
+  - id: st19
+    type: predict
+    code: |
+      a = [1, 2]
+      b = a.copy()
+      b.append(3)
+      print(a)
+    choices:
+      - text: "[1, 2, 3]"
+        why: "That would be true for b = a. copy() makes a new, independent list."
+      - text: "[1, 2]"
+        why: "Correct. b is a copy, so changing b does not change a."
+      - text: "[3]"
+        why: "append adds to the end of b. It does not replace anything."
+      - text: "An error is raised"
+        why: "copy() is a normal list method."
+    answer: 1
+
+  - id: st20
+    type: code
+    title: "Exercise 3: remove duplicates"
+    exercise: exercises/lists_practice.py
+    function: without_duplicates
+    test_class: WithoutDuplicates
+    hint_levels:
+      - "Do not change the input list. Start a new empty list."
+      - "Use `in` to check whether you already collected the item."
+      - "for item in items: if item not in result: result.append(item)"
+
+  - id: st21
+    type: code
+    title: "Exercise 4: moving window max"
+    exercise: exercises/lists_practice.py
+    function: moving_window_max
+    test_class: MovingWindowMax
+    hint_levels:
+      - "How many windows are there? Try with 7 values and size 3 on paper."
+      - "There are len(values) - size + 1 windows. Use range() for the start index."
+      - "Use max(values[start:start + size])."
+
+  - id: st22
+    type: terminal
+    title: "Hands-on: server health report"
+    guide: handson.md
+    check: "The commit exists and report.py prints the expected output."
+
+  - id: st23
+    type: explain
+    prompt: "Explain to a new teammate the difference between ports.sort() and sorted(ports). When would you use each one?"
+    rubric: [correct idea, a concrete example, clear English]
+
+  - id: st24
+    type: boss
+    title: "Mini boss: List Keeper"
+    time_limit_minutes: 10
+    pass_rule: "4 of 5 predicts correct and the bug-fix test passes"
+    draws_from: [st04, st05, st09, st12, st16, st19]
+    plus:
+      - type: fix
+        starter: |
+          def top_two(values):
+              values.sort()
+              return values[-2:]
+        task: "This function changes the caller's list. Fix it so the input is not changed."
+        tests: |
+          v = [5, 1, 9]
+          assert top_two(v) == [5, 9]
+          assert v == [5, 1, 9]
+
+review_cards:
+  from_steps: [st04, st05, st09, st12, st16, st19]
+  vocab: true

@@ -1,0 +1,176 @@
+<title>cs-academy Play</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: one narrow lesson column, like a lab notebook page; HUD on top, step card, action bar at the bottom. */
+:root{
+  --paper:#F4F6FA; --sheet:#FFFFFF; --ink:#1B2233; --muted:#5C6680; --rule:#DDE2EE;
+  --cobalt:#2E49C9; --cobalt-soft:#E6EAFB; --ok:#0F7A5C; --ok-soft:#DDF3EA; --bad:#B23A2E; --bad-soft:#FBE7E4;
+  --gold:#A86A00; --code-bg:#EEF1F8;
+  --f-display:"Bricolage Grotesque", "Avenir Next", system-ui, sans-serif;
+  --f-body:"Atkinson Hyperlegible", "Hiragino Sans", system-ui, sans-serif;
+  --f-mono:"JetBrains Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --paper:#0F1424; --sheet:#171E33; --ink:#E7EBF5; --muted:#9AA4BF; --rule:#2A3350;
+  --cobalt:#8EA2FF; --cobalt-soft:#232D52; --ok:#5FD3A9; --ok-soft:#163A30; --bad:#FF8F82; --bad-soft:#40211E;
+  --gold:#F2B84B; --code-bg:#11182B; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --paper:#0F1424; --sheet:#171E33; --ink:#E7EBF5; --muted:#9AA4BF; --rule:#2A3350;
+  --cobalt:#8EA2FF; --cobalt-soft:#232D52; --ok:#5FD3A9; --ok-soft:#163A30; --bad:#FF8F82; --bad-soft:#40211E;
+  --gold:#F2B84B; --code-bg:#11182B; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--paper);color:var(--ink);font-family:var(--f-body);font-size:17px;line-height:1.55;
+  padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));padding-block:12px 40px}
+.wrap{max-width:640px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+.hud{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;justify-content:space-between}
+.brand{font-family:var(--f-display);font-weight:800;font-size:1.05rem;letter-spacing:.01em}
+.brand small{display:block;font-family:var(--f-body);font-weight:400;font-size:.78rem;color:var(--muted)}
+.stats{display:flex;gap:8px;flex-wrap:wrap}
+.chip{font-family:var(--f-mono);font-size:.78rem;padding:4px 10px;border-radius:999px;background:var(--sheet);border:1px solid var(--rule);font-variant-numeric:tabular-nums}
+.chip b{color:var(--cobalt)}
+.chip.combo b{color:var(--gold)}
+.progress{height:8px;background:var(--rule);border-radius:999px;overflow:hidden}
+.progress span{display:block;height:100%;background:var(--cobalt);width:0;transition:width .3s}
+.meta{display:flex;justify-content:space-between;font-size:.8rem;color:var(--muted);font-family:var(--f-mono)}
+.card{background:var(--sheet);border:1px solid var(--rule);border-radius:14px;padding:20px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.kind{font-family:var(--f-mono);font-size:.72rem;text-transform:uppercase;letter-spacing:.12em;color:var(--cobalt)}
+h1{font-family:var(--f-display);font-weight:800;font-size:1.55rem;line-height:1.2;margin:0;text-wrap:balance}
+p{margin:0}
+pre{margin:0;background:var(--code-bg);border-radius:10px;padding:12px 14px;overflow-x:auto;font-family:var(--f-mono);font-size:.86rem;line-height:1.6}
+code{font-family:var(--f-mono);font-size:.9em;background:var(--code-bg);padding:1px 5px;border-radius:5px}
+pre code{background:none;padding:0}
+.w{border-bottom:2px dotted var(--cobalt);cursor:help;background:none;border-top:0;border-left:0;border-right:0;font:inherit;color:inherit;padding:0}
+.gloss{font-size:.85rem;color:var(--muted);min-height:1.3em}
+.choices{display:grid;gap:10px}
+.choice{text-align:left;font:inherit;color:var(--ink);background:var(--sheet);border:1.5px solid var(--rule);border-radius:10px;padding:12px 14px;cursor:pointer;display:flex;flex-direction:column;gap:4px}
+.choice:hover{border-color:var(--cobalt)}
+.choice:focus-visible,.btn:focus-visible,.line:focus-visible,.w:focus-visible{outline:3px solid var(--cobalt);outline-offset:2px}
+.choice .mono{font-family:var(--f-mono);font-size:.9rem}
+.choice .why{font-size:.86rem;color:var(--muted)}
+.choice.correct{border-color:var(--ok);background:var(--ok-soft)}
+.choice.wrong{border-color:var(--bad);background:var(--bad-soft)}
+.choice[disabled]{cursor:default}
+.tag{font-family:var(--f-mono);font-size:.72rem;font-weight:600}
+.correct .tag{color:var(--ok)} .wrong .tag{color:var(--bad)}
+.lines{display:grid;gap:8px}
+.line{font-family:var(--f-mono);font-size:.86rem;text-align:left;background:var(--code-bg);border:1.5px dashed var(--rule);border-radius:8px;padding:10px 12px;color:var(--ink);cursor:pointer}
+.line[disabled]{opacity:.35;cursor:default}
+.slot{min-height:3.2em;border:1.5px solid var(--rule);border-radius:10px;padding:8px;display:grid;gap:6px}
+.slot .placed{font-family:var(--f-mono);font-size:.86rem;padding:6px 8px;background:var(--cobalt-soft);border-radius:6px}
+.out{font-family:var(--f-mono);font-size:.85rem;padding:10px 12px;border-radius:8px;background:var(--code-bg)}
+.out.ok{background:var(--ok-soft);color:var(--ok)} .out.bad{background:var(--bad-soft);color:var(--bad)}
+.bar{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap}
+.btn{font:inherit;font-weight:700;border-radius:10px;padding:11px 18px;border:1.5px solid var(--cobalt);cursor:pointer;background:var(--cobalt);color:var(--sheet)}
+.btn.ghost{background:transparent;color:var(--cobalt)}
+.btn[disabled]{opacity:.4;cursor:default}
+.note{font-size:.8rem;color:var(--muted)}
+.stars{font-family:var(--f-mono);font-size:1.1rem;color:var(--gold)}
+.summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.summary div{border:1px solid var(--rule);border-radius:10px;padding:10px;text-align:center}
+.summary strong{display:block;font-family:var(--f-display);font-size:1.4rem;font-variant-numeric:tabular-nums}
+.summary span{font-size:.75rem;color:var(--muted)}
+.toast{font-family:var(--f-mono);font-size:.8rem;color:var(--gold);min-height:1.2em}
+@media (prefers-reduced-motion: reduce){.progress span{transition:none}}
+</style>
+
+<div class="wrap">
+  <header class="hud">
+    <div class="brand">cs-academy<small>Stage 1 · Collections · Lists</small></div>
+    <div class="stats">
+      <span class="chip">XP <b id="xp">0</b></span>
+      <span class="chip combo">Combo <b id="combo">0</b></span>
+      <span class="chip">Streak <b>6</b> days</span>
+    </div>
+  </header>
+  <div class="progress" aria-hidden="true"><span id="prog"></span></div>
+  <div class="meta"><span id="stepno">Step 1</span><span>Prototype · sample unit</span></div>
+  <main class="card" id="card" aria-live="polite"></main>
+  <div class="toast" id="toast"></div>
+  <p class="note">This prototype shows how a unit plays. In the real app, "Code" steps run your Python in a sandbox and check it with tests. Dotted words show the Japanese meaning when tapped.</p>
+</div>
+
+<script>
+const VOCAB={item:"要素",index:"添字（位置の番号）",mutable:"変更可能な",slice:"切り出し","in place":"その場で（新しく作らずに）",silently:"何も知らせずに"};
+const w=t=>`<button class="w" type="button" data-w="${t}">${t}</button>`;
+const STEPS=[
+ {type:"read",title:"Why lists?",html:()=>`<p>You manage five web servers. With variables only, you need five names. That does not work for 500 servers.</p><p>A <strong>list</strong> is one value that holds many values <strong>in order</strong>. Each value inside is an ${w("item")}.</p><pre><code>servers = ["web01", "web02", "web03"]</code></pre>`},
+ {type:"read",title:"Indexes start at 0",html:()=>`<p>Each item has a number called an ${w("index")}. The first index is <strong>0</strong>: it means "0 steps from the start". Negative indexes count from the end, so <code>-1</code> is the last item.</p><pre><code> index:    0        1        2
+servers  "web01"  "web02"  "web03"
+ index:   -3       -2       -1</code></pre><p class="note">Text version: index 0 is "web01", index 1 is "web02", index 2 is "web03".</p>`},
+ {type:"predict",title:"What does this print?",code:'servers = ["web01", "web02", "db01"]\nprint(servers[-1])',choices:[
+   ["web01","web01 is at index 0. -1 counts from the end."],["web02","web02 is at index 1, or -2."],["db01","Correct. -1 is always the last item."],["IndexError","Negative indexes are valid when the list is not empty."]],answer:2},
+ {type:"predict",title:"What does this print?",code:'ports = [80, 443, 22]\nprint(ports[3])',choices:[
+   ["IndexError: list index out of range","Correct. 3 items, so the last index is 3 - 1 = 2."],["22","22 is at index 2. Index 3 would be a 4th item."],["None","Python does not return None for a missing index. It stops with an error."],["80","Python does not wrap around to the start."]],answer:0},
+ {type:"read",title:"Slices",html:()=>`<p>A ${w("slice")} gives you a <strong>new list</strong> with part of the items.</p><pre><code>x = [10, 20, 30, 40, 50]
+x[1:3]   # [20, 30]
+x[:2]    # [10, 20]
+x[3:]    # [40, 50]</code></pre><p>Rule: <code>x[start:stop]</code>. start is included, stop is not.</p>`},
+ {type:"parsons",title:"Put the lines in order",task:"Make a program that prints the first two servers. Tap the lines in the right order.",
+   lines:["print(first_two)",'servers = ["web01", "web02", "db01"]',"first_two = servers[:2]"],order:[1,2,0],out:"['web01', 'web02']"},
+ {type:"read",title:"Lists can change",html:()=>`<p>Lists are ${w("mutable")}: you can change them ${w("in place")}. Watch the list after each line:</p><pre><code>servers = ["web01", "web02"]
+servers.append("db01")     # ["web01", "web02", "db01"]
+servers.remove("web02")    # ["web01", "db01"]
+last = servers.pop()       # last is "db01"</code></pre>`},
+ {type:"predict",title:"A very common mistake",code:"ports = [443, 22, 80]\nports = ports.sort()\nprint(ports)",choices:[
+   ["[22, 80, 443]","sort() does sort the list, but then its result is assigned back to ports."],["[443, 22, 80]","The list was sorted first. The bigger problem is the assignment."],["An error is raised","No error. That is why this bug is hard to see."],["None","Correct. sort() returns None, so ports becomes None. Use sorted(ports) for a new list."]],answer:3},
+ {type:"fix",title:"Fix the bug",code:"def add_server(servers, name):\n    servers = servers.append(name)   # line 2\n    return servers",task:"The test add_server([\"web01\"], \"web02\") == [\"web01\", \"web02\"] fails. Which new line 2 fixes it?",choices:[
+   ["servers.append(name)","Correct. append() changes the list and returns None, so do not assign its result."],["servers = servers + name","name is a string, not a list. This raises a TypeError."],["return servers.append(name)","This returns None, the same bug as before."],["servers = [name]","This throws away the servers that were already there."]],answer:0},
+ {type:"predict",title:"What does zip do here?",code:'names = ["a", "b", "c"]\nnums = [1, 2]\nprint(len(list(zip(names, nums))))',choices:[
+   ["3","zip does not fill missing values."],["An error is raised","zip does not check lengths. You must check them yourself."],["2",`Correct. zip stops at the shorter list. "c" is dropped ${"silently"}.`],["5","zip makes pairs. It does not join lists."]],answer:2},
+ {type:"done"}
+];
+const REVIEW=[2,3,7,9];
+let i=0,xp=0,combo=0,best=0,correct=0,answered=0,mode="unit",rq=[],missed=[];
+const $=id=>document.getElementById(id);
+const esc=s=>s.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+function save(){try{localStorage.setItem("csa-proto",JSON.stringify({xp}))}catch(e){}}
+try{const s=JSON.parse(localStorage.getItem("csa-proto")||"{}");if(s.xp)xp=s.xp}catch(e){}
+function hud(){ $("xp").textContent=xp; $("combo").textContent=combo; const total=mode==="unit"?STEPS.length-1:rq.length; const pos=mode==="unit"?i:i; $("prog").style.width=Math.min(100,pos/total*100)+"%"; $("stepno").textContent=mode==="unit"?(i<STEPS.length-1?`Step ${i+1} of ${STEPS.length-1}`:"Unit complete"):(i<rq.length?`Review ${i+1} of ${rq.length}`:"Review complete"); }
+function toast(t){$("toast").textContent=t}
+function award(ok){ answered++; if(ok){correct++;combo++;best=Math.max(best,combo);const gain=10+Math.min(combo-1,4)*2;xp+=gain;toast(combo>1?`+${gain} XP · combo x${combo}`:`+${gain} XP`)} else {combo=0;toast("Combo reset. This one will come back in review.")} save(); hud(); }
+function bar(html){return `<div class="bar">${html}</div>`}
+function next(){ i++; render(); }
+function render(){
+  hud(); const c=$("card");
+  const s=mode==="unit"?STEPS[i]:(i<rq.length?STEPS[rq[i]]:{type:"rdone"});
+  if(s.type==="read"){ c.innerHTML=`<span class="kind">Read</span><h1>${s.title}</h1>${s.html()}<p class="gloss" id="gloss"></p>${bar('<button class="btn" id="go">Next</button>')}`; xp+=2; save(); hud(); }
+  else if(s.type==="predict"||s.type==="fix"){
+    c.innerHTML=`<span class="kind">${s.type==="fix"?"Fix the bug":"Predict"}</span><h1>${s.title}</h1><pre><code>${esc(s.code)}</code></pre>${s.task?`<p>${esc(s.task)}</p>`:""}<div class="choices">${s.choices.map((ch,k)=>`<button class="choice" type="button" data-k="${k}"><span class="mono">${esc(ch[0])}</span><span class="why" hidden>${esc(ch[1])}</span></button>`).join("")}</div>${bar('<button class="btn" id="go" disabled>Continue</button>')}`;
+    c.querySelectorAll(".choice").forEach(b=>b.onclick=()=>{
+      const k=+b.dataset.k, ok=k===s.answer;
+      c.querySelectorAll(".choice").forEach(x=>{x.disabled=true;x.querySelector(".why").hidden=false;const kk=+x.dataset.k;
+        if(kk===s.answer){x.classList.add("correct");x.insertAdjacentHTML("afterbegin",'<span class="tag">CORRECT</span>')}
+        else if(kk===k){x.classList.add("wrong");x.insertAdjacentHTML("afterbegin",'<span class="tag">YOUR ANSWER</span>')}});
+      if(!ok&&mode==="review")missed.push(rq[i]);
+      award(ok); $("go").disabled=false; $("go").focus();
+    });
+  }
+  else if(s.type==="parsons"){
+    let picked=[];
+    c.innerHTML=`<span class="kind">Parsons</span><h1>${s.title}</h1><p>${esc(s.task)}</p><div class="slot" id="slot" aria-label="Your program"></div><div class="lines">${s.lines.map((l,k)=>`<button class="line" type="button" data-k="${k}">${esc(l)}</button>`).join("")}</div><div id="res"></div>${bar('<button class="btn ghost" id="reset">Reset</button><button class="btn" id="run" disabled>Run</button><button class="btn" id="go" hidden>Continue</button>')}`;
+    const draw=()=>{$("slot").innerHTML=picked.map(k=>`<div class="placed">${esc(s.lines[k])}</div>`).join("");$("run").disabled=picked.length!==s.lines.length};
+    c.querySelectorAll(".line").forEach(b=>b.onclick=()=>{picked.push(+b.dataset.k);b.disabled=true;draw()});
+    $("reset").onclick=()=>{picked=[];c.querySelectorAll(".line").forEach(b=>b.disabled=false);draw();$("res").innerHTML=""};
+    $("run").onclick=()=>{const ok=picked.join()===s.order.join();
+      $("res").innerHTML=ok?`<div class="out ok">$ python3 first_two.py<br>${esc(s.out)}</div>`:`<div class="out bad">NameError: a name is used before it is defined. Check the order.</div>`;
+      if(ok){award(true);$("run").hidden=true;$("reset").hidden=true;$("go").hidden=false;$("go").focus()} else {combo=0;hud()} };
+  }
+  else if(s.type==="done"){
+    const acc=answered?Math.round(correct/answered*100):0, stars=acc>=90?3:acc>=60?2:1;
+    c.innerHTML=`<span class="kind">Unit complete</span><h1>Lists: Keeping Many Values in Order</h1><p class="stars" aria-label="${stars} of 3 stars">${"★".repeat(stars)}${"☆".repeat(3-stars)}</p><div class="summary"><div><strong>${xp}</strong><span>XP</span></div><div><strong>${acc}%</strong><span>accuracy</span></div><div><strong>${best}</strong><span>best combo</span></div></div><p>Next in the real app: 4 coding exercises with tests, the hands-on report script, an English explanation, and the mini boss. Your predict answers are now review cards.</p>${bar('<button class="btn ghost" id="again">Play again</button><button class="btn" id="arena">Start Review Arena</button>')}`;
+    $("again").onclick=()=>{i=0;combo=0;correct=0;answered=0;best=0;render()};
+    $("arena").onclick=()=>{mode="review";rq=[...REVIEW].sort(()=>Math.random()-.5);missed=[];i=0;combo=0;toast("Review Arena: 4 cards. Missed cards come back at the end.");render()};
+    return;
+  }
+  else if(s.type==="rdone"){
+    if(missed.length){rq=rq.concat(missed);missed=[];toast("Second chance for the cards you missed.");render();return}
+    c.innerHTML=`<span class="kind">Review complete</span><h1>Cards scheduled</h1><p>Correct cards come back in a few days. Cards you missed come back tomorrow. In the real app, FSRS chooses the exact day.</p>${bar('<button class="btn" id="back">Back to unit</button>')}`;
+    $("back").onclick=()=>{mode="unit";i=STEPS.length-1;render()}; return;
+  }
+  const go=$("go"); if(go) go.onclick=next;
+  c.querySelectorAll(".w").forEach(b=>b.onclick=()=>{const g=$("gloss");if(g)g.textContent=`${b.dataset.w}: ${VOCAB[b.dataset.w]}`});
+}
+render();
+</script>
