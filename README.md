@@ -1,8 +1,44 @@
 # CS Academy
 
+> A self-paced learning platform with two independent curricula:
+> **CS Quest** (gamified university-level CS) and **FDE Academy** (Forward Deployed Engineer prep).
+
+---
+
+## 🎮 CS Quest — Gamified Computer Science
+
+University-level CS reorganized as an RPG. Journey through 17 worlds from undergraduate fundamentals
+to graduate specialization, collecting XP and defeating bosses.
+
+| | |
+|---|---|
+| 日本語 | [CS Quest 〜コンピュータサイエンス冒険譚〜](cs-quest/README.md) |
+| English | [CS Quest — An Adventure Tale of Computer Science](cs-quest/en/README.md) |
+
+**Three continents:**
+- 🏝️ First Continent (Worlds 1–8 + Final Boss): undergraduate core — coding interviews & CS fundamentals
+- 🌄 Second Continent (Worlds 9–14): advanced undergraduate — OS, DB, compilers, theory, algorithms
+- ☁️ The Heavens (GRAD 1–4): graduate level — distributed systems, security, ML, architecture
+
+---
+
+## 🛰️ FDE Academy — Forward Deployed Engineer Curriculum
+
+A complete ~29-week curriculum for landing FDE roles at OpenAI, Anthropic, Google, and Palantir.
+Covers production engineering, LLM apps (RAG/agents/MCP), evals, enterprise deployment, and interview prep.
+
+| | |
+|---|---|
+| English | [FDE Academy](fde-curriculum/README.md) |
+| 日本語 | [FDE Academy 日本語版](fde-curriculum/ja/README.md) |
+
+---
+
+## 🧪 Local learning app (P0, `app/`・`web/`・`runner/`)
+
 Python の Lists を、短いステップと復習で学ぶ macOS 向けローカルアプリです。P0 では、サンプル教材の Read、Predict、Try it、Parsons、Fix、Code の21ステップをブラウザで進められます。レッスンの参照シートと端末ハンズオンの手順は Today の「教材を読む」から開けます。
 
-## 起動
+### 起動
 
 Python 3.13 を使うための uv と、起動済みの Docker Engine（Docker Desktop や OrbStack）が必要です。ランナーは Mac 内の Unix ソケットへ接続します。セットアップで uv が Python 3.13 の環境を選び、`uv.lock` の PyYAML をインストールします。
 テストを実行する場合は Node.js 22 以上も用意します。
@@ -15,7 +51,7 @@ make run
 
 ターミナルに `CS Academy is ready at http://127.0.0.1:4350` と出たら、その URL を開きます。初回起動時に `data/`（0700）と学習用 SQLite が作られます。終了はターミナルで Ctrl+C を押します。
 
-## 学習
+### 学習
 
 - **Today** に Lists の進捗、累計 XP、Daily quest、今日の復習数とストリークが出ます。15分モードでは、今日の復習または学習のクエストを1つ表示します。
 - **Play** の **Run** はコードに「標準入力」の内容を渡します。**Run tests** はサーバーが選んだテストで判定します。コード課題の失敗回数と合格 XP は Run tests で更新されます。ヒントを開くと合格時の XP が減り、模範解答は合格後か Run tests で3回失敗した後に開きます。
@@ -24,7 +60,7 @@ make run
 
 Docker またはイメージが起動できない場合は、結果欄に理由が表示されます。Docker Engine が起動していることを確認し、イメージがない場合は `make runner-image` を実行します。起動失敗では、テスト失敗回数や XP は変わりません。コード実行は10秒で打ち切り、出力は stdout と stderr にそれぞれ16 KiBまで保持します。
 
-## バックアップと復元
+### バックアップと復元
 
 「バックアップ」画面で作成済みのバックアップを確認し、選んで復元できます。既存の学習データがある場合、復元前にその状態も別のバックアップとして保存します。
 
@@ -41,7 +77,7 @@ make restore BACKUP=20261127T190000-0123456789ab
 
 P0 の永続データは SQLite にあります。エディタの未提出の下書きはブラウザのタブ内に保存されます。
 
-## 検証
+### 検証
 
 `make test` と `make test-web` の実行前に、`node --version` で Node.js 22 以上を確認します。CI は Node.js 22 を使います。
 
@@ -54,3 +90,12 @@ P0 の永続データは SQLite にあります。エディタの未提出の下
 | `make audit` | `uv.lock` から抽出した依存を pip-audit が検査する |
 
 Docker に接続できない場合、通常のテストは Docker の項目をスキップします。Docker に接続できてイメージが見つからない場合は失敗します。TCP の待ち受けが制限される環境では、通常テストの TCP 項目がスキップされます。CI では Docker と TCP の確認が必須です。週次・手動の監査では Python 依存とランナーイメージを検査します。
+
+---
+
+## License
+
+© 2025 Atsushi Ambo. Licensed under [MIT](./LICENSE).
+
+CS Quest references learning resources from [Coding Interview University](https://github.com/jwasham/coding-interview-university)
+by [John Washam](https://github.com/jwasham) (CC BY-SA 4.0).
