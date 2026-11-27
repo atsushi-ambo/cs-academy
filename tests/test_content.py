@@ -13,7 +13,8 @@ class ContentTest(unittest.TestCase):
     def test_algorithm_units_have_the_required_play_and_review_steps(self):
         catalog = load_catalog()
         units = ("s1.m02.u02", "s1.m02.u03", "s1.m02.u04", "s2.m05.u01",
-                 "s2.m05.u03", "s2.m05.u04", "s2.m05.u05")
+                 "s2.m05.u03", "s2.m05.u04", "s2.m05.u05", "s2.m02.u01", "s2.m02.u02",
+                 "s2.m02.u03", "s2.m02.u04", "s2.m02.u05", "s2.m03.u04", "s2.m03.u05")
         for uid in units:
             with self.subTest(unit=uid):
                 steps = catalog.play[uid]

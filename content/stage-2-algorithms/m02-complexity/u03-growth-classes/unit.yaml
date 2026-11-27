@@ -1,0 +1,39 @@
+id: s2.m02.u03
+title: 'Complexity classes: constant, log, linear, polynomial, exponential, factorial'
+stage: 2
+module: Complexity
+version: 1
+status: draft
+estimated_minutes: 75
+prerequisites:
+- s2.m05.u01
+- s2.m02.u02
+objectives:
+- Tell common growth classes apart.
+- Read a tree of recursive choices.
+- Compare counting with listing.
+skills:
+- python.growth-classes
+- english.explain-code
+parts:
+- steps.yaml
+- lesson.md
+- exercises/
+- solutions/solutions.md
+references:
+- kind: official_doc
+  title: Python built-in types
+  url: https://docs.python.org/3.13/library/stdtypes.html
+vocab:
+- en: constant
+  ja: 定数
+- en: logarithmic
+  ja: 対数的
+- en: polynomial
+  ja: 多項式
+- en: exponential
+  ja: 指数的
+- en: factorial
+  ja: 階乗
+- en: leaf
+  ja: 木の末端

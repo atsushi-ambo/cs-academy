@@ -1,0 +1,41 @@
+id: s2.m03.u05
+title: Fixed, multidimensional, and dynamic arrays (amortized growth)
+stage: 2
+module: Linear Data Structures
+version: 1
+status: draft
+estimated_minutes: 75
+prerequisites:
+- s2.m02.u05
+- s2.m03.u04
+objectives:
+- Read fixed and two-dimensional arrays.
+- Compare the costs of common list operations.
+- Build a dynamic array and count its copies.
+skills:
+- python.array-layout-and-growth
+- english.explain-code
+parts:
+- steps.yaml
+- lesson.md
+- exercises/
+- solutions/solutions.md
+references:
+- kind: official_doc
+  title: Python built-in types
+  url: https://docs.python.org/3.13/library/stdtypes.html
+vocab:
+- en: fixed array
+  ja: 固定長配列
+- en: contiguous
+  ja: 連続した
+- en: row-major order
+  ja: 行優先順
+- en: capacity
+  ja: 容量
+- en: resize
+  ja: 容量の変更
+- en: amortized cost
+  ja: 償却コスト
+- en: slot
+  ja: 要素を入れる場所

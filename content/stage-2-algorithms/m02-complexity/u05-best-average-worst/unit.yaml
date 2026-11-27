@@ -1,0 +1,39 @@
+id: s2.m02.u05
+title: Best, average, and worst cases
+stage: 2
+module: Complexity
+version: 1
+status: draft
+estimated_minutes: 75
+prerequisites:
+- s2.m05.u01
+- s2.m02.u04
+objectives:
+- Compare search costs at the same input size.
+- State an assumption for average cost.
+- Count matches without losing an early exit.
+skills:
+- python.best-average-worst
+- english.explain-code
+parts:
+- steps.yaml
+- lesson.md
+- exercises/
+- solutions/solutions.md
+references:
+- kind: official_doc
+  title: Python built-in types
+  url: https://docs.python.org/3.13/library/stdtypes.html
+vocab:
+- en: best case
+  ja: 最良の場合
+- en: worst case
+  ja: 最悪の場合
+- en: average case
+  ja: 平均の場合
+- en: equally likely
+  ja: 同じ確率
+- en: early exit
+  ja: 早期終了
+- en: comparison
+  ja: 比較

@@ -1,0 +1,312 @@
+unit: s2.m03.u04
+python_min: '3.9'
+steps:
+- id: st01
+  type: read
+  title: Draw a name as an arrow
+  body: |
+    An **address** tells a computer where data is in memory.
+    A Python name holds a **reference**. Think of it as an arrow to an object.
+    Two names for the same object are **aliases**.
+
+    ```text
+    queue ──> list ["open"]
+    alias ────^
+    ```
+
+    Both arrows reach one list. `alias = queue` makes no new list.
+    A change through alias is also visible through queue.
+- id: st02
+  type: predict
+  title: Add an item through an alias
+  code: |
+    queue = ["open"]
+    alias = queue
+    alias.append("done")
+    print(queue)
+  choices:
+  - text: '["open"]'
+    why: Both names reach the list that append changes.
+  - text: '["done"]'
+    why: Append leaves the older item in place.
+  - text: '[''open'', ''done'']'
+    why: Both names refer to the same list after the append.
+  - text: None
+    why: Append returns None, but queue still refers to the list.
+  answer: 2
+- id: st03
+  type: try
+  title: Move the name to its own list
+  starter: |
+    queue = ["open"]
+    alias = queue
+    alias.append("done")
+    print(queue)
+  task: Set alias = queue[:] instead. A full slice makes a new list. See which list changes.
+  check:
+    stdout_line: '[''open'']'
+- id: st04
+  type: read
+  title: Ask whether two things are the same object
+  body: |
+    Use `is` to ask about **identity**: do the two names lead to the same object?
+    For lists of small numbers, `==` checks whether the lists have equal values in order.
+    `id(obj)` returns a number for the object's identity while it is alive.
+    In CPython it is the address. In Python code, use the number as an identity,
+    since other Python systems can choose a different number.
+- id: st05
+  type: predict
+  title: Compare two equal lists
+  code: |
+    a = [5]
+    b = [5]
+    print(a is b, a == b, id(a) == id(b))
+  choices:
+  - text: True True True
+    why: The two list expressions build separate objects.
+  - text: False True False
+    why: The lists have equal values, but they are two live objects with different IDs.
+  - text: False False False
+    why: The lists both contain the value 5.
+  - text: True False True
+    why: Same-object tests are false here. The values are equal.
+  answer: 1
+- id: st06
+  type: parsons
+  title: Make a new top-level list
+  task: Use all lines. Start with [5], copy its slots, and add 8 only to the copy. Print [5] [5, 8].
+  lines:
+  - original = [5]
+  - other = original[:]
+  - other.append(8)
+  - print(original, other)
+  expected_stdout: '[5] [5, 8]'
+  hint_levels:
+  - Start from the original.
+  - Make the slice before you append.
+  - Print both lists after the append.
+- id: st07
+  type: code
+  title: Tell if two names share a list
+  exercise: exercises/practice.py
+  function: same_list
+  test_class: SameList
+  hint_levels:
+  - Equal values are possible in two different lists.
+  - Check where the names lead.
+  - Return a is b.
+- id: st08
+  type: read
+  title: Names in frames and objects in the heap
+  body: |
+    A call makes a **frame** with local names and a place to return to.
+    The **call stack** tracks active frames. A new call goes on top.
+    When it returns, the caller can continue.
+
+    Think of the **heap** as the area used for objects such as lists.
+    A caller can keep a returned object after the call's frame is gone.
+    This picture is about lifetime. It does not show the exact memory layout of Python frames.
+
+    The line puzzle copied n slots in O(n) time and used O(n) space for the new list.
+- id: st09
+  type: predict
+  title: Keep a list after its maker returns
+  code: |
+    def open_log():
+        log = ["start"]
+        return log
+
+    events = open_log()
+    events.append("ready")
+    print(events)
+  choices:
+  - text: '[''start'']'
+    why: The caller can change the returned list.
+  - text: '[]'
+    why: Returning the list passes a reference. It does not clear the list.
+  - text: None
+    why: return log gives the caller a reference.
+  - text: '[''start'', ''ready'']'
+    why: The local name is gone, but events still refers to the list.
+  answer: 3
+- id: st10
+  type: fix
+  title: Copy before adding a code
+  task: |2
+
+    Return a new list with code added at the end. Do not change the input list.
+    Inputs: 0 to 100 integer codes and one integer code.
+    Sample: add_to_copy([2, 4], 6) -> [2, 4, 6]
+  starter: |
+    def add_to_copy(codes, code):
+        result = codes
+        result.append(code)
+        return result
+  solution: |
+    def add_to_copy(codes, code):
+        result = codes[:]
+        result.append(code)
+        return result
+  tests: |
+    for codes, code, expected in (([], 9, [9]), ([2, 4], 6, [2, 4, 6]), ([5, 5], 5, [5, 5, 5])):
+        before = codes[:]
+        result = add_to_copy(codes, code)
+        assert result is not codes
+        assert result == expected
+        assert codes == before
+  hint_levels:
+  - Right now both names reach one list.
+  - Make another list before the append.
+  - Use result = codes[:].
+  explanation: Copying n slots takes O(n) time and O(n) output space. There is O(1) extra space outside
+    the output.
+- id: st11
+  type: predict
+  title: See why every row can change at once
+  code: |
+    m, n = 2, 3
+    grid = [[0] * n] * m
+    grid[0][1] = 7
+    print(grid)
+  choices:
+  - text: '[[0, 7, 0], [0, 7, 0]]'
+    why: The outer * repeats a reference to the same row.
+  - text: '[[0, 7, 0], [0, 0, 0]]'
+    why: This would require separate lists for the two rows.
+  - text: '[[7, 7, 7], [7, 7, 7]]'
+    why: Only slot 1 in the shared row changes.
+  - text: '[[0, 0, 0], [0, 7, 0]]'
+    why: Row 0 and row 1 both lead to the changed row.
+  answer: 0
+- id: st12
+  type: try
+  title: Build a fresh row each time
+  starter: |
+    grid = []
+    for row in range(2):
+        grid.append([0] * 3)
+    grid[0][1] = 7
+    print(grid)
+  task: Change the row count to 3. Check that only row 0 changes.
+  check:
+    stdout_line: '[[0, 7, 0], [0, 0, 0], [0, 0, 0]]'
+- id: st13
+  type: read
+  title: A copy and a view act differently
+  body: |
+    A full list slice is a **shallow copy**. It makes a new outer list with
+    the same references inside. For a grid, both outer lists still reach the same rows.
+
+    A **view** gives a new way to reach the same storage. Python's `bytearray([3, 4])`
+    makes editable bytes, each from 0 to 255. `memoryview(data)` lets you use the same bytes.
+    Changing `view[0]` changes `data[0]`. A slice `data[:]` instead copies the bytes.
+- id: st14
+  type: predict
+  title: Change a byte through a view
+  code: |
+    data = bytearray([3, 4])
+    view = memoryview(data)
+    copy = data[:]
+    view[0] = 9
+    print(data[0], copy[0])
+  choices:
+  - text: 3 3
+    why: The view writes into data.
+  - text: 9 9
+    why: The copy has its own byte storage.
+  - text: 9 3
+    why: The view shares data. The slice keeps its own first byte.
+  - text: 3 9
+    why: It is the view, not the copy, that gets the write.
+  answer: 2
+- id: st15
+  type: code
+  title: Build an independent row for each team
+  exercise: exercises/practice.py
+  function: blank_grid
+  test_class: BlankGrid
+  hint_levels:
+  - Start with zero rows.
+  - Create one new row at a time.
+  - Append [0] * cols inside the loop.
+- id: st16
+  type: fix
+  title: Copy the rows as well as the grid
+  task: |2
+
+    Return a grid with the same integer values, with independent rows. Do not change the input.
+    The grid has 0 to 20 rows of 0 to 20 integers each. Row lengths may differ.
+    Sample: copy_rows([[4], [7, 9]]) -> [[4], [7, 9]]
+  starter: |
+    def copy_rows(grid):
+        return grid[:]
+  solution: |
+    def copy_rows(grid):
+        result = []
+        for row in grid:
+            result.append(row[:])
+        return result
+  tests: |
+    row = [7, 9]
+    grid = [[4], row, row, []]
+    result = copy_rows(grid)
+    assert result is not grid and result == grid
+    assert result[3] is not grid[3]
+    result[1][0] = 8
+    assert grid == [[4], [7, 9], [7, 9], []]
+    assert result == [[4], [8, 9], [7, 9], []]
+    empty = []
+    assert copy_rows(empty) == [] and copy_rows(empty) is not empty
+  hint_levels:
+  - Only copying the outside keeps the arrows to the same rows.
+  - Make a new list for each row.
+  - Loop over grid and append row[:] to a new outer list.
+  explanation: The work and the output space are O(1 + r + c), where r is the number of rows and c is
+    the total number of cells. Extra space outside the result is O(1).
+- id: st17
+  type: predict
+  title: Send an arrow through a function
+  code: |
+    def mark(items):
+        items[0] = 8
+
+    numbers = [4, 5]
+    mark(numbers)
+    print(numbers)
+  choices:
+  - text: '[4, 5]'
+    why: The call passes a reference to the same list.
+  - text: '[8, 5]'
+    why: The frame has a new name, items, that leads to the caller's list.
+  - text: '[8]'
+    why: Changing a slot does not remove any other slots.
+  - text: None
+    why: The function returns None, but the print reads numbers.
+  answer: 1
+- id: st18
+  type: code
+  title: Give a worker a view of the first bytes
+  exercise: exercises/practice.py
+  function: head_view
+  test_class: HeadView
+  hint_levels:
+  - Start with a view of all the bytes.
+  - Slice the view, after making it.
+  - Return memoryview(data)[:count].
+- id: st19
+  type: explain
+  title: Draw two arrows in words
+  prompt: Write 2–3 English sentences. Explain why changing grid[0][1] can also change grid[1][1] after
+    grid = [[0] * 3] * 2.
+  rubric:
+  - Name the one shared row object.
+  - Describe how to give each grid row its own list.
+review_cards:
+  from_steps:
+  - st02
+  - st05
+  - st09
+  - st11
+  - st14
+  - st17
+  vocab: true

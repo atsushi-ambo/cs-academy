@@ -1,0 +1,43 @@
+id: s2.m03.u04
+title: 'How memory holds data: addresses, references, stack and heap'
+stage: 2
+module: Linear Data Structures
+version: 1
+status: draft
+estimated_minutes: 75
+prerequisites:
+- s1.m03.u01
+- s2.m02.u04
+objectives:
+- Read a drawing of names and objects.
+- Use is and == to ask different questions.
+- Choose when to share or copy data.
+skills:
+- python.memory-and-references
+- english.explain-code
+parts:
+- steps.yaml
+- lesson.md
+- exercises/
+- solutions/solutions.md
+references:
+- kind: official_doc
+  title: Python data model
+  url: https://docs.python.org/3.13/reference/datamodel.html
+vocab:
+- en: address
+  ja: メモリ上の番地
+- en: reference
+  ja: 参照
+- en: identity
+  ja: オブジェクトの同一性
+- en: alias
+  ja: 同じ対象を指す別名
+- en: stack
+  ja: スタック
+- en: heap
+  ja: ヒープ
+- en: shallow copy
+  ja: 浅いコピー
+- en: view
+  ja: 元のデータを共有するビュー

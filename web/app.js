@@ -224,6 +224,7 @@ function hints(parent, step, message, send) {
 }
 
 function parsons(panel, step, send, message, resume) {
+  const hint = hints(panel, step, message, send);
   const placed = node("ol", undefined, "placed");
   const order = [];
   const buttons = choices(panel, step.lines, (index, item) => {
@@ -243,6 +244,7 @@ function parsons(panel, step, send, message, resume) {
     const result = await send("order", {order});
     message.textContent = result.complete ? "正しい順序です。" : "コードの順序を見直してください。";
     if (!result.complete) return;
+    if (hint) hint.hidden = true;
     check.hidden = reset.hidden = true;
     panel.append(codeBlock(result.stdout));
     nextButton(panel, resume);

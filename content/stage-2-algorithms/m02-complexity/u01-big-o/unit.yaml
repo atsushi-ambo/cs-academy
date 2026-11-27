@@ -1,0 +1,41 @@
+id: s2.m02.u01
+title: 'Measuring cost: Big-O'
+stage: 2
+module: Complexity
+version: 1
+status: draft
+estimated_minutes: 75
+prerequisites:
+- s1.m03.u01
+- s2.m05.u01
+objectives:
+- Choose an input size and an operation to count.
+- Find the Big-O of simple loops.
+- Tell when two loops multiply their costs.
+skills:
+- python.big-o
+- english.explain-code
+parts:
+- steps.yaml
+- lesson.md
+- exercises/
+- solutions/solutions.md
+references:
+- kind: official_doc
+  title: Python built-in types
+  url: https://docs.python.org/3.13/library/stdtypes.html
+vocab:
+- en: input size
+  ja: 入力サイズ
+- en: operation
+  ja: 操作
+- en: growth
+  ja: 増加のしかた
+- en: upper bound
+  ja: 上界
+- en: constant factor
+  ja: 定数倍
+- en: linear
+  ja: 線形
+- en: quadratic
+  ja: 二次

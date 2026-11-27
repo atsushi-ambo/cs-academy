@@ -1,0 +1,344 @@
+unit: s2.m03.u05
+python_min: '3.9'
+steps:
+- id: st01
+  type: read
+  title: Find a slot without scanning
+  body: |
+    A **fixed array** has a fixed number of slots. If equal-size slots are
+    **contiguous**, they sit next to one another. To find slot i, move i slot
+    widths from the start. This gives O(1) time for an index read or write.
+
+    Use a Python list as a model of fixed storage. Create the slots once
+    and fill them by index. Keep the same length while using that block.
+    A Python list stores references in its slots.
+- id: st02
+  type: predict
+  title: Read one fixed slot
+  code: |
+    slots = [None] * 4
+    slots[2] = 9
+    print(slots[2], len(slots))
+  choices:
+  - text: 2 4
+    why: The first value printed comes from the slot, not its index.
+  - text: 9 5
+    why: Writing by index replaces a slot without adding one.
+  - text: 9 4
+    why: Index 2 now holds 9. The block still has four slots.
+  - text: None 4
+    why: The write changes slot 2 from None to 9.
+  answer: 2
+- id: st03
+  type: try
+  title: Fill the last slot without growing the block
+  starter: |
+    slots = [None] * 4
+    slots[0] = 9
+    print(slots)
+  task: Write 9 at index 3 instead of 0. Check the last slot.
+  check:
+    stdout_line: '[None, None, None, 9]'
+- id: st04
+  type: read
+  title: Lay out a grid in one row of slots
+  body: |
+    A grid has rows and columns. Both indexes start at zero.
+    In **row-major order**, place the first row, then the second row,
+    and so on. With three columns the flat indexes look like this:
+
+    ```text
+    row 0: 0 1 2
+    row 1: 3 4 5
+    ```
+
+    Skip three slots for each complete row, then move by the column index.
+    The formula is row * cols + col. A Python list of lists instead uses two reads, grid[row][col].
+- id: st05
+  type: predict
+  title: Find a seat in flat storage
+  code: |
+    seats = [10, 11, 12, 13, 14, 15]
+    row, col, cols = 1, 2, 3
+    print(seats[row * cols + col])
+  choices:
+  - text: '12'
+    why: That is row 0 column 2. Skip the first row first.
+  - text: '15'
+    why: Skip three slots for row 0 and move two more.
+  - text: '14'
+    why: That is row 1 column 1.
+  - text: '13'
+    why: That is the start of row 1. Move two more slots.
+  answer: 1
+- id: st06
+  type: parsons
+  title: Write a grid cell by flat index
+  task: Use all lines. Reserve six slots, then set cols to 3. Write 6 at row 1, column 0. Print [0, 0,
+    0, 6, 0, 0].
+  lines:
+  - cells = [0] * 6
+  - cols = 3
+  - index = 1 * cols + 0
+  - cells[index] = 6
+  - print(cells)
+  expected_stdout: '[0, 0, 0, 6, 0, 0]'
+  hint_levels:
+  - First reserve six slots.
+  - Skip one full row.
+  - Write at index 3 before printing.
+- id: st07
+  type: code
+  title: Read a cell without scanning
+  exercise: exercises/practice.py
+  function: read_cell
+  test_class: ReadCell
+  hint_levels:
+  - Work out how many whole rows come first.
+  - Each skipped row has cols slots.
+  - Read cells[row * cols + col].
+- id: st08
+  type: read
+  title: Shifting and scanning cost work
+  body: |
+    A Python list's `insert(0, value)` puts a value at the front.
+    The old items must move to later slots. Moving n old references takes O(n) time.
+    A test like `value in slots` can check all n entries if the value is missing.
+    It has O(n) worst-case time. An index read goes right to one slot.
+
+    `append(value)` adds to the end. With room left, it does one slot write.
+    If the storage is full, it may need to move the existing slots first.
+
+    In the line puzzle, one index calculation and slot write took O(1) time and O(1) extra space.
+- id: st09
+  type: predict
+  title: Open the first slot
+  code: |
+    jobs = [4, 7, 9]
+    jobs.insert(0, 3)
+    print(jobs)
+  choices:
+  - text: '[3, 7, 9]'
+    why: Insert keeps 4 and shifts it to index 1.
+  - text: '[4, 7, 9, 3]'
+    why: Append would add 3 at the end.
+  - text: '[3, 4, 7]'
+    why: Insert does not drop the last item.
+  - text: '[3, 4, 7, 9]'
+    why: All three old entries shift. Front insertion takes O(n) time.
+  answer: 3
+- id: st10
+  type: fix
+  title: Use columns as the row width
+  task: |2
+
+    Set one cell in a flat grid. Change the original list and return it.
+    Inputs: 1 to 20 rows, 1 to 20 columns, integer values, and valid indexes.
+    Use one direct slot write. Sample: set_cell([0, 0, 0, 0, 0, 0], 3, 1, 0, 7) -> [0, 0, 0, 7, 0, 0]
+  starter: |
+    def set_cell(cells, cols, row, col, value):
+        cells[row + col] = value
+        return cells
+  solution: |
+    def set_cell(cells, cols, row, col, value):
+        cells[row * cols + col] = value
+        return cells
+  tests: |
+    import ast
+    import inspect
+
+    for cols, row, col, index in ((3, 1, 0, 3), (2, 1, 1, 3), (6, 0, 5, 5), (1, 5, 0, 5)):
+        cells = [0] * 6
+        expected = [0] * 6
+        expected[index] = 7
+        assert set_cell(cells, cols, row, col, 7) is cells
+        assert cells == expected
+    nodes = list(ast.walk(ast.parse(inspect.getsource(set_cell))))
+    assert sum(isinstance(node, ast.Subscript) and isinstance(node.ctx, ast.Store)
+               for node in nodes) == 1
+    assert not any(isinstance(node, (ast.For, ast.While, ast.comprehension, ast.Call)) for node in nodes)
+  hint_levels:
+  - Each row takes more than one slot if cols > 1.
+  - Skip row whole rows before the column offset.
+  - Set cells[row * cols + col].
+  explanation: The slot is reached with one calculation and one write. Time and extra space are O(1).
+- id: st11
+  type: predict
+  title: Tell size apart from capacity
+  code: |
+    slots = [None] * 4
+    size = 0
+    slots[size] = 10
+    size += 1
+    print(size, len(slots))
+  choices:
+  - text: 1 4
+    why: One used slot gives size one. Four slots are available.
+  - text: 4 4
+    why: Empty slots count toward capacity but not size.
+  - text: 1 3
+    why: Three is the number of empty slots, not capacity.
+  - text: 0 4
+    why: The update increases size after the write.
+  answer: 0
+- id: st12
+  type: read
+  title: Grow only when all slots are used
+  body: |
+    **Capacity** is the number of slots. Size is how many are in use.
+    A **dynamic array** can replace its storage with more slots.
+    When it is full, make a block with twice as many slots.
+    Copy the old slots in order and then write the new value.
+
+    Start at capacity 1. To reach capacity 8, copy 1, then 2, then 4 slots.
+    The sum 1 + 2 + 4 is one less than 8. This pattern holds at every resize.
+    The new capacity is less than 2n when the size is n just after a resize.
+    So the total copies so far are less than 2n for any positive size n.
+    The n writes plus those copies cost O(n) for n appends.
+    This is **amortized** O(1) per append: spread total work across the sequence.
+    An individual resize still takes O(n) when it copies n slots.
+    Python lists leave extra room too. Their growth rule can differ from doubling.
+- id: st13
+  type: try
+  title: Watch the total copies on each resize
+  starter: |
+    slots = [None]
+    size = 0
+    copies = 0
+    for value in range(5):
+        if size == len(slots):
+            bigger = [None] * (2 * len(slots))
+            for i in range(size):
+                bigger[i] = slots[i]
+                copies += 1
+            slots = bigger
+        slots[size] = value
+        size += 1
+    print(size, len(slots), copies)
+  task: Change range(5) to range(9). Read size, capacity, and total copies.
+  check:
+    stdout_line: 9 16 15
+- id: st14
+  type: predict
+  title: Cross more than one capacity limit
+  code: |
+    copies = 0
+    capacity = 1
+    while capacity < 5:
+        copies += capacity
+        capacity *= 2
+    print(capacity, copies)
+  choices:
+  - text: 5 4
+    why: Capacity grows in doubles, not one slot at a time.
+  - text: 8 15
+    why: Fifteen includes another move from 8 to 16.
+  - text: 8 7
+    why: The resizes copy 1, 2, and 4 slots. Later appends can use the free slots.
+  - text: 4 3
+    why: Four slots cannot hold size five.
+  answer: 2
+- id: st15
+  type: code
+  title: Plan copies for a series of appends
+  exercise: exercises/practice.py
+  function: copies_for_appends
+  test_class: CopiesForAppends
+  hint_levels:
+  - The first block has one slot.
+  - It grows only when more slots are needed.
+  - While capacity < count, add capacity to copies, then double capacity.
+- id: st16
+  type: fix
+  title: Keep data when a block grows
+  task: |2
+
+    Return a block with twice the old length, with the old values first and None in the new slots.
+    Inputs: a block of 1 to 64 values. Do not change the old block.
+    Sample: grow_block([6, 7]) -> [6, 7, None, None]
+  starter: |
+    def grow_block(slots):
+        bigger = [None] * (2 * len(slots))
+        for i in range(len(slots)):
+            bigger[i] = i
+        return bigger
+  solution: |
+    def grow_block(slots):
+        bigger = [None] * (2 * len(slots))
+        for i in range(len(slots)):
+            bigger[i] = slots[i]
+        return bigger
+  tests: |
+    for slots in ([6], [6, 7], [None, 4, 0], list(range(64))):
+        before = slots[:]
+        bigger = grow_block(slots)
+        assert bigger == before + [None] * len(before)
+        assert slots == before
+        assert bigger is not slots
+  hint_levels:
+  - The index tells you where to write.
+  - Read the value at that index in the old block.
+  - Use bigger[i] = slots[i].
+  explanation: The solution allocates twice as many slots and copies each old slot. Time is O(n), output
+    space is O(n), and extra space outside it is O(1).
+- id: st17
+  type: read
+  title: Put the size and storage in one object
+  body: |
+    A **class** is a plan for making objects. The next task gives you the plan's
+    starting code. `DynamicArray()` makes a new object. Python calls `__init__`
+    to set up its fields, such as `self.slots`.
+
+    A **method** is a function on the object. In `array.append(7)`, Python passes
+    array as `self` and 7 as value. Each array keeps its own size and copy count.
+    When an array grows, use an index to copy each old reference into the new block.
+    Making a new block also fills its slots, so a resize is linear even before the copies.
+- id: st18
+  type: predict
+  title: Do we copy on every append?
+  code: |
+    size = 5
+    capacity = 8
+    copies = 7
+    if size == capacity:
+        copies += size
+        capacity *= 2
+    size += 1
+    print(size, capacity, copies)
+  choices:
+  - text: 6 16 12
+    why: There is free room, so this append does not resize.
+  - text: 6 8 7
+    why: The new item uses a spare slot. The old copy count remains the same.
+  - text: 5 8 7
+    why: The new write increases the size to six.
+  - text: 6 8 8
+    why: The new write is not a copy of an old slot.
+  answer: 1
+- id: st19
+  type: code
+  title: Build a doubling DynamicArray
+  exercise: exercises/practice.py
+  function: make_array
+  test_class: MakeArray
+  hint_levels:
+  - Check whether size equals the length of slots.
+  - When full, make a double-size block and write each old slot to the same index.
+  - Set self.slots to the new block after copying. Then write at self.size and add one to size.
+- id: st20
+  type: explain
+  title: Explain the occasional large copy
+  prompt: Write 2–3 English sentences. Why can a doubling array have an expensive append and still have
+    amortized O(1) append cost?
+  rubric:
+  - Say when a resize happens and what it copies.
+  - Connect the total copies over n appends to a bounded cost per append.
+review_cards:
+  from_steps:
+  - st02
+  - st05
+  - st09
+  - st11
+  - st14
+  - st18
+  vocab: true
