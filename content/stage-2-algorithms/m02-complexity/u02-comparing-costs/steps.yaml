@@ -78,7 +78,7 @@ steps:
 - id: st06
   type: parsons
   title: Count the levels
-  task: Use all lines. Set size to 8, then set the count to 0. Halve until size is 1. Output is 3.
+  task: Use all lines. Start with size 8 and count 0. Halve until size is 1. Output is 3.
   lines:
   - size = 8
   - levels = 0
@@ -86,6 +86,10 @@ steps:
   - '    size //= 2'
   - '    levels += 1'
   - print(levels)
+  accepted_orders:
+  - [0, 1, 2, 4, 3, 5]
+  - [1, 0, 2, 3, 4, 5]
+  - [1, 0, 2, 4, 3, 5]
   expected_stdout: '3'
   hint_levels:
   - Set the start size and count first.
@@ -167,7 +171,8 @@ steps:
         assert round_visits(n) == visits
     loops = [node for node in ast.walk(ast.parse(inspect.getsource(round_visits)))
              if isinstance(node, ast.While)]
-    assert any(isinstance(node, ast.For) for loop in loops for node in loop.body)
+    assert any(isinstance(node, ast.For)
+               for loop in loops for stmt in loop.body for node in ast.walk(stmt))
   hint_levels:
   - Which value shrinks?
   - All groups together still have n items.
@@ -291,7 +296,7 @@ steps:
         assert pair_visits(n) == n * n
     nodes = ast.walk(ast.parse(inspect.getsource(pair_visits)))
     assert any(isinstance(node, ast.For) and any(isinstance(child, ast.For)
-               for child in node.body) for node in nodes)
+               for stmt in node.body for child in ast.walk(stmt)) for node in nodes)
   hint_levels:
   - The second index can be any item.
   - Start the second loop at index zero.

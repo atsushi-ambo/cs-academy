@@ -40,7 +40,7 @@ class UniformHitCost(unittest.TestCase):
         for n, cost in ((1, 1), (2, 1.5), (4, 2.5), (5, 3), (1_000_000, 500000.5)):
             self.assertEqual(function(n), cost)
         nodes = ast.walk(ast.parse(inspect.getsource(function)))
-        self.assertFalse(any(isinstance(node, (ast.For, ast.While, ast.comprehension, ast.Call,
+        self.assertFalse(any(isinstance(node, (ast.For, ast.While, ast.comprehension,
                                              ast.List, ast.Set, ast.Dict)) for node in nodes))
 
 

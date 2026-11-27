@@ -37,6 +37,4 @@ class FirstOverBudget(unittest.TestCase):
         function = practice.first_over_budget
         for budget, n in ((0, 1), (1, 2), (3, 2), (4, 4), (15, 4), (16, 8), (10_000, 128)):
             self.assertEqual(function(budget), n)
-        loops = [node for node in nodes(function) if isinstance(node, ast.While)]
-        self.assertTrue(any(isinstance(node, ast.Mult) for loop in loops for node in ast.walk(loop)),
-                        "Use a while loop with multiplication.")
+        self.assertTrue(any(isinstance(node, ast.While) for node in nodes(function)), "Use a while loop.")

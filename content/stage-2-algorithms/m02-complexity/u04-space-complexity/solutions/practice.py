@@ -1,7 +1,7 @@
 def count_large(values, limit):
     """Return how many values are greater than limit. Use one pass and a running count.
     Inputs: 0 to 200 integers and an integer limit. Leave the list unchanged.
-    Use a loop with comparison and counting. Do not build another collection or use a helper.
+    Use a loop with comparison and counting. Do not build another collection or use a counting helper.
     Sample: count_large([3, 8, 5, 8], 5) -> 2
     """
     count = 0

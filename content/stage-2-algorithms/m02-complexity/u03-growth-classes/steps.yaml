@@ -146,14 +146,23 @@ steps:
             return 1
         return 1 + tour_calls(n - 1) + tour_calls(n - 1)
   tests: |
-    import ast
-    import inspect
+    import sys
 
     for n, count in ((0, 1), (1, 3), (2, 7), (5, 63), (10, 2047)):
-        assert tour_calls(n) == count
-    nodes = ast.walk(ast.parse(inspect.getsource(tour_calls)))
-    assert sum(isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
-               and node.func.id == "tour_calls" for node in nodes) == 2
+        visits = []
+
+        def profile(frame, event, arg):
+            if event == "call" and frame.f_code is tour_calls.__code__:
+                visits.append(frame.f_locals[frame.f_code.co_varnames[0]])
+
+        previous_profile = sys.getprofile()
+        sys.setprofile(profile)
+        try:
+            assert tour_calls(n) == count
+        finally:
+            sys.setprofile(previous_profile)
+        for size in range(n + 1):
+            assert visits.count(size) == 2 ** (n - size), "Visit both children at each size."
   hint_levels:
   - One call at the current level counts as one.
   - There are two children when n is positive.
@@ -243,14 +252,24 @@ steps:
             return 1
         return n * job_plans(n - 1)
   tests: |
-    import ast
-    import inspect
+    import sys
 
     for n, count in ((0, 1), (1, 1), (3, 6), (7, 5040)):
-        assert job_plans(n) == count
-    nodes = ast.walk(ast.parse(inspect.getsource(job_plans)))
-    assert sum(isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
-               and node.func.id == "job_plans" for node in nodes) == 1
+        visits = []
+
+        def profile(frame, event, arg):
+            if event == "call" and frame.f_code is job_plans.__code__:
+                visits.append(frame.f_locals[frame.f_code.co_varnames[0]])
+
+        previous_profile = sys.getprofile()
+        sys.setprofile(profile)
+        try:
+            assert job_plans(n) == count
+        finally:
+            sys.setprofile(previous_profile)
+        assert visits == list(range(n, -1, -1)) or (
+            n > 0 and visits == list(range(n, 0, -1))
+        ), "Recurse once per job count."
   hint_levels:
   - The zero-job case has one order.
   - A zero makes every product zero.

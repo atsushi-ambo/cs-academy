@@ -74,7 +74,7 @@ steps:
 - id: st06
   type: parsons
   title: Write a grid cell by flat index
-  task: Use all lines. Reserve six slots, then set cols to 3. Write 6 at row 1, column 0. Print [0, 0,
+  task: Use all lines. Reserve six slots and set cols to 3. Write 6 at row 1, column 0. Print [0, 0,
     0, 6, 0, 0].
   lines:
   - cells = [0] * 6
@@ -82,9 +82,12 @@ steps:
   - index = 1 * cols + 0
   - cells[index] = 6
   - print(cells)
+  accepted_orders:
+  - [1, 0, 2, 3, 4]
+  - [1, 2, 0, 3, 4]
   expected_stdout: '[0, 0, 0, 6, 0, 0]'
   hint_levels:
-  - First reserve six slots.
+  - Reserve six slots before writing to them.
   - Skip one full row.
   - Write at index 3 before printing.
 - id: st07
@@ -156,7 +159,7 @@ steps:
     nodes = list(ast.walk(ast.parse(inspect.getsource(set_cell))))
     assert sum(isinstance(node, ast.Subscript) and isinstance(node.ctx, ast.Store)
                for node in nodes) == 1
-    assert not any(isinstance(node, (ast.For, ast.While, ast.comprehension, ast.Call)) for node in nodes)
+    assert not any(isinstance(node, (ast.For, ast.While, ast.comprehension)) for node in nodes)
   hint_levels:
   - Each row takes more than one slot if cols > 1.
   - Skip row whole rows before the column offset.

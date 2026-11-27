@@ -37,7 +37,7 @@ class ReadCell(unittest.TestCase):
         self.assertEqual(function(tracked, 3, 1, 2), 9)
         self.assertEqual(tracked.reads, 1)
         nodes = ast.walk(ast.parse(inspect.getsource(function)))
-        self.assertFalse(any(isinstance(node, (ast.For, ast.While, ast.comprehension, ast.Call))
+        self.assertFalse(any(isinstance(node, (ast.For, ast.While, ast.comprehension))
                              for node in nodes), "Find the slot directly.")
 
 
@@ -49,8 +49,9 @@ class CopiesForAppends(unittest.TestCase):
             self.assertEqual(function(count), copies)
         nodes = list(ast.walk(ast.parse(inspect.getsource(function))))
         loops = (ast.For, ast.While, ast.comprehension)
-        self.assertEqual([type(node) for node in nodes if isinstance(node, loops)], [ast.While])
-        self.assertFalse(any(isinstance(node, (ast.List, ast.Dict, ast.Set, ast.Call)) for node in nodes))
+        loop, = (node for node in nodes if isinstance(node, loops))
+        self.assertIsInstance(loop, (ast.For, ast.While), "Loop over resizes only.")
+        self.assertFalse(any(isinstance(node, (ast.List, ast.Dict, ast.Set)) for node in nodes))
 
 
 class MakeArray(unittest.TestCase):

@@ -1,6 +1,6 @@
 from datetime import date, timedelta
 
-from .content import SOURCE_LIMIT, STDIN_LIMIT
+from .content import SOURCE_LIMIT, STDIN_LIMIT, is_parsons_order
 from .execution import run_problem
 from .fsrs import Grade, Memory, answer_grade, due_date, update
 
@@ -335,11 +335,11 @@ class Learning:
         if kind == "parsons" and action == "order":
             fields(body, "unit", "step", "action", "order")
             order = body["order"]
-            correct_order = list(reversed(range(len(step["lines"]))))
-            expect(isinstance(order, list) and len(order) == len(correct_order)
-                   and all(type(i) is int for i in order) and sorted(order) == sorted(correct_order),
-                   "Use each line exactly once")
-            correct = order == correct_order
+            line_count = len(step["lines"])
+            expect(is_parsons_order(order, line_count), "Use each line exactly once")
+            authored_order = [line_count - 1 - index for index in order]
+            correct = (authored_order == list(range(line_count))
+                       or authored_order in step.get("accepted_orders", []))
             self.attempt(db, uid, key, day, action, "correct" if correct else "wrong")
             if correct:
                 self.complete(db, uid, key, day, 5)

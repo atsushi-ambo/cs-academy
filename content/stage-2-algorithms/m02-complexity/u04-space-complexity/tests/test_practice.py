@@ -8,6 +8,14 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "exercises"))
 import practice
 
 
+def materializes_collection(node):
+    if not isinstance(node, ast.Call):
+        return False
+    names = {"dict", "list", "set", "sorted", "tuple", "copy"}
+    return (isinstance(node.func, ast.Name) and node.func.id in names
+            or isinstance(node.func, ast.Attribute) and node.func.attr in names)
+
+
 class CountLarge(unittest.TestCase):
     def test_contract(self):
         function = practice.count_large
@@ -18,10 +26,14 @@ class CountLarge(unittest.TestCase):
         self.assertEqual(function([-1, -2, -1], -2), 2)
         nodes = list(ast.walk(ast.parse(inspect.getsource(function))))
         self.assertEqual(sum(isinstance(node, (ast.For, ast.While)) for node in nodes), 1)
-        self.assertFalse(any(isinstance(node, (ast.Call, ast.Slice, ast.List, ast.ListComp,
+        self.assertFalse(any(isinstance(node, (ast.Slice, ast.List, ast.ListComp,
                                              ast.Set, ast.SetComp, ast.Dict, ast.DictComp,
-                                             ast.Tuple, ast.GeneratorExp)) for node in nodes),
+                                             ast.GeneratorExp)) or materializes_collection(node)
+                             for node in nodes),
                          "Use a loop and a counter only.")
+        self.assertFalse(any(isinstance(node, ast.Name) and node.id == "sum"
+                             or isinstance(node, ast.Attribute) and node.attr in {"sum", "count"}
+                             for node in nodes), "Count the matches in your loop.")
 
 
 class AboveZero(unittest.TestCase):
@@ -52,7 +64,5 @@ class PeakOpen(unittest.TestCase):
         self.assertEqual(sum(isinstance(node, (ast.For, ast.While)) for node in nodes), 1)
         self.assertFalse(any(isinstance(node, (ast.List, ast.ListComp, ast.Slice, ast.Set,
                                              ast.SetComp, ast.Dict, ast.DictComp, ast.GeneratorExp))
-                             for node in nodes), "Do not save a history of counts.")
-        for node in nodes:
-            if isinstance(node, ast.Call):
-                self.assertTrue(isinstance(node.func, ast.Name) and node.func.id in {"len", "range", "max"})
+                             or materializes_collection(node) for node in nodes),
+                         "Do not save a history of counts.")

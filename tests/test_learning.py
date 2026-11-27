@@ -11,6 +11,29 @@ from app.storage import BACKUP_DB, MIGRATIONS, Store, connect, migrate
 from .support import LISTS, PLACEMENT_SOURCE, AcademyCase, result
 
 
+class ParsonsTest(AcademyCase):
+    lists_only = False
+
+    def test_equivalent_orders_complete_the_exercise(self):
+        cases = (
+            ("s2.m02.u01", [5, 4, 1, 2, 3, 0], "6"),
+            ("s2.m02.u02", [5, 4, 3, 1, 2, 0], "3"),
+            ("s2.m03.u05", [3, 2, 4, 1, 0], "[0, 0, 0, 6, 0, 0]"),
+        )
+        for uid, order, stdout in cases:
+            key = f"{uid}/st06"
+            with (self.subTest(unit=uid), patch.dict(self.store.catalog.play, {uid: [key]}, clear=True),
+                  self.store.transaction() as db):
+                body = {"unit": uid, "step": key, "action": "order"}
+                with self.assertRaisesRegex(RequestError, "Use each line exactly once"):
+                    self.learning.play(db, {**body, "order": [0] * len(order)}, self.date)
+                wrong = self.learning.play(db, {**body, "order": list(range(len(order)))}, self.date)
+                self.assertEqual(wrong, {"complete": False, "stdout": ""})
+                correct = self.learning.play(db, {**body, "order": order}, self.date)
+                self.assertEqual(correct, {"complete": True, "stdout": stdout})
+                self.assertIn(key, self.learning.completed(db))
+
+
 class LearningTest(AcademyCase):
     def play(self, step, action, **fields):
         with self.store.transaction() as db:

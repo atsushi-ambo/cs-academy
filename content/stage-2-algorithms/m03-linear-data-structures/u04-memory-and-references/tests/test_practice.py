@@ -16,7 +16,7 @@ class SameList(unittest.TestCase):
         self.assertIs(function(a, b), False)
         self.assertIs(function([], []), False)
         self.assertEqual((a, b), ([4], [4]))
-        self.assertTrue(any(isinstance(node, ast.Is)
+        self.assertTrue(any(isinstance(node, (ast.Is, ast.IsNot))
                             for node in ast.walk(ast.parse(inspect.getsource(function)))))
 
 

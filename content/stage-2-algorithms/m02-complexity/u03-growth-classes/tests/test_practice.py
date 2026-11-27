@@ -8,18 +8,24 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "exercises"))
 import practice
 
 
-def recursive_calls(nodes, name):
-    return [node for node in nodes if isinstance(node, ast.Call)
-            and isinstance(node.func, ast.Name) and node.func.id == name]
-
-
 class HalfPath(unittest.TestCase):
     def test_contract(self):
         function = practice.half_path
+
+        def profile(frame, event, arg):
+            if event == "call" and frame.f_code is function.__code__:
+                visits.append(frame.f_locals[frame.f_code.co_varnames[0]])
+
         for size, count in ((1, 0), (2, 1), (3, 1), (18, 4), (1024, 10), (1_000_000, 19)):
-            self.assertEqual(function(size), count)
+            visits = []
+            previous_profile = sys.getprofile()
+            sys.setprofile(profile)
+            try:
+                self.assertEqual(function(size), count)
+            finally:
+                sys.setprofile(previous_profile)
+            self.assertEqual(visits, [size >> level for level in range(count + 1)])
         nodes = list(ast.walk(ast.parse(inspect.getsource(function))))
-        self.assertEqual(len(recursive_calls(nodes, "half_path")), 1)
         self.assertFalse(any(isinstance(node, (ast.For, ast.While, ast.comprehension)) for node in nodes))
 
 
@@ -28,12 +34,13 @@ class OrderCount(unittest.TestCase):
         function = practice.order_count
         for n, count in ((0, 1), (1, 1), (4, 24), (6, 720), (12, 479001600)):
             self.assertEqual(function(n), count)
-        calls = [node for node in ast.walk(ast.parse(inspect.getsource(function)))
-                 if isinstance(node, ast.Call)]
-        self.assertTrue(all(isinstance(node.func, ast.Name) and node.func.id == "range"
-                            for node in calls), "Only call range(). Multiply the factors yourself.")
-        self.assertTrue(any(isinstance(node, (ast.For, ast.While))
-                            for node in ast.walk(ast.parse(inspect.getsource(function)))))
+        nodes = list(ast.walk(ast.parse(inspect.getsource(function))))
+        self.assertEqual(sum(isinstance(node, (ast.For, ast.While, ast.comprehension))
+                             for node in nodes), 1, "Use one loop over the factors.")
+        self.assertFalse(any(isinstance(node, ast.Name) and node.id == "factorial"
+                             or isinstance(node, ast.Attribute) and node.attr == "factorial"
+                             or isinstance(node, ast.alias) and node.name == "factorial"
+                             for node in nodes), "Multiply the factors without a factorial helper.")
 
 
 class TripleChecks(unittest.TestCase):
@@ -42,6 +49,5 @@ class TripleChecks(unittest.TestCase):
         for n in (0, 1, 2, 7, 30, 500):
             self.assertEqual(function(n), n ** 3)
         nodes = list(ast.walk(ast.parse(inspect.getsource(function))))
-        self.assertFalse(any(isinstance(node, (ast.For, ast.While, ast.comprehension, ast.Call))
-                             for node in nodes), "Compute the count directly.")
-        self.assertTrue(any(isinstance(node, (ast.Mult, ast.Pow)) for node in nodes))
+        self.assertFalse(any(isinstance(node, (ast.For, ast.While, ast.comprehension))
+                             for node in nodes), "Compute the count without enumerating triples.")

@@ -84,6 +84,8 @@ steps:
   - 'for label in range(3):'
   - '    checks = checks + 1'
   - print(checks)
+  accepted_orders:
+  - [0, 1, 4, 3, 2, 5]
   expected_stdout: '6'
   hint_levels:
   - Put the counter first.
@@ -106,7 +108,8 @@ steps:
     Suppose each returned book must match against every shelf record.
     If there are n returns and n records, the count is n × n.
     That is **quadratic** growth, O(n²). If the two list sizes can change
-    on their own, name them separately. With a returns and b records, the cost is O(a × b).
+    on their own, name them separately. With a returns and b records, there are a × b comparisons.
+    The total time is O(a + a × b), including one outer-loop pass per return even when b is zero.
 
     The two passes you arranged earlier gave 2n, O(n), using just one counter.
 - id: st09
@@ -160,8 +163,10 @@ steps:
     assert scan_places(4, 0) == 0
     assert scan_places(4, 3) == 12
     nodes = ast.walk(ast.parse(inspect.getsource(scan_places)))
-    assert any(isinstance(node, ast.For) and any(isinstance(child, ast.For)
-               for child in node.body) for node in nodes), "Keep the nested for loops."
+    assert any(isinstance(node, (ast.For, ast.While))
+               and any(isinstance(child, (ast.For, ast.While))
+                       for stmt in node.body for child in ast.walk(stmt))
+               for node in nodes), "Keep the nested loops."
   hint_levels:
   - Look for two places that set the count to zero.
   - Start from zero only before the outer loop.
@@ -262,28 +267,38 @@ steps:
         return checks
   tests: |
     import ast
-    import builtins
     import inspect
+    import sys
+
+    source, first_line = inspect.getsourcelines(label_checks)
+    loops = [node for node in ast.walk(ast.parse("".join(source))) if isinstance(node, ast.For)]
+    assert len(loops) == 2, "Keep both for loops."
+    outer, inner = sorted(loops, key=lambda loop: loop.lineno)
+    assert any(inner is node for stmt in outer.body for node in ast.walk(stmt)), "Keep the inner loop."
+    outer_line = first_line + outer.lineno - 1
+    inner_line = first_line + inner.lineno - 1
 
     def work(n):
-        def counted_range(*args):
-            nonlocal visits
-            for index in builtins.range(*args):
-                visits += 1
-                yield index
+        visits = {outer_line: 0, inner_line: 0}
 
-        visits = 0
-        label_checks.__globals__["range"] = counted_range
+        def trace(frame, event, arg):
+            if frame.f_code is not label_checks.__code__:
+                return None
+            if event == "line" and frame.f_lineno in visits:
+                visits[frame.f_lineno] += 1
+            return trace
+
+        previous_trace = sys.gettrace()
+        sys.settrace(trace)
         try:
             result = label_checks(n)
         finally:
-            del label_checks.__globals__["range"]
-        return result, visits
+            sys.settrace(previous_trace)
+        return result, visits[outer_line], visits[inner_line]
 
+    # Each for header runs once per iteration and once more at exhaustion.
     for n in (0, 2, 4, 19, 80):
-        assert work(n) == (4 * n, 5 * n)
-    assert sum(isinstance(node, ast.For)
-               for node in ast.walk(ast.parse(inspect.getsource(label_checks)))) == 2
+        assert work(n) == (4 * n, n + 1, 5 * n), "Visit four labels per box."
   hint_levels:
   - The inside length should not grow with n.
   - A box always has four labels.

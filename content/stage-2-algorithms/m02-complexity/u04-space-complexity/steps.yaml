@@ -153,19 +153,32 @@ steps:
   tests: |
     import ast
     import inspect
+    import sys
 
-    assert count_ones([], 0) == 0
-    assert count_ones([1, 1], 2) == 0
-    values = [1, 0, 1, 1]
-    assert count_ones(values, 1) == 2
-    assert count_ones(values, 0) == 3
-    assert values == [1, 0, 1, 1]
-    nodes = list(ast.walk(ast.parse(inspect.getsource(count_ones))))
-    calls = [node for node in nodes if isinstance(node, ast.Call)
-             and isinstance(node.func, ast.Name) and node.func.id == "count_ones"]
-    assert len(calls) == 1 and len(calls[0].args) == 2
-    assert isinstance(calls[0].args[0], ast.Name) and calls[0].args[0].id == "values"
-    assert not any(isinstance(node, ast.Slice) for node in nodes)
+    for values, start, expected in (([], 0, 0), ([1, 1], 2, 0), ([1, 0, 1, 1], 1, 2),
+                                    ([1, 0, 1, 1], 0, 3)):
+        indices = []
+        original = values[:]
+
+        def profile(frame, event, arg):
+            if event == "call" and frame.f_code is count_ones.__code__:
+                values_name, index_name = frame.f_code.co_varnames[:2]
+                assert frame.f_locals[values_name] is values, "Share the original list."
+                indices.append(frame.f_locals[index_name])
+
+        previous_profile = sys.getprofile()
+        sys.setprofile(profile)
+        try:
+            assert count_ones(values, start) == expected
+        finally:
+            sys.setprofile(previous_profile)
+        assert values == original
+        if start < len(values) - 1:
+            assert len(indices) > 1, "Use recursion."
+        assert all(before < after <= len(values) for before, after in zip(indices, indices[1:]))
+
+    nodes = ast.walk(ast.parse(inspect.getsource(count_ones)))
+    assert not any(isinstance(node, ast.Slice) for node in nodes), "Do not copy the list."
   hint_levels:
   - int(True) is 1 and int(False) is 0. That part already counts the current value.
   - Keep the same list. Change the index instead.
@@ -275,8 +288,10 @@ steps:
     nodes = ast.walk(ast.parse(inspect.getsource(clear_negative)))
     for node in nodes:
         assert not isinstance(node, (ast.List, ast.ListComp, ast.Slice))
-        if isinstance(node, ast.Call):
-            assert isinstance(node.func, ast.Name) and node.func.id in {"range", "len"}
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Name):
+            assert node.func.id not in {"list", "sorted"}
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute):
+            assert node.func.attr != "copy"
   hint_levels:
   - Keep the list the caller gives you.
   - Use indexes so you can replace a slot.

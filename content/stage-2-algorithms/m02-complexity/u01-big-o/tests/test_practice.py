@@ -30,7 +30,8 @@ class PairChecks(unittest.TestCase):
             self.assertEqual(function(n), n * (n - 1) // 2)
         nodes = ast.walk(ast.parse(inspect.getsource(function)))
         self.assertTrue(any(isinstance(node, ast.For) and any(isinstance(child, ast.For)
-                            for child in node.body) for node in nodes), "Use nested for loops.")
+                            for stmt in node.body for child in ast.walk(stmt))
+                            for node in nodes), "Use nested for loops.")
 
 
 class SharedShelfPairs(unittest.TestCase):
