@@ -3,7 +3,7 @@ import {markdown} from "/markdown.js";
 const main = document.querySelector("#main");
 const xp = document.querySelector("#xp");
 const kinds = {read: "Read", predict: "Predict", try: "Try it", parsons: "Parsons",
-  fix: "Fix the bug", code: "Code"};
+  fix: "Fix the bug", code: "Code", explain: "Explain"};
 const questNames = {step: "ステップを進める", code: "コード課題に合格", review: "今日の復習"};
 let busy = false;
 
@@ -89,14 +89,24 @@ async function act(control, message, callback) {
 
 async function today(view) {
   const data = await hud();
-  const percent = Math.round(100 * data.completed / data.total);
-  const panel = card(data.unit, "Today");
-  const state = data.completed === data.total ? "修了" : data.skipped ? "配置テストでスキップ済み" : "Lists";
-  panel.append(node("p", `${state} · ${percent}% · ${data.completed} / ${data.total} ステップ`, "meta"),
-    meter(data.completed, data.total, "Unit の進捗"));
-  if (data.recommend) panel.append(node("p", "復習で間違えた内容を Lists でもう一度確認できます。", "notice"));
-  panel.append(link(data.completed === data.total ? "修了を表示" : data.completed ? "続きから" : "Lists を開く", "play"),
-    link("教材を読む", "reference", "button secondary"));
+  const unit = data.unit;
+  const panel = card(unit?.title ?? "学習パス", "Today");
+  if (unit) {
+    const percent = Math.round(100 * unit.completed / unit.total);
+    const state = unit.status === "completed" ? "修了" : unit.skipped ? "実力診断でスキップ済み" : "進捗";
+    panel.append(node("p", `${state} · ${percent}% · ${unit.completed} / ${unit.total} ステップ`, "meta"),
+      meter(unit.completed, unit.total, "Unit の進捗"),
+      link(unit.status === "completed" ? "修了を表示" : unit.completed ? "続きから" : "ユニットを開く",
+        `play/${unit.id}`),
+      link("教材を読む", `reference/${unit.id}`, "button secondary"));
+  } else {
+    panel.append(link("Path を開く", "path"));
+  }
+  for (const recommendation of data.recommended) {
+    const item = node("p", "復習で間違えた内容を確認する ");
+    item.append(link(recommendation.title, `play/${recommendation.id}`, "button secondary"));
+    panel.append(item);
+  }
 
   const stats = node("div", undefined, "stats");
   for (const [value, label] of [[data.due, "今日の復習"], [data.streak, "学習ストリーク（日）"]]) {
@@ -138,6 +148,35 @@ async function today(view) {
   view.append(panel, stats, quests);
 }
 
+async function path(view) {
+  const {stages} = await api("path");
+  const panel = card("Path");
+  const labels = {outline: "目次のみ", draft: "下書き", published: "公開済み", completed: "修了"};
+  for (const stage of stages) {
+    const section = node("details");
+    section.open = stage.modules.some((module) => module.units.some((unit) => unit.total));
+    section.append(node("summary", `Stage ${stage.number} · ${stage.title}`));
+    for (const module of stage.modules) {
+      const list = node("ul", undefined, "path-units");
+      for (const unit of module.units) {
+        const item = node("li");
+        item.append(node("strong", unit.title), node("span",
+          `${labels[unit.status]}${unit.skipped ? " · スキップ済み" : ""}`, "meta"));
+        if (unit.blockers.length) {
+          item.append(node("p", `先に修了またはスキップ: ${unit.blockers.map((other) => other.title).join("、")}`));
+        } else if (unit.total) {
+          item.append(link(unit.status === "completed" ? "振り返る" : "開く", `play/${unit.id}`));
+        }
+        if (unit.placement) item.append(link("実力診断", `placement/${unit.id}`, "button secondary"));
+        list.append(item);
+      }
+      section.append(node("h2", module.title), list);
+    }
+    panel.append(section);
+  }
+  view.append(panel);
+}
+
 function choices(parent, values, select) {
   const group = node("div", undefined, "choices");
   const buttons = values.map((value, i) => {
@@ -159,8 +198,8 @@ function feedback(buttons, chosen, result) {
   });
 }
 
-function nextButton(view) {
-  const next = button("次のステップ", () => load("play"));
+function nextButton(view, resume) {
+  const next = button("次のステップ", resume);
   view.append(next);
   next.focus();
 }
@@ -184,7 +223,7 @@ function hints(parent, step, message, send) {
   return ask;
 }
 
-function parsons(panel, step, send, message) {
+function parsons(panel, step, send, message, resume) {
   const placed = node("ol", undefined, "placed");
   const order = [];
   const buttons = choices(panel, step.lines, (index, item) => {
@@ -206,7 +245,7 @@ function parsons(panel, step, send, message) {
     if (!result.complete) return;
     check.hidden = reset.hidden = true;
     panel.append(codeBlock(result.stdout));
-    nextButton(panel);
+    nextButton(panel, resume);
     await hud();
   }));
   check.disabled = true;
@@ -236,7 +275,7 @@ function output(result) {
   return container;
 }
 
-function editor(panel, step, send, message) {
+function editor(panel, step, send, message, resume) {
   const draft = `academy-draft-${step.id}`;
   const [sourceLabel, source] = textarea("Python", sessionStorage.getItem(draft) ?? step.starter, 12, true);
   source.addEventListener("input", () => sessionStorage.setItem(draft, source.value));
@@ -263,7 +302,7 @@ function editor(panel, step, send, message) {
         fields.disabled = true;
         if (showHint) showHint.hidden = true;
         sessionStorage.removeItem(draft);
-        nextButton(panel);
+        nextButton(panel, resume);
         await hud();
       }
     }), name === "run" && step.tests ? "button secondary" : "button");
@@ -310,29 +349,37 @@ function minutes(seconds) {
   return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
 }
 
-async function play(view, selected) {
-  const path = selected ? `play?step=${encodeURIComponent(selected)}` : "play";
-  const {step, unit, index, total, completed_steps: completed} = await api(path);
+async function play(view, uid, selected, open) {
+  if (!uid) uid = (await hud()).unit?.id;
+  if (!uid) {
+    view.append(link("Path を開く", "path"));
+    return;
+  }
+  const url = `play?unit=${encodeURIComponent(uid)}`;
+  if (open) await api("play", {unit: uid, action: "start"});
+  const {step, unit, index, total, completed_steps: completed} = await api(
+    selected ? `${url}&step=${encodeURIComponent(selected)}` : url);
+  const resume = () => load("play", uid);
   if (completed.length) {
     const label = node("label", "完了したステップを振り返る ");
     const select = node("select");
-    const resume = node("option", completed.length === total ? "修了画面" : "続きから");
-    resume.value = "";
-    select.append(resume);
+    const latest = node("option", completed.length === total ? "修了画面" : "続きから");
+    latest.value = "";
+    select.append(latest);
     for (const {id, title} of completed) {
       const option = node("option", title);
       option.value = id;
       select.append(option);
     }
     select.value = selected ?? "";
-    select.addEventListener("change", () => load("play", select.value));
+    select.addEventListener("change", () => load("play", uid, select.value));
     label.append(select);
     view.append(label);
   }
   if (!step) {
     const done = card(unit, "Unit 修了");
     done.append(node("p", "四択の復習は、出題日に Review Arena に表示されます。"),
-      link("Review Arena", "review"), link("教材を読む", "reference", "button secondary"));
+      link("Review Arena", "review"), link("教材を読む", `reference/${uid}`, "button secondary"));
     view.append(done);
     return;
   }
@@ -343,12 +390,17 @@ async function play(view, selected) {
   const panel = card(step.title, kinds[step.type]);
   const message = status();
   panel.append(message);
-  view.append(header, panel);
-  const send = (action, data = {}) => api("play", {step: step.id, action, ...data});
+  const links = node("div");
+  links.append(link("Path", "path", "button secondary"),
+    link("教材を読む", `reference/${uid}`, "button secondary"));
+  view.append(links, header, panel);
+  const send = (action, data = {}) => api("play", {unit: uid, step: step.id, action, ...data});
   if (step.body) panel.append(markdown(step.body));
   if (step.task) panel.append(node("p", step.task));
   if (step.code) panel.append(codeBlock(step.code));
-  if (step.complete) {
+  if (step.type === "explain") {
+    explain(panel, step, send, message, resume);
+  } else if (step.complete) {
     if (step.choices) feedback(choices(panel, step.choices, () => {}), -1, step.feedback);
     if (step.lines) panel.append(codeBlock(step.lines.join("\n")));
     if (step.starter) panel.append(codeBlock(step.starter));
@@ -356,7 +408,7 @@ async function play(view, selected) {
   } else if (step.type === "read") {
     const next = button("次のステップ", () => act(next, message, async () => {
       await send("continue");
-      await load("play");
+      await resume();
     }));
     panel.append(next);
   } else if (step.type === "predict") {
@@ -366,14 +418,47 @@ async function play(view, selected) {
       feedback(buttons, choice, result);
       if (hint) hint.hidden = true;
       message.textContent = result.correct ? "正解です。" : "解説を確認してください。";
-      nextButton(panel);
+      nextButton(panel, resume);
       await hud();
     }).then(() => { if (buttons[choice].querySelector(".why")) control.disabled = true; }));
   } else if (step.type === "parsons") {
-    parsons(panel, step, send, message);
+    parsons(panel, step, send, message, resume);
   } else {
-    editor(panel, step, send, message);
+    editor(panel, step, send, message, resume);
   }
+}
+
+function explain(panel, step, send, message, resume) {
+  const draft = `academy-draft-${step.id}`;
+  panel.append(node("p", step.prompt));
+  const checklist = node("ul", undefined, "rubric");
+  const checks = step.rubric.map((criterion) => {
+    const item = node("li");
+    const label = node("label", undefined, "radio");
+    const check = node("input");
+    check.type = "checkbox";
+    check.disabled = step.complete;
+    check.checked = step.complete;
+    label.append(check, document.createTextNode(criterion));
+    item.append(label);
+    checklist.append(item);
+    return check;
+  });
+  const [label, response] = textarea("英語での説明（このタブに保存）", sessionStorage.getItem(draft) ?? "", 5);
+  response.readOnly = step.complete;
+  panel.append(label, checklist);
+  if (step.complete) return;
+  response.addEventListener("input", () => sessionStorage.setItem(draft, response.value));
+  const finish = button("自己評価を完了", () => act(finish, message, async () => {
+    if (!response.value.trim() || checks.some((check) => !check.checked)) {
+      message.textContent = "説明を書き、評価項目を確認してください。";
+      return;
+    }
+    await send("explain", {response: response.value, self_checked: true});
+    await resume();
+    await hud();
+  }));
+  panel.append(finish);
 }
 
 async function review(view) {
@@ -401,7 +486,7 @@ async function review(view) {
         link("Today", "today", "button secondary"));
       return;
     }
-    questionBox.append(node("h2", question.title));
+    questionBox.append(node("p", question.unit, "meta"), node("h2", question.title));
     if (retry) questionBox.append(node("p", "間違えた問題をもう一度"));
     if (question.code) questionBox.append(codeBlock(question.code));
     const message = status();
@@ -429,9 +514,10 @@ async function review(view) {
   }, 1000);
 }
 
-async function placement(view) {
-  const data = await api("placement");
-  const panel = card("Lists の実力診断", "Placement");
+async function placement(view, uid) {
+  const url = `placement?unit=${encodeURIComponent(uid)}`;
+  const data = await api(url);
+  const panel = card(data.unit, "Placement");
   const message = status();
   const resultBox = node("div");
   const actions = node("div", undefined, "actions");
@@ -446,10 +532,10 @@ async function placement(view) {
     }
     if (result?.execution) resultBox.append(output(result.execution));
     if (canSkip) {
-      const skip = button("Lists をスキップする", () => act(skip, message, async () => {
-        await api("placement/skip", {});
+      const skip = button("このユニットをスキップする", () => act(skip, message, async () => {
+        await api("placement/skip", {unit: uid});
         showResult(result, false, true);
-        message.textContent = "今日から1日2枚ずつ、Lists の四択が復習に追加されます。";
+        message.textContent = "今日から1日2枚ずつ、このユニットの四択が復習に追加されます。";
       }), "button secondary");
       actions.append(skip);
     }
@@ -480,13 +566,13 @@ async function placement(view) {
       return;
     }
     message.textContent = "診断のコードを Docker で実行中…";
-    const result = await api("placement", {answers, source: source.value});
-    const placementState = await api("placement");
+    const result = await api("placement", {unit: uid, answers, source: source.value});
+    const placementState = await api(url);
     showResult({...placementState.result, execution: result.execution}, placementState.can_skip, placementState.skipped);
     message.textContent = "";
   }));
   showResult(data.result, data.can_skip, data.skipped);
-  panel.append(label, submit, message, resultBox, actions);
+  panel.append(label, submit, message, resultBox, actions, link("Path に戻る", "path", "button secondary"));
   view.append(panel);
 }
 
@@ -533,20 +619,26 @@ async function backups(view) {
   await refresh();
 }
 
-async function reference(view) {
-  const data = await api("reference");
-  const panel = card("Lists の教材");
+async function reference(view, uid) {
+  const data = await api(`reference?unit=${encodeURIComponent(uid)}`);
+  const panel = card(data.title);
+  panel.append(link("Play", `play/${uid}`));
   for (const [name, text] of [["レッスンの参照シート", data.lesson], ["端末でのハンズオン", data.handson]]) {
     if (!text) continue;
     const section = node("details");
     section.append(node("summary", name), markdown(text));
     panel.append(section);
   }
+  const vocabulary = node("details");
+  const terms = node("dl");
+  for (const term of data.vocab) terms.append(node("dt", term.en), node("dd", term.ja));
+  vocabulary.append(node("summary", "英単語"), terms);
+  if (data.vocab.length) panel.append(vocabulary);
   view.append(panel);
 }
 
-const pages = {today, play, review, placement, backups, reference};
-async function load(page, selectedStep) {
+const pages = {today, path, play, review, placement, backups, reference};
+async function load(page, uid, selectedStep, open = false) {
   const selected = Object.hasOwn(pages, page) ? page : "today";
   for (const item of document.querySelectorAll("nav a")) {
     if (item.hash === `#${selected}`) item.setAttribute("aria-current", "page");
@@ -558,13 +650,18 @@ async function load(page, selectedStep) {
   view.append(loading);
   main.replaceChildren(view);
   try {
-    await pages[selected](view, selectedStep);
+    await pages[selected](view, uid, selectedStep, open);
     loading.remove();
   } catch (error) {
     loading.textContent = error.message;
   }
 }
 
-window.addEventListener("hashchange", () => load(location.hash.slice(1)));
-load(location.hash.slice(1));
+function route() {
+  const [page, uid] = location.hash.slice(1).split("/");
+  return load(page, uid, undefined, true);
+}
+
+window.addEventListener("hashchange", route);
+route();
 hud().catch(() => {});

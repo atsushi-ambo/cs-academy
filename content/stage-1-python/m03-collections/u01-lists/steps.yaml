@@ -338,6 +338,7 @@ steps:
 
   - id: st23
     type: explain
+    optional: true
     prompt: "Explain to a new teammate the difference between ports.sort() and sorted(ports). When would you use each one?"
     rubric: [correct idea, a concrete example, clear English]
 

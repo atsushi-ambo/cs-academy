@@ -1,0 +1,43 @@
+id: s2.m05.u01
+title: Thinking recursively
+stage: 2
+module: Recursion
+version: 1
+status: draft
+estimated_minutes: 85
+prerequisites:
+- s1.m02.u04
+objectives:
+- Turn a small loop into recursion.
+- Choose a base case and a smaller input.
+- Trace values back to the first call.
+- Count routes with two recursive calls.
+skills:
+- python.thinking-recursively
+- english.explain-code
+parts:
+- steps.yaml
+- lesson.md
+- exercises/
+- solutions/solutions.md
+references:
+- kind: official_doc
+  title: Python control flow
+  url: https://docs.python.org/3.13/tutorial/controlflow.html
+vocab:
+- en: recursion
+  ja: 再帰
+- en: base case
+  ja: 再帰を止める条件
+- en: recursive case
+  ja: 再帰呼び出しを行う場合
+- en: frame
+  ja: 呼び出しごとの作業領域
+- en: caller
+  ja: 呼び出し元
+- en: branch
+  ja: 分岐
+- en: time complexity
+  ja: 入力に対する処理時間の増え方
+- en: space complexity
+  ja: 入力に対する使用メモリの増え方

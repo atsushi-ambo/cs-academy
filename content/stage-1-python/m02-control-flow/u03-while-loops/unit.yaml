@@ -1,0 +1,40 @@
+id: s1.m02.u03
+title: while loops
+stage: 1
+module: Control Flow
+version: 1
+status: draft
+estimated_minutes: 85
+prerequisites:
+- s1.m02.u02
+objectives:
+- Trace a test, a body and an update.
+- Set a safe limit on retries.
+- Exit a loop with break.
+skills:
+- python.while-loops
+- english.explain-code
+parts:
+- steps.yaml
+- lesson.md
+- exercises/
+- solutions/solutions.md
+references:
+- kind: official_doc
+  title: Python control flow
+  url: https://docs.python.org/3.13/tutorial/controlflow.html
+vocab:
+- en: condition
+  ja: 条件
+- en: update
+  ja: 値を更新する
+- en: retry
+  ja: 再試行
+- en: budget
+  ja: 使える上限
+- en: infinite loop
+  ja: 無限ループ
+- en: break
+  ja: ループから抜ける
+- en: boolean
+  ja: 真偽値

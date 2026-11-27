@@ -1,0 +1,42 @@
+id: s1.m02.u02
+title: for loops and range
+stage: 1
+module: Control Flow
+version: 1
+status: draft
+estimated_minutes: 85
+prerequisites:
+- s1.m02.u01
+objectives:
+- Visit each item with for.
+- Use range to repeat work and choose numbers.
+- Keep a running total.
+skills:
+- python.for-loops
+- english.explain-code
+parts:
+- steps.yaml
+- lesson.md
+- exercises/
+- solutions/solutions.md
+references:
+- kind: official_doc
+  title: Python control flow
+  url: https://docs.python.org/3.13/tutorial/controlflow.html
+vocab:
+- en: loop
+  ja: 繰り返し
+- en: iteration
+  ja: 繰り返しの1回
+- en: indent
+  ja: 字下げする
+- en: exclusive stop
+  ja: 含まない終了値
+- en: step size
+  ja: 増減幅
+- en: accumulator
+  ja: 集計用の変数
+- en: return
+  ja: 呼び出し元に値を返す
+- en: extra space
+  ja: 入力と出力を除いた追加のメモリ

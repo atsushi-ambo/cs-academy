@@ -1,8 +1,9 @@
 import unittest
 from unittest.mock import patch
 
-from app.content import LISTS
 from runner.host import IMAGE, WALL_TIMEOUT, command, execute
+
+from .support import LISTS
 
 
 class RunnerCommandTest(unittest.TestCase):

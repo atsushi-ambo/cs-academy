@@ -1,0 +1,397 @@
+unit: s2.m05.u05
+python_min: '3.9'
+steps:
+- id: st01
+  type: read
+  title: Choose what to keep when calls become a loop
+  body: |
+    A service reads a report with thousands of nested groups. A recursive
+    scan can hit the depth limit. You will rewrite calls as loops.
+    For a straight chain, save just the values needed next.
+    For nested groups, keep a list of work still to do.
+
+    A **tail call** is the last action in its caller. A loop can update
+    the arguments like a tail call and go back to its top.
+- id: st02
+  type: predict
+  title: What does the tail call carry?
+  code: |
+    def bytes_used(n, total):
+        if n == 0:
+            return total
+        return bytes_used(n - 1, total + 4)
+
+    print(bytes_used(2, 0))
+  choices:
+  - text: '12'
+    why: The base case returns before adding another 4.
+  - text: '8'
+    why: The frames receive (2, 0), (1, 4), and (0, 8). All return 8.
+  - text: '4'
+    why: There are two updates before the base case.
+  - text: '0'
+    why: The base frame returns its total, not its n.
+  answer: 1
+- id: st03
+  type: try
+  title: Update two values in a loop
+  starter: |
+    n = 2
+    total = 0
+    while n > 0:
+        n -= 1
+        total += 4
+    print(total)
+  task: Change the starting n to 3. Confirm the total grows by one block of 4.
+  check:
+    stdout_line: '12'
+- id: st04
+  type: read
+  title: Trace the same states in one frame
+  body: |
+    ```text
+    calls:   bytes_used(2, 0) -> bytes_used(1, 4) -> bytes_used(0, 8)
+    returns: 8                <- 8                <- 8
+    loop:    (n=2, total=0)   -> (n=1, total=4)   -> (n=0, total=8)
+    ```
+
+    In the loop there are no waiting frames to return through. When a
+    new value uses the old n, compute it before changing n.
+- id: st05
+  type: predict
+  title: Read n before you change it
+  code: |
+    n, total = 3, 0
+    while n > 0:
+        n -= 1
+        total += n
+    print(total)
+  choices:
+  - text: '0'
+    why: Only the last pass adds zero.
+  - text: '5'
+    why: The value 3 is reduced before any addition.
+  - text: '3'
+    why: The loop adds the new values 2, 1, and 0.
+  - text: '6'
+    why: That would add n before the decrement.
+  answer: 2
+- id: st06
+  type: fix
+  title: Match the recursive update order
+  task: The first pass must add n. Return n + (n - 1) + ... + 1.
+  starter: |
+    def work(n):
+        total = 0
+        while n > 0:
+            n -= 1
+            total += n
+        return total
+  solution: |
+    def work(n):
+        total = 0
+        while n > 0:
+            total += n
+            n -= 1
+        return total
+  tests: |
+    assert work(3) == 6
+    assert work(1) == 1
+    assert work(0) == 0
+  hint_levels:
+  - Compare the first addition with the recursive call's arguments.
+  - Use the old n to update total before lowering n.
+  - Move total += n just above n -= 1.
+  explanation: The updated total must include work for the current n.
+- id: st07
+  type: code
+  title: Replace recursive discount steps with a loop
+  exercise: exercises/practice.py
+  function: reduced_price
+  test_class: ReducedPrice
+  hint_levels:
+  - Use the two changing arguments as variables.
+  - Update cents and weeks on every pass.
+  - Use while weeks > 0 and return cents after the loop.
+- id: st08
+  type: read
+  title: Store branches in a list
+  body: |
+    An **explicit stack** is a list you manage yourself. Use append to
+    **push** work onto its end. Use pop() to take the last item off.
+    This is **last in, first out**. The last thing added runs first.
+
+    ```text
+    stack (top at right): [] -> ["later"] -> ["later", "now"]
+    pop() gives "now"; "later" stays on the stack
+    ```
+
+    To visit items from left to right, push them right to left.
+- id: st09
+  type: predict
+  title: Push in the order that runs left first
+  code: |
+    stack = ["file C"]
+    stack.append("file B")
+    stack.append("file A")
+    print(stack.pop())
+    print(stack.pop())
+  choices:
+  - text: |
+      file C
+      file B
+    why: pop here uses the end, not the start.
+  - text: |
+      file A
+      file A
+    why: Each pop removes its result.
+  - text: |
+      file B
+      file C
+    why: file A is at the end before the first pop.
+  - text: |
+      file A
+      file B
+    why: pop removes the right end. The last file pushed is first out.
+  answer: 3
+- id: st10
+  type: parsons
+  title: Take the last pending job
+  task: Push two tasks and print the one that was pushed last.
+  lines:
+  - stack = ["night report"]
+  - stack.append("urgent report")
+  - job = stack.pop()
+  - print(job)
+  expected_stdout: urgent report
+- id: st11
+  type: read
+  title: Trace nested batches without calls
+  body: |
+    Start with the entire list as the only pending item. When you pop
+    a list, push its items in reverse order. When you pop a number, output it.
+    `reversed(batch)` lets a for loop read a list from right to left.
+
+    ```text
+    stack (top right)          action
+    [[1, [2, 3], 4]]          open the outer batch
+    [4, [2, 3], 1]            emit 1
+    [4, [2, 3]]               open the inner batch
+    [4, 3, 2]                 emit 2, then 3, then 4
+    ```
+
+    Each row shows work still to do. The top of the stack is the next item.
+- id: st12
+  type: predict
+  title: What if you push in input order?
+  code: |
+    stack = []
+    for file in ["first", "middle", "last"]:
+        stack.append(file)
+    while stack:
+        print(stack.pop())
+  choices:
+  - text: |
+      last
+      middle
+      first
+    why: The loop processes the most recent push first.
+  - text: |
+      first
+      middle
+      last
+    why: This would need pushes in reverse order.
+  - text: |
+      last
+      first
+      middle
+    why: After removing last, middle is at the end.
+  - text: last
+    why: The loop continues until the stack is empty.
+  answer: 0
+- id: st13
+  type: try
+  title: Try reversing the pushes
+  starter: |
+    stack = []
+    for file in ["first", "middle", "previous-last"]:
+        stack.append(file)
+    emitted = []
+    while stack:
+        emitted.append(stack.pop())
+    print(emitted)
+  task: Wrap the list in reversed(...). Check that the emitted list follows the input order.
+  check:
+    stdout_line: "['first', 'middle', 'previous-last']"
+- id: st14
+  type: fix
+  title: Keep the first item on top
+  task: Return all sizes in left-to-right order. You can use reversed() before pushing.
+  starter: |
+    def unpack(batch):
+        pending = [batch]
+        result = []
+        while pending:
+            item = pending.pop()
+            if isinstance(item, list):
+                for child in item:
+                    pending.append(child)
+            else:
+                result.append(item)
+        return result
+  solution: |
+    def unpack(batch):
+        pending = [batch]
+        result = []
+        while pending:
+            item = pending.pop()
+            if isinstance(item, list):
+                for child in reversed(item):
+                    pending.append(child)
+            else:
+                result.append(item)
+        return result
+  tests: |
+    assert unpack([1, [2, 3], 4]) == [1, 2, 3, 4]
+    assert unpack([[], [0]]) == [0]
+  hint_levels:
+  - Which child should be popped first?
+  - Put the leftmost child at the end of pending.
+  - Iterate over reversed(item) when you push children.
+  explanation: Reversing the push order makes the pop order left to right, just like the recursive version.
+- id: st15
+  type: code
+  title: Flatten a deeply nested export with a stack
+  exercise: exercises/practice.py
+  function: unpack_sizes
+  test_class: UnpackSizes
+  hint_levels:
+  - Start with a stack that holds the full list as one item.
+  - Pop until empty. A list adds work. A number adds output.
+  - 'Push children with for child in reversed(item): pending.append(child).'
+- id: st16
+  type: read
+  title: Keep two counts instead of repeating calls
+  body: |
+    For stairs, the number of routes to the next step is the sum of
+    the two counts before it. Reuse those counts instead of solving
+    the same smaller problems again.
+
+    ```text
+    step number:   0   1   2   3   4
+    route count:   1   1   2   3   5
+    ```
+
+    The counts at 0 and 1 are both 1. To move one step, shift the pair
+    (older, newer) to (newer, older + newer).
+    In a double assignment, Python computes both right sides first.
+- id: st17
+  type: predict
+  title: Move the pair once
+  code: |
+    older, newer = 2, 3
+    older, newer = newer, older + newer
+    print(older, newer)
+  choices:
+  - text: 5 3
+    why: The sum becomes the second value, not the first.
+  - text: 3 5
+    why: Both new values use the old pair. The next pair holds 3 and 5.
+  - text: 3 6
+    why: The right side uses the old older value, 2.
+  - text: 2 5
+    why: older is also updated.
+  answer: 1
+- id: st18
+  type: try
+  title: Move the route counter twice
+  starter: |
+    older, newer = 1, 1
+    for step in range(2, 4):
+        older, newer = newer, older + newer
+    print(newer)
+  task: Raise the stop from 4 to 5. Check that the number of routes to step 4 is 5.
+  check:
+    stdout_line: '5'
+- id: st19
+  type: code
+  title: Count stairs routes without repeated calls
+  exercise: exercises/practice.py
+  function: route_count
+  test_class: RouteCount
+  hint_levels:
+  - Start with the counts at 0 and 1.
+  - From step 2 through n, replace the pair with the newer count and the sum.
+  - Loop over range(2, n + 1). Use older, newer = newer, older + newer, then return newer.
+- id: st20
+  type: predict
+  title: What work is still waiting after the call?
+  code: |
+    def audit(level):
+        print("open", level)
+        if level > 0:
+            audit(level - 1)
+        print("close", level)
+
+    audit(1)
+  choices:
+  - text: |
+      open 1
+      close 1
+      open 0
+      close 0
+    why: The child runs before the caller can close.
+  - text: |
+      open 1
+      open 0
+      close 0
+      close 1
+    why: The child closes first. A loop version must keep the older close action pending.
+  - text: |
+      open 1
+      open 0
+      close 1
+      close 0
+    why: The older call waits until the new call has finished.
+  - text: |
+      open 1
+      close 1
+    why: Level zero stops calling itself. It still prints its own open and close lines.
+  answer: 1
+- id: st21
+  type: try
+  title: Save the close action for later
+  starter: |
+    pending = [("open", 1)]
+    emitted = []
+    while pending:
+        action, level = pending.pop()
+        emitted.append(f"{action} {level}")
+        if action == "open":
+            if level > 0:
+                pending.append(("open", level - 1))
+            pending.append(("close", level))
+    print(emitted)
+  task: |
+    Each pair holds a message and a level. Place the push for close before
+    the nested if. Then the child will run before its parent's close.
+    Check that the loop emits the same four messages as audit(1).
+  check:
+    stdout_line: "['open 1', 'open 0', 'close 0', 'close 1']"
+- id: st22
+  type: explain
+  title: Explain it to a teammate
+  prompt: Write 2–3 English sentences. A file export often has deep nesting. Explain how you would replace
+    recursive flattening.
+  rubric:
+  - Name what to keep in the stack.
+  - Say which end to pop and in which order to push each list's children.
+review_cards:
+  from_steps:
+  - st02
+  - st05
+  - st09
+  - st12
+  - st17
+  - st20
+  vocab: true

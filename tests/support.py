@@ -7,6 +7,10 @@ from app.content import ROOT, load_catalog
 from app.learning import Learning
 from app.storage import BACKUP_DB, Store
 
+LISTS = "s1.m03.u01"
+FOR = "s1.m02.u02"
+WHILE = "s1.m02.u03"
+RECURSION = "s2.m05.u01"
 UNIT = ROOT / "content/stage-1-python/m03-collections/u01-lists"
 SOLUTIONS = (UNIT / "solutions/lists_practice.py").read_text(encoding="utf-8")
 FIX = "def add_server(servers, name):\n    servers.append(name)\n    return servers\n"
@@ -32,9 +36,16 @@ def fake_runner(problem_id, source, stdin=None):
 
 
 class AcademyCase(TestCase):
+    lists_only = True
+
     def setUp(self):
         root = Path(self.enterContext(TemporaryDirectory(prefix="cs-academy-test-")))
-        self.store = Store(root / "data" / BACKUP_DB, root / "backups", load_catalog())
+        catalog = load_catalog()
+        if self.lists_only:
+            catalog.play = {LISTS: catalog.play[LISTS]}
+            catalog.cards = {key: card for key, card in catalog.cards.items() if card["unit"] == LISTS}
+            catalog.placements = {LISTS: catalog.placements[LISTS]}
+        self.store = Store(root / "data" / BACKUP_DB, root / "backups", catalog)
         self.store.initialize()
         self.date = TODAY
         self.learning = Learning(self.store, clock=lambda: self.date, runner=fake_runner)

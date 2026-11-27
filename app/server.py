@@ -6,7 +6,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from threading import BoundedSemaphore
 from urllib.parse import parse_qs
 
-from .content import LISTS, ROOT
+from .content import ROOT
 from .learning import RequestError, expect, fields
 
 MAX_BODY = 128 * 1024
@@ -24,9 +24,11 @@ CSP = ("default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'se
        "form-action 'self'; base-uri 'none'; frame-ancestors 'none'")
 GET_ROUTES = {
     "/api/today": "today",
+    "/api/path": "path",
     "/api/play": "step_view",
     "/api/reviews": "reviews",
     "/api/placement": "placement",
+    "/api/reference": "reference",
 }
 POST_ROUTES = {
     "/api/play": "play",
@@ -99,18 +101,10 @@ def handler_for(learning, port):
 
         def get(self):
             path, separator, query = self.path.partition("?")
-            selected_step = None
-            if path == "/api/play" and separator:
-                params = parse_qs(query, keep_blank_values=True, strict_parsing=True,
-                                  max_num_fields=1)
-                fields(params, "step")
-                selected_step = params["step"][0]
             if self.path == "/api/backups":
                 with learning.store.locked():
                     return {"backups": learning.store.backups_list()}
-            if self.path == "/api/reference":
-                return learning.catalog.resources[LISTS]
-            route = GET_ROUTES.get("/api/play" if selected_step is not None else self.path)
+            route = GET_ROUTES.get(path)
             if route is None:
                 status = 405 if self.path in POST_ROUTES or self.path in {
                     "/api/backup", "/api/restore",
@@ -118,10 +112,21 @@ def handler_for(learning, port):
                 raise RequestError("Route unavailable for GET", status)
             with learning.store.transaction() as db:
                 method = getattr(learning, route)
+                if route in {"step_view", "placement", "reference"}:
+                    params = parse_qs(query, keep_blank_values=True, strict_parsing=True,
+                                      max_num_fields=2)
+                    if route == "step_view" and "step" in params:
+                        fields(params, "unit", "step")
+                    else:
+                        fields(params, "unit")
+                    expect(all(len(values) == 1 for values in params.values()),
+                           "Duplicate query field")
+                    if route == "step_view":
+                        return method(db, params["unit"][0], params.get("step", [None])[0])
+                    return method(db, params["unit"][0])
+                expect(not separator, "Unexpected query")
                 if route in {"today", "reviews"}:
                     return method(db, learning.clock())
-                if route == "step_view":
-                    return method(db, selected_step)
                 return method(db)
 
         def post(self, body):
@@ -136,11 +141,7 @@ def handler_for(learning, port):
             route = POST_ROUTES.get(self.path)
             expect(route is not None, "Unknown POST route", 404)
             with learning.store.transaction() as db:
-                method = getattr(learning, route)
-                if route == "skip":
-                    fields(body)
-                    return method(db, learning.clock())
-                return method(db, body, learning.clock())
+                return getattr(learning, route)(db, body, learning.clock())
 
         def dispatch(self, is_post):
             try:

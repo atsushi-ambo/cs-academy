@@ -1,0 +1,308 @@
+unit: s1.m02.u02
+python_min: '3.9'
+steps:
+- id: st01
+  type: read
+  title: One instruction for many servers
+  body: |
+    You have a list of servers to check. The list can grow from 3 to 300.
+    A **loop** lets you write the check once. You will visit each name, pick
+    number ranges for batches, and build a report from the results.
+
+    ```python
+    for host in ["web", "db"]:
+        print(host)
+    ```
+
+    The brackets hold a **list** of names. Read the first line as
+    “for each host in this list.” The indented line
+    runs once per item. Each run of that line is one **iteration**.
+- id: st02
+  type: predict
+  title: What does host hold?
+  code: |
+    for host in ["web", "db"]:
+        print(host)
+    print("done")
+  choices:
+  - text: |
+      db
+      web
+      done
+    why: The list keeps its original order.
+  - text: |
+      ['web', 'db']
+      done
+    why: host holds one string at a time.
+  - text: |
+      web
+      db
+      done
+    why: The two indented prints run first. The last print runs once after the loop.
+  - text: |
+      web
+      done
+      db
+      done
+    why: The last print is outside the loop.
+  answer: 2
+- id: st03
+  type: try
+  title: Try a larger list
+  starter: |
+    hosts = ["web", "db"]
+    for host in hosts:
+        print(host)
+  task: Add "cache" as the third name. Run the loop and find the third output line.
+  check:
+    stdout_line: cache
+- id: st04
+  type: read
+  title: Count with range
+  body: |
+    `range(3)` gives 0, 1, 2. It starts at zero and stops before 3.
+    The **stop** is exclusive. For day numbers 1 to 3, use `range(1, 4)`.
+    The first argument is the start. The second is the stop.
+
+    ```text
+    range(1, 4):   1 -> 2 -> 3 | stop
+    ```
+
+    Trace it with a finger. At 4 the loop has no new value to use.
+    `list(range(1, 4))` turns these values into a list you can print.
+
+    In a function, `def shifts(count):` names the function and its input.
+    `return` sends the result back. Write `shifts(3)` to call it with 3.
+    To build a list one item at a time, start with `[]` and use
+    `labels.append(label)` to add a label at the end.
+
+    A solution also explains its cost. **O(n)** means the work grows with
+    the number of items n. **O(1)** means the amount stays about the same.
+    When we count memory, we use the same notation for the space needed.
+- id: st05
+  type: predict
+  title: Pick the batch numbers
+  code: |
+    print(list(range(1, 4)))
+  choices:
+  - text: '[1, 2, 3, 4]'
+    why: The stop value is left out.
+  - text: '[0, 1, 2, 3]'
+    why: The explicit start replaces zero.
+  - text: '[2, 3]'
+    why: The start value is included.
+  - text: '[1, 2, 3]'
+    why: The start is 1. The first value left out is 4.
+  answer: 3
+- id: st06
+  type: fix
+  title: Recover the last shift
+  task: Return a list of shift numbers from 1 through count. A count of 0 gives [].
+  starter: |
+    def shifts(count):
+        return list(range(1, count))
+  solution: |
+    def shifts(count):
+        return list(range(1, count + 1))
+  tests: |
+    assert shifts(3) == [1, 2, 3]
+    assert shifts(1) == [1]
+    assert shifts(0) == []
+  hint_levels:
+  - Test the smallest positive count.
+  - The stop must be one past the last shift.
+  - Use range(1, count + 1).
+  explanation: The extra 1 moves the exclusive stop. It does not add a shift beyond count.
+- id: st07
+  type: code
+  title: Make rack labels
+  exercise: exercises/practice.py
+  function: rack_labels
+  test_class: RackLabels
+  hint_levels:
+  - Work out the sequence of numbers first.
+  - Start an empty list. Append one label for each number.
+  - Loop over range(first, last + 1); append f"rack-{number}".
+- id: st08
+  type: read
+  title: Change the step size
+  body: |
+    The third value in `range(start, stop, step)` is the **step size**.
+    A step of 2 moves from 1 to 3 to 5. A step of -1 counts down.
+    With a negative step, the stop is still left out.
+    A positive step cannot reach a stop below the start.
+- id: st09
+  type: predict
+  title: Count back from a later batch
+  code: |
+    print(list(range(5, 1, -2)))
+  choices:
+  - text: '[5, 3]'
+    why: The next value would be 1. The stop is left out.
+  - text: '[5, 3, 1]'
+    why: A negative step still excludes the stop.
+  - text: '[5, 4, 3, 2]'
+    why: The step is -2, so it skips 4 and 2.
+  - text: '[]'
+    why: A negative step can move down from 5 toward 1.
+  answer: 0
+- id: st10
+  type: try
+  title: Count down to zero
+  starter: |
+    for number in range(3, 0, -1):
+        print(number)
+  task: Run to see 3, 2, 1. Change only the stop so the last line is 0.
+  check:
+    stdout_line: '0'
+- id: st11
+  type: parsons
+  title: Build a two-line report
+  task: Put the indented line under for. Print the report title first.
+  lines:
+  - print("Checks")
+  - 'for job in range(2):'
+  - '    print(job)'
+  expected_stdout: |
+    Checks
+    0
+    1
+- id: st12
+  type: code
+  title: Schedule batch offsets
+  exercise: exercises/practice.py
+  function: batch_offsets
+  test_class: BatchOffsets
+  hint_levels:
+  - Start with offset zero.
+  - Use stride as the third argument to range.
+  - Return list(range(0, size, stride)).
+- id: st13
+  type: read
+  title: Remember the total
+  body: |
+    An **accumulator** holds a result that grows as you loop.
+    Set it to 0 once before the loop. Add each value inside the loop.
+
+    ```text
+    prices = [4, 7, 2]
+    total: 0 -> 4 -> 11 -> 13
+    ```
+
+    After the last addition, the result is 13. If the list is empty,
+    the loop runs zero times. The result stays 0.
+- id: st14
+  type: predict
+  title: Trace a reset inside the loop
+  code: |
+    for price in [4, 7, 2]:
+        total = 0
+        total += price
+    print(total)
+  choices:
+  - text: '4'
+    why: The second and third iterations both run.
+  - text: '2'
+    why: The last iteration starts again at zero. Only its price stays.
+  - text: '13'
+    why: That would be the total if zero were set once before the loop.
+  - text: '0'
+    why: There is an addition after the final reset.
+  answer: 1
+- id: st15
+  type: fix
+  title: Keep all the prices
+  task: Return the sum of prices. Return 0 for an empty list.
+  starter: |
+    def bill(prices):
+        total = 0
+        for price in prices:
+            total = price
+        return total
+  solution: |
+    def bill(prices):
+        total = 0
+        for price in prices:
+            total += price
+        return total
+  tests: |
+    assert bill([5, 7]) == 12
+    assert bill([]) == 0
+  hint_levels:
+  - Compare the total before and after each pass.
+  - Add to the old value instead of replacing it.
+  - Use total += price.
+  explanation: Assignment replaces the old value. Addition keeps the earlier prices in the total.
+- id: st16
+  type: predict
+  title: What happens with no items?
+  code: |
+    total = 0
+    for price in []:
+        total += price
+    print(total)
+  choices:
+  - text: '1'
+    why: An empty list gives no iteration.
+  - text: NameError
+    why: The print only uses total, which already exists.
+  - text: '0'
+    why: The body never runs. The initial value is still 0.
+  - text: None
+    why: total was set to the integer 0.
+  answer: 2
+- id: st17
+  type: try
+  title: Try a price list
+  starter: |
+    total = 0
+    for price in [4, 7]:
+        total += price
+    print(total)
+  task: Add a price of 3 to the list. Check that the new total is 14.
+  check:
+    stdout_line: '14'
+- id: st18
+  type: code
+  title: Total only failed jobs
+  exercise: exercises/practice.py
+  function: failed_minutes
+  test_class: FailedMinutes
+  hint_levels:
+  - Use the same position in both lists.
+  - Loop over the indexes and test the flag before adding.
+  - For i in range(len(durations)), add durations[i] only if failed[i].
+- id: st19
+  type: explain
+  title: Explain it to a teammate
+  prompt: Write 2–3 English sentences. A teammate needs labels for the 4th to the 7th shift. Explain your
+    range and how you would collect the labels.
+  rubric:
+  - Give range(4, 8) and explain why 8 is left out.
+  - Describe an empty list before the loop and one append per shift.
+review_cards:
+  from_steps:
+  - st02
+  - st05
+  - st09
+  - st14
+  - st16
+  vocab: true
+placement:
+  title: 'Placement: slot numbers'
+  questions:
+  - st02
+  - st05
+  - st09
+  - st14
+  minimum_correct: 3
+  starter: |
+    def even_slots(stop):
+        """Return even slot numbers from 0 up to but not including stop.
+        stop is an integer from 0 to 100. Example: even_slots(5) -> [0, 2, 4].
+        """
+        raise NotImplementedError
+  tests: |
+    assert even_slots(5) == [0, 2, 4]
+    assert even_slots(4) == [0, 2]
+    assert even_slots(0) == []

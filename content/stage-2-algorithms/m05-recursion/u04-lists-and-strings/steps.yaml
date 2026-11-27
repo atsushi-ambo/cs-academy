@@ -1,0 +1,322 @@
+unit: s2.m05.u04
+python_min: '3.9'
+steps:
+- id: st01
+  type: read
+  title: Work with the rest of a list or string
+  body: |
+    A server report may have one list of file sizes per team.
+    After this unit you can total sizes, check if a label reads the same
+    in both directions, and turn nested batches into one list.
+
+    In `sizes[i]`, i is an index, or position. Instead of making a copy
+    of the rest, pass the original list and the next index to your call.
+    Stop when i equals the length. The part from i to the end is a **suffix**.
+- id: st02
+  type: predict
+  title: Follow a list sum by index
+  code: |
+    def total(sizes, i):
+        if i == len(sizes):
+            return 0
+        return sizes[i] + total(sizes, i + 1)
+
+    print(total([4, 8, 5], 1))
+  choices:
+  - text: '13'
+    why: Start at index 1. Only 8 and 5 are added.
+  - text: '17'
+    why: Index 0 is skipped by the first call.
+  - text: '8'
+    why: The call at index 2 also adds its value.
+  - text: IndexError
+    why: Index 3 returns 0 before reading the list.
+  answer: 0
+- id: st03
+  type: try
+  title: Move the first frame
+  starter: |
+    def total(sizes, i):
+        if i == len(sizes):
+            return 0
+        return sizes[i] + total(sizes, i + 1)
+
+    print(total([4, 8, 5], 1))
+  task: Start at index 0 instead. Compare the old and new totals.
+  check:
+    stdout_line: '17'
+- id: st04
+  type: read
+  title: Trace the suffix frames
+  body: |
+    All frames use `[4, 8, 5]`. Only i changes. Read the bottom row
+    from right to left. Each frame adds the item at its own index.
+
+    ```text
+    calls:   total(i=0) -> total(i=1) -> total(i=2) -> total(i=3)
+    returns: 17         <- 13         <- 5          <- 0
+    ```
+- id: st05
+  type: code
+  title: Total file sizes without slicing
+  exercise: exercises/practice.py
+  function: size_total
+  test_class: SizeTotal
+  hint_levels:
+  - Use the empty suffix as the base case.
+  - Move to i + 1 without making another list.
+  - Return sizes[i] + size_total(sizes, i + 1) when i is in bounds.
+- id: st06
+  type: read
+  title: Reverse by adding the first letter last
+  body: |
+    A string has indexes just like a list. `text[1:]` is the part after
+    its first letter. To reverse “db3”, reverse “b3” and then add “d”.
+    `reversed_rest + text[0]` adds the first letter at the end.
+
+    ```text
+    calls:   rev("db3") -> rev("b3") -> rev("3") -> rev("")
+    returns: "3bd"      <- "3b"      <- "3"      <- ""
+    ```
+
+    Each return adds one letter. When the string is empty, return "".
+- id: st07
+  type: predict
+  title: Which side gets the letter?
+  code: |
+    def rev(text):
+        if not text:
+            return ""
+        return rev(text[1:]) + text[0]
+
+    print(rev("db3"))
+  choices:
+  - text: A blank line
+    why: Only the base call returns empty text.
+  - text: 3bd
+    why: The deepest letter arrives first. Each waiting frame adds its letter on the right.
+  - text: db3
+    why: Adding the letter on the left would keep its original order.
+  - text: 3b
+    why: The first frame still adds d.
+  answer: 1
+- id: st08
+  type: parsons
+  title: Build the reverse result
+  task: Put the base test before reading text[0]. Reverse the label.
+  lines:
+  - 'def rev(text):'
+  - '    if not text:'
+  - '        return ""'
+  - '    return rev(text[1:]) + text[0]'
+  - print(rev("ab"))
+  expected_stdout: ba
+- id: st09
+  type: code
+  title: Reverse a label for a display check
+  exercise: exercises/practice.py
+  function: reverse_label
+  test_class: ReverseLabel
+  hint_levels:
+  - Reverse the part after the first letter first.
+  - Handle empty text before you read the first letter.
+  - Return reverse_label(label[1:]) + label[0].
+- id: st10
+  type: read
+  title: Compare the ends of a label
+  body: |
+    A **palindrome** reads the same in both directions. “radar” is one.
+    Compare the first and last letter. If they differ, return False.
+    If they match, compare the part inside. At zero or one letter,
+    there is no mismatched pair, so return True.
+    `text[1:-1]` gives the part inside.
+- id: st11
+  type: predict
+  title: Odd length leaves one center letter
+  code: |
+    def same(text):
+        if len(text) <= 1:
+            return True
+        return text[0] == text[-1] and same(text[1:-1])
+
+    print(same("radar"))
+  choices:
+  - text: None
+    why: Each waiting frame returns a boolean value.
+  - text: IndexError
+    why: The code checks length before indexing.
+  - text: 'True'
+    why: r matches r, a matches a, and the single d reaches the base case.
+  - text: 'False'
+    why: The middle letter has no partner to compare.
+  answer: 2
+- id: st12
+  type: fix
+  title: Stop on either kind of center
+  task: Check whether text reads the same both ways. Empty and one-letter strings are palindromes.
+  starter: |
+    def same(text):
+        if len(text) == 1:
+            return True
+        return text[0] == text[-1] and same(text[1:-1])
+  solution: |
+    def same(text):
+        if len(text) <= 1:
+            return True
+        return text[0] == text[-1] and same(text[1:-1])
+  tests: |
+    assert same("") is True
+    assert same("abba") is True
+    assert same("abca") is False
+  hint_levels:
+  - Trace a label with two matching letters.
+  - Its next call gets empty text.
+  - Stop when len(text) <= 1.
+  explanation: An even length may reach an empty center. Checking both centers keeps either call in bounds.
+- id: st13
+  type: code
+  title: Check a label without copying it
+  exercise: exercises/practice.py
+  function: is_mirror
+  test_class: IsMirror
+  hint_levels:
+  - Think of two index markers moving toward the middle.
+  - Stop if they meet or cross. Otherwise compare the two letters.
+  - On a match, return is_mirror(label, left + 1, right - 1).
+- id: st14
+  type: read
+  title: Flatten one batch at a time
+  body: |
+    To **flatten** a list, keep its values in order and remove inner lists.
+    For `[1, [2, [3]], 4]`, the result is `[1, 2, 3, 4]`.
+    `isinstance(item, list)` tests whether an item needs another call.
+    A loop visits each item in the current batch. A call opens an inner batch.
+    Share one output list during this work. Make it fresh for each top call.
+- id: st15
+  type: predict
+  title: Trace a list shared by two top calls
+  code: |
+    def collect(item, out=[]):
+        out.append(item)
+        return out
+
+    collect("a")
+    print(collect("b"))
+  choices:
+  - text: '[''b'']'
+    why: Omitting the argument reuses the default list.
+  - text: '[''a'']'
+    why: The second call appends b before printing.
+  - text: None
+    why: The function returns out explicitly.
+  - text: '[''a'', ''b'']'
+    why: Python makes the default list once. Both calls append to that same list.
+  answer: 3
+- id: st16
+  type: fix
+  title: Make a fresh list per run
+  task: Return a list of values in a nested batch. Each top call must get a fresh result.
+  starter: |
+    def flat(batch, out=[]):
+        for item in batch:
+            if isinstance(item, list):
+                flat(item, out)
+            else:
+                out.append(item)
+        return out
+  solution: |
+    def flat(batch, out=None):
+        if out is None:
+            out = []
+        for item in batch:
+            if isinstance(item, list):
+                flat(item, out)
+            else:
+                out.append(item)
+        return out
+  tests: |
+    assert flat([1, [2]]) == [1, 2]
+    assert flat([3, []]) == [3]
+    assert flat([]) == []
+  hint_levels:
+  - Call the starter twice with different batches.
+  - Use None as the default and make the new list inside.
+  - Allocate out only when out is None. Keep passing it to child calls.
+  explanation: The default None can be reused safely. Each top call creates its own list, shared only
+    with its child calls.
+- id: st17
+  type: predict
+  title: Watch an inner batch return
+  code: |
+    def walk(batch):
+        print("in", len(batch))
+        for item in batch:
+            if isinstance(item, list):
+                walk(item)
+        print("out", len(batch))
+
+    walk([1, [2]])
+  choices:
+  - text: |
+      in 2
+      in 1
+      out 1
+      out 2
+    why: The inner list has length 1 and finishes before the outer list.
+  - text: |
+      in 2
+      out 2
+      in 1
+      out 1
+    why: The outer frame waits at the call.
+  - text: |
+      in 2
+      in 2
+      out 2
+      out 2
+    why: The inner frame gets only [2].
+  - text: |
+      in 2
+      out 2
+    why: The list [2] causes a call even though it contains no lists.
+  answer: 0
+- id: st18
+  type: try
+  title: Open an empty inner batch too
+  starter: |
+    def walk(batch):
+        print("in", len(batch))
+        for item in batch:
+            if isinstance(item, list):
+                walk(item)
+        print("out", len(batch))
+
+    walk([1, [2]])
+  task: Change [2] to []. The inner call has length zero. Find its closing line.
+  check:
+    stdout_line: out 0
+- id: st19
+  type: code
+  title: Flatten an export in input order
+  exercise: exercises/practice.py
+  function: flatten_sizes
+  test_class: FlattenSizes
+  hint_levels:
+  - Use one output list in all calls for this input.
+  - Visit each item. Recurse only for a list.
+  - Call flatten_sizes(item, out) for a list; use out.append(item) for an integer.
+- id: st20
+  type: explain
+  title: Explain it to a teammate
+  prompt: Write 2–3 English sentences. Describe how to check whether a label reads the same in both directions.
+  rubric:
+  - Say which letters to compare.
+  - Describe both kinds of center and when a mismatched pair stops the check.
+review_cards:
+  from_steps:
+  - st02
+  - st07
+  - st11
+  - st15
+  - st17
+  vocab: true

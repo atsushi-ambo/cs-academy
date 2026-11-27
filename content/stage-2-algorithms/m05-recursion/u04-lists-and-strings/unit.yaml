@@ -1,0 +1,44 @@
+id: s2.m05.u04
+title: 'Recursion on lists and strings: sum, reverse, palindrome, flatten'
+stage: 2
+module: Recursion
+version: 1
+status: draft
+estimated_minutes: 85
+prerequisites:
+- s2.m05.u03
+- s1.m03.u01
+objectives:
+- Use an index to make the next call smaller.
+- Reverse text and compare its ends.
+- Flatten nested batches while keeping input order.
+skills:
+- python.lists-and-strings
+- english.explain-code
+parts:
+- steps.yaml
+- lesson.md
+- exercises/
+- solutions/solutions.md
+references:
+- kind: official_doc
+  title: Python strings and lists
+  url: https://docs.python.org/3.13/tutorial/introduction.html
+- kind: official_doc
+  title: Python function defaults
+  url: https://docs.python.org/3.13/tutorial/controlflow.html#default-argument-values
+vocab:
+- en: index
+  ja: 添字
+- en: suffix
+  ja: 末尾側の部分
+- en: palindrome
+  ja: 回文
+- en: flatten
+  ja: 入れ子を平らにする
+- en: nested list
+  ja: 入れ子のリスト
+- en: mutable default
+  ja: 変更可能なデフォルト引数
+- en: join
+  ja: 文字列を連結する

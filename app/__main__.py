@@ -20,7 +20,8 @@ def main():
     try:
         catalog = load_catalog()
         if args.command == "validate":
-            print(f"Content valid ({len(catalog.units)} units, {len(catalog.steps)} steps).")
+            print(f"Content valid ({len(catalog.play)} playable units, "
+                  f"{len(catalog.units)} catalog units, {len(catalog.steps)} steps).")
             return 0
         backups = Path(os.environ.get("CS_ACADEMY_BACKUP_DIR", "~/cs-academy-backups"))
         store = Store(ROOT / "data" / BACKUP_DB, backups, catalog)

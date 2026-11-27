@@ -1,0 +1,322 @@
+unit: s1.m02.u03
+python_min: '3.9'
+steps:
+- id: st01
+  type: read
+  title: Repeat while a condition holds
+  body: |
+    A server may need several checks before it is ready. A **while loop**
+    repeats as long as its **condition** is true. You will write checks
+    that stop at success or at a safe limit. Here all checks are local data.
+
+    ```python
+    left = 2
+    while left > 0:
+        print(left)
+        left -= 1
+    ```
+
+    Python tests the condition first. The body prints and **updates** left.
+    Then Python goes back to the test. At zero it leaves the loop.
+- id: st02
+  type: predict
+  title: Trace every check of the condition
+  code: |
+    left = 2
+    while left > 0:
+        print(left)
+        left -= 1
+    print("stop")
+  choices:
+  - text: |
+      2
+      1
+      0
+      stop
+    why: At zero the body is skipped.
+  - text: |
+      1
+      0
+      stop
+    why: The print comes before the update.
+  - text: |
+      2
+      stop
+    why: After the first update, 1 is still positive.
+  - text: |
+      2
+      1
+      stop
+    why: The test fails with left equal to 0. The final print is outside the loop.
+  answer: 3
+- id: st03
+  type: try
+  title: Run a countdown
+  starter: |
+    left = 2
+    while left > 0:
+        print(left)
+        left -= 1
+  task: Change the initial value to 4. Check that the first output line is 4.
+  check:
+    stdout_line: '4'
+- id: st04
+  type: read
+  title: Trace the state before each test
+  body: |
+    Use a row for each test. Read the row from left to right.
+
+    ```text
+    left before test | left > 0 | printed | left after body
+    2                | True     | 2       | 1
+    1                | True     | 1       | 0
+    0                | False    | —       | —
+    ```
+
+    At 0 there is no print and no update. If the first test is false,
+    the body never runs. For a retry **budget**, zero means no check.
+- id: st05
+  type: predict
+  title: What if the budget is zero?
+  code: |
+    budget = 0
+    while budget > 0:
+        print("try")
+        budget -= 1
+    print(budget)
+  choices:
+  - text: '0'
+    why: The first test is false, so budget stays at zero.
+  - text: |
+      try
+      0
+    why: A while loop tests before it enters the body.
+  - text: '-1'
+    why: There is no update when the body is skipped.
+  - text: |
+      try
+      -1
+    why: The print and update are both inside the skipped body.
+  answer: 0
+- id: st06
+  type: parsons
+  title: Put the update inside the loop
+  task: Print the two remaining retry counts. Use all lines.
+  lines:
+  - left = 2
+  - 'while left > 0:'
+  - '    print(left)'
+  - '    left -= 1'
+  expected_stdout: |
+    2
+    1
+- id: st07
+  type: code
+  title: Count free disk space by chunks
+  exercise: exercises/practice.py
+  function: chunks_that_fit
+  test_class: ChunksThatFit
+  hint_levels:
+  - Ask when there is room for one more chunk.
+  - Start a count at 0. Subtract one chunk of space on each pass.
+  - Use while free >= chunk. Subtract chunk and add 1 to the count.
+- id: st08
+  type: read
+  title: Find an update that makes progress
+  body: |
+    An **infinite loop** keeps running. A common cause is a condition that
+    stays true because the body never changes the value it tests.
+
+    The next example adds a second limit so you can study the bug safely.
+    Ignore that extra limit for a moment. Without it, what would end
+    the loop?
+- id: st09
+  type: predict
+  title: Spot a loop that would never end
+  code: |
+    left = 2
+    checks = 0
+    while left > 0 and checks < 3:
+        checks += 1
+    print(left, checks)
+  choices:
+  - text: 0 3
+    why: left does not drop when checks grows.
+  - text: 2 3
+    why: Only checks changes. Without the checks limit, left > 0 would stay true forever.
+  - text: 0 2
+    why: The body never updates left.
+  - text: 2 2
+    why: The checks limit is 3 and left stays positive.
+  answer: 1
+- id: st10
+  type: try
+  title: Try a repair with a guard
+  starter: |
+    left = 2
+    checks = 0
+    while left > 0 and checks < 3:
+        checks += 1
+    print(left, checks)
+  task: Add left -= 1 in the loop body. Check that the output changes to 0 2.
+  check:
+    stdout_line: 0 2
+- id: st11
+  type: fix
+  title: Spend one retry each time
+  task: Return the number of retries. Use up the budget. Leave the guard in place.
+  starter: |
+    def retries(budget):
+        left, count = budget, 0
+        while left > 0 and count < budget + 1:
+            count += 1
+        return count
+  solution: |
+    def retries(budget):
+        left, count = budget, 0
+        while left > 0 and count < budget + 1:
+            count += 1
+            left -= 1
+        return count
+  tests: |
+    assert retries(1) == 1
+    assert retries(3) == 3
+    assert retries(0) == 0
+  hint_levels:
+  - Which value tracks the retries still allowed?
+  - Make the value get smaller once per check.
+  - Add left -= 1 inside the loop.
+  explanation: The budget goes down by one per check. The loop now stops before the guard is needed.
+- id: st12
+  type: read
+  title: Stop on success
+  body: |
+    `break` leaves the loop at once. Use it when you find a good result.
+    `continue` skips the rest of the body and starts the next test.
+
+    For a list of status codes, first check that the position is below
+    `len(codes)`. Then read `codes[i]`. A value of 200 means success here.
+    If you do not find success, increase i. The loop stays within the list.
+- id: st13
+  type: predict
+  title: Break before the next update
+  code: |
+    i = 0
+    codes = [503, 200, 503]
+    while i < len(codes):
+        if codes[i] == 200:
+            break
+        i += 1
+    print(i)
+  choices:
+  - text: '2'
+    why: The update at i == 1 is skipped.
+  - text: '3'
+    why: The loop stops early. It does not read every code.
+  - text: '1'
+    why: Success is at index 1. break leaves the loop before the next update.
+  - text: '0'
+    why: The first code is 503, so the loop continues.
+  answer: 2
+- id: st14
+  type: code
+  title: Find how many server checks ran
+  exercise: exercises/practice.py
+  function: checks_used
+  test_class: ChecksUsed
+  hint_levels:
+  - Count actual checks, including a successful one.
+  - Test both bounds before reading codes[used].
+  - Read codes[used], increase used, then break if the value was 200.
+- id: st15
+  type: predict
+  title: The command that never runs
+  code: |
+    left = 2
+    while left > 0:
+        left -= 1
+        if left == 1:
+            continue
+        print(left)
+  choices:
+  - text: |
+      1
+      0
+    why: continue skips the print on the first pass.
+  - text: '1'
+    why: The skipped value is 1, not 0.
+  - text: |
+      2
+      1
+    why: The decrement is before the print and is never skipped.
+  - text: '0'
+    why: continue starts the next test. Only the second pass reaches print.
+  answer: 3
+- id: st16
+  type: read
+  title: Continue can skip the update
+  body: |
+    `continue` goes straight to the next condition test. If the update
+    is below it, that update can be skipped. Trace the second pass to
+    check whether it can get stuck on the same item.
+    In a while loop over indexes, one safe plan is to read the current
+    value, move the index, then decide whether to skip the item.
+- id: st17
+  type: fix
+  title: Find the first time after a blank
+  task: Return the first non-empty string in logs, or None. The trace guard models a limit of one pass
+    per item.
+  starter: |
+    def first_line(logs):
+              i = steps = 0
+              while i < len(logs) and steps < len(logs):
+                  steps += 1
+                  if logs[i] == "":
+                      continue
+                  return logs[i]
+              return None
+  solution: |
+    def first_line(logs):
+              i = steps = 0
+              while i < len(logs) and steps < len(logs):
+                  steps += 1
+                  line = logs[i]
+                  i += 1
+                  if line == "":
+                      continue
+                  return line
+              return None
+  tests: |
+    assert first_line(["", "ready", "later"]) == "ready"
+    assert first_line([""]) is None
+    assert first_line([]) is None
+  hint_levels:
+  - The blank line gets read again on the next pass.
+  - Save the line and advance before continue.
+  - Set line = logs[i], then i += 1. Use line after that.
+  explanation: The next condition test uses a new index. The guard makes the starter fail quickly.
+- id: st18
+  type: code
+  title: Drain a local job queue
+  exercise: exercises/practice.py
+  function: rounds_to_drain
+  test_class: RoundsToDrain
+  hint_levels:
+  - Ask whether any work is left before starting a round.
+  - Subtract the batch size and count the round.
+  - Use while pending > 0; a negative remainder also ends the loop.
+- id: st19
+  type: explain
+  title: Explain it to a teammate
+  prompt: Write 2–3 English sentences. Explain how a server check loop avoids running forever.
+  rubric:
+  - Name a condition that stops the loop.
+  - Say which value changes on every pass and how success can end the loop early.
+review_cards:
+  from_steps:
+  - st02
+  - st05
+  - st09
+  - st13
+  - st15
+  vocab: true

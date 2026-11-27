@@ -1,31 +1,49 @@
 import shutil
 import unittest
+from collections import Counter
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from app.content import LISTS, ROOT, ContentError, load_catalog
+from app.content import ROOT, ContentError, load_catalog
 
-from .support import UNIT
+from .support import LISTS, UNIT
 
 
 class ContentTest(unittest.TestCase):
+    def test_algorithm_units_have_the_required_play_and_review_steps(self):
+        catalog = load_catalog()
+        units = ("s1.m02.u02", "s1.m02.u03", "s1.m02.u04", "s2.m05.u01",
+                 "s2.m05.u03", "s2.m05.u04", "s2.m05.u05")
+        for uid in units:
+            with self.subTest(unit=uid):
+                steps = catalog.play[uid]
+                counts = Counter(catalog.steps[key]["type"] for key in steps)
+                self.assertTrue(18 <= len(steps) <= 28)
+                self.assertEqual(catalog.steps[steps[0]]["type"], "read")
+                for kind, minimum in {"predict": 5, "code": 3, "fix": 2, "parsons": 1,
+                                      "try": 1, "explain": 1}.items():
+                    self.assertGreaterEqual(counts[kind], minimum, kind)
+                for key in steps:
+                    if catalog.steps[key]["type"] == "predict":
+                        self.assertIn(key, catalog.cards)
+
     def test_loads_sample(self):
         catalog = load_catalog()
         self.assertEqual(len(catalog.stages), 8)
         self.assertEqual(len(catalog.play[LISTS]), 21)
-        self.assertEqual(len(catalog.steps), 24)
-        self.assertEqual(sum(card["kind"] == "predict" for card in catalog.cards.values()), 6)
+        self.assertEqual(sum(key.startswith(LISTS + "/") for key in catalog.steps), 24)
+        self.assertEqual(sum(card["kind"] == "predict" for card in catalog.cards.values() if card["unit"] == LISTS), 6)
         self.assertIn("test_empty", catalog.problems[f"{LISTS}/st14"].test_body)
         self.assertIn("Text version", catalog.steps[f"{LISTS}/st03"]["body"])
         self.assertIn("reference", catalog.resources[LISTS]["lesson"].lower())
         self.assertIn("Hands-on", catalog.resources[LISTS]["handson"])
 
-    def changed(self, first, replacement, *, curriculum=False):
+    def changed(self, first, replacement, *, curriculum=False, unit_file="steps.yaml"):
         with TemporaryDirectory() as root:
             directory = Path(root) / "content"
             shutil.copytree(ROOT / "content", directory)
             file = directory / ("curriculum.yaml" if curriculum else
-                                UNIT.relative_to(ROOT / "content") / "steps.yaml")
+                                UNIT.relative_to(ROOT / "content") / unit_file)
             contents = file.read_text(encoding="utf-8")
             self.assertIn(first, contents)
             file.write_text(contents.replace(first, replacement, 1), encoding="utf-8")
@@ -66,3 +84,11 @@ class ContentTest(unittest.TestCase):
         body = load_catalog().steps[f"{LISTS}/st06"]["body"]
         self.assertIn("`0 <= start <= stop <= len(x)`", body)
         self.assertIn("x[3:10]  # [40, 50]", body)
+
+    def test_rejects_invalid_prerequisite(self):
+        with self.assertRaisesRegex(ContentError, "Invalid prerequisites"):
+            self.changed("s1.m02.u02", "unknown", unit_file="unit.yaml")
+
+    def test_rejects_missing_explain_rubric(self):
+        with self.assertRaisesRegex(ContentError, "Missing rubric"):
+            self.changed("[correct idea, a concrete example, clear English]", "[]")
