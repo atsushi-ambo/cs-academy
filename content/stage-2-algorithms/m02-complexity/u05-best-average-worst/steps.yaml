@@ -1,0 +1,354 @@
+unit: s2.m02.u05
+python_min: '3.9'
+steps:
+- id: st01
+  type: read
+  title: Keep the size fixed and change the input
+  body: |
+    A delivery worker looks for a code in a list of n codes.
+    Start at the front. Stop at the first match or at the end.
+    Count one **comparison** each time you test a code.
+
+    The **best case** has the fewest checks for this n.
+    The **worst case** has the most checks for the same n.
+    The **average case** depends on how likely each kind of input is.
+- id: st02
+  type: predict
+  title: Find the first item
+  code: |
+    codes = [8, 2, 4, 9]
+    checks = 0
+    for code in codes:
+        checks += 1
+        if code == 8:
+            break
+    print(checks)
+  choices:
+  - text: '4'
+    why: break leaves the loop at the match.
+  - text: '0'
+    why: The first code still needs a check.
+  - text: '1'
+    why: The match comes first. The best case takes O(1) time.
+  - text: '8'
+    why: Eight is the code, not the number of tests.
+  answer: 2
+- id: st03
+  type: try
+  title: Move the match to the end
+  starter: |
+    codes = [8, 2, 4, 9]
+    target = 8
+    checks = 0
+    for code in codes:
+        checks += 1
+        if code == target:
+            break
+    print(checks)
+  task: Set target to 9. Keep the list length the same and compare the check counts.
+  check:
+    stdout_line: '4'
+- id: st04
+  type: read
+  title: A missing item can cost as much as a late one
+  body: |
+    With no match, all n items must be checked. A match at the last slot also costs n checks.
+    Both are worst cases. The worst-case time is O(n).
+    Python's `target in codes` gives True on a match and False on a miss.
+    On a list it searches in order and can take O(n) time.
+- id: st05
+  type: predict
+  title: Use in on a list with no match
+  code: |
+    codes = [8, 2, 4, 9]
+    print(6 in codes)
+  choices:
+  - text: 'True'
+    why: No slot contains six.
+  - text: 'False'
+    why: Six is missing, so list membership must check all four slots.
+  - text: '4'
+    why: The result is a Boolean, even though the search checks four slots.
+  - text: '0'
+    why: There is no match, but the search still does work.
+  answer: 1
+- id: st06
+  type: parsons
+  title: Keep the early exit
+  task: Use all lines. Search [8, 4, 9] for 4. Stop at the first match. Print the check count, 2.
+  lines:
+  - checks = 0
+  - 'for code in [8, 4, 9]:'
+  - '    checks += 1'
+  - '    if code == 4:'
+  - '        break'
+  - print(checks)
+  expected_stdout: '2'
+  hint_levels:
+  - Set the count before the scan.
+  - Count the current slot before testing the code.
+  - Stop at a match and print after the loop.
+- id: st07
+  type: code
+  title: Count the cost of a first match
+  exercise: exercises/practice.py
+  function: checks_until_match
+  test_class: ChecksUntilMatch
+  hint_levels:
+  - Count an item as soon as you visit it.
+  - Stop after counting a hit.
+  - Add one inside the loop, then break if code == target.
+- id: st08
+  type: read
+  title: Give the average a model
+  body: |
+    Suppose exactly one slot matches. Say each slot is **equally likely**
+    to be that match. On a list of four items, the possible costs are
+    1, 2, 3, and 4. Their average is (1 + 2 + 3 + 4) / 4 = 2.5.
+    For n items it is (n + 1) / 2, so the average time is O(n).
+    The average can be a fraction even though each search uses a whole number of checks.
+
+    The line puzzle uses one counter, O(1) extra space. A first-item hit takes O(1) time.
+- id: st09
+  type: predict
+  title: Average four equally likely costs
+  code: |
+    checks = 0
+    for cost in range(1, 5):
+        checks += cost
+    print(checks / 4)
+  choices:
+  - text: '4'
+    why: Four is the worst cost in this group.
+  - text: '2.0'
+    why: The four costs add to ten, not eight.
+  - text: '10'
+    why: Ten is the total before you divide.
+  - text: '2.5'
+    why: Each cost has the same chance, so divide the total by four.
+  answer: 3
+- id: st10
+  type: fix
+  title: Count the comparison at the match
+  task: |2
+
+    Return the number of checks up to and including the first match, or all checks if no item matches.
+    Inputs: a list of 0 to 200 integer codes and an integer target. Stop checking at the first match.
+    Sample: scan_count([3, 7, 9], 7) -> 2
+  starter: |
+    def scan_count(codes, target):
+        checks = 0
+        for code in codes:
+            if code == target:
+                break
+            checks += 1
+        return checks
+  solution: |
+    def scan_count(codes, target):
+        checks = 0
+        for code in codes:
+            checks += 1
+            if code == target:
+                break
+        return checks
+  tests: |
+    class SeenCodes(list):
+        def __getitem__(self, index):
+            assert index == 0, "Stop after the first match."
+            return super().__getitem__(index)
+
+        def __iter__(self):
+            for index in range(len(self)):
+                yield self[index]
+
+    assert scan_count([], 7) == 0
+    assert scan_count([7, 7, 9], 7) == 1
+    assert scan_count([3, 7, 9], 7) == 2
+    assert scan_count([3, 9, 7], 7) == 3
+    assert scan_count([3, 9, 7], 1) == 3
+    assert scan_count(SeenCodes([7, 9]), 7) == 1
+  hint_levels:
+  - The first match took a check too.
+  - Update the count before you may leave the loop.
+  - Move checks += 1 above if code == target.
+  explanation: A hit counts once before the loop stops. Best-case time is O(1), worst-case time is O(n),
+    and extra space is O(1).
+- id: st11
+  type: predict
+  title: Average when most searches miss
+  code: |
+    costs = [1, 4, 4, 4]
+    total = 0
+    for cost in costs:
+        total += cost
+    print(total / len(costs))
+  choices:
+  - text: '3.25'
+    why: The total is 13 and there are four searches.
+  - text: '2.5'
+    why: That is the average for one hit at each position.
+  - text: '4'
+    why: One search is a first-slot hit, so the average is lower.
+  - text: '1.0'
+    why: Only one of the searches has cost one.
+  answer: 0
+- id: st12
+  type: try
+  title: Make every search miss
+  starter: |
+    codes = [8, 2, 4, 9]
+    targets = [8, 7, 6]
+    total = 0
+    for target in targets:
+        for code in codes:
+            total += 1
+            if code == target:
+                break
+    print(total)
+  task: Replace the first target 8 with 5. Check the total for three misses.
+  check:
+    stdout_line: '12'
+- id: st13
+  type: read
+  title: A new mix can change the average
+  body: |
+    The previous run had three searches. After the edit, all three missed.
+    Each miss scanned the whole list. Together they made twelve checks.
+
+    Now imagine a service that usually finds a common code in the first slot.
+    A real workload is the mix of jobs the service gets. Measure its mix before
+    using an average to plan capacity. Keep the worst case in mind when a delay matters.
+- id: st14
+  type: predict
+  title: The same size can still give two costs
+  code: |
+    codes = [8, 2, 4, 9]
+    for target in [8, 9]:
+        checks = 0
+        for code in codes:
+            checks += 1
+            if code == target:
+                break
+        print(checks)
+  choices:
+  - text: |-
+      4
+      4
+    why: A first-slot match ends the first search early.
+  - text: |-
+      1
+      1
+    why: The second search must reach the last slot.
+  - text: |-
+      1
+      4
+    why: At size four the first and last hits are best and worst cases.
+  - text: |-
+      0
+      3
+    why: Count comparisons, not indexes.
+  answer: 2
+- id: st15
+  type: code
+  title: Find the average for a uniform hit
+  exercise: exercises/practice.py
+  function: uniform_hit_cost
+  test_class: UniformHitCost
+  hint_levels:
+  - The lowest hit cost is one.
+  - The highest is n. The costs are evenly spaced.
+  - Take the mean with (n + 1) / 2.
+- id: st16
+  type: fix
+  title: Return the earliest match
+  task: |2
+
+    Return the index of the first match, or -1 if there is none. Stop when you find a match.
+    Inputs: 0 to 200 integer codes and an integer target. Use a loop and leave the list unchanged.
+    Sample: first_index([4, 8, 4], 4) -> 0
+  starter: |
+    def first_index(codes, target):
+        found = -1
+        for i in range(len(codes)):
+            if codes[i] == target:
+                found = i
+        return found
+  solution: |
+    def first_index(codes, target):
+        for i in range(len(codes)):
+            if codes[i] == target:
+                return i
+        return -1
+  tests: |
+    import ast
+    import inspect
+
+    class FirstOnly:
+        def __len__(self):
+            return 5
+
+        def __getitem__(self, index):
+            assert index == 0, "Stop reading after a match."
+            return 8
+
+    assert first_index(FirstOnly(), 8) == 0
+    for codes, target, expected in (([], 2, -1), ([4, 8, 4], 4, 0),
+                                    ([4, 8, 4], 8, 1), ([4, 8, 4], 2, -1),
+                                    ([8, 8, 4], 4, 2)):
+        before = codes[:]
+        assert first_index(codes, target) == expected
+        assert codes == before
+    nodes = ast.walk(ast.parse(inspect.getsource(first_index)))
+    assert any(isinstance(node, (ast.For, ast.While, ast.GeneratorExp)) for node in nodes)
+  hint_levels:
+  - Keeping the last match can overwrite the first one.
+  - Return before the loop can read another item.
+  - Put return i inside the if. Return -1 after the loop.
+  explanation: Returning at a hit gives the earliest index. Time is O(1) in the best case and O(n) in
+    the worst. Extra space is O(1).
+- id: st17
+  type: predict
+  title: Check the empty list
+  code: |
+    codes = []
+    checks = 0
+    for code in codes:
+        checks += 1
+    print(checks)
+  choices:
+  - text: '1'
+    why: The loop body never runs.
+  - text: '0'
+    why: An empty list has no items to compare.
+  - text: '-1'
+    why: Some searches return -1 for a missing index. This code prints a count.
+  - text: 'False'
+    why: No membership operator runs.
+  answer: 1
+- id: st18
+  type: code
+  title: Count searches in a batch of targets
+  exercise: exercises/practice.py
+  function: batch_checks
+  test_class: BatchChecks
+  hint_levels:
+  - Start one total for the whole batch.
+  - Start a new scan for each target.
+  - Break only the inner loop when a code matches.
+- id: st19
+  type: explain
+  title: Report what your search costs
+  prompt: Write 2–3 English sentences. Describe the best and worst cases for a scan of a list of size
+    n. What do you need to know to give an average?
+  rubric:
+  - Use the same n in both cases.
+  - State a clear assumption about how often hits or misses occur.
+review_cards:
+  from_steps:
+  - st02
+  - st05
+  - st09
+  - st11
+  - st14
+  - st17
+  vocab: true

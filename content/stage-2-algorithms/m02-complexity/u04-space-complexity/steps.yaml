@@ -1,0 +1,351 @@
+unit: s2.m02.u04
+python_min: '3.9'
+steps:
+- id: st01
+  type: read
+  title: Measure space at its largest
+  body: |
+    Imagine a small desk for checking forms. **Peak** space is the most space
+    you use at one time. It is possible to check a hundred forms using one spare slot.
+
+    **Space complexity** describes how peak space grows with input size.
+    We count **extra space**, also called **auxiliary space**. We leave out the
+    input and required output and count temporary lists and waiting calls.
+    We count slots and small numbers rather than exact bytes.
+- id: st02
+  type: predict
+  title: One running count
+  code: |
+    codes = [3, 7, 2, 7]
+    found = 0
+    for code in codes:
+        if code == 7:
+            found += 1
+    print(found)
+  choices:
+  - text: '4'
+    why: Only matching codes add to the count.
+  - text: '2'
+    why: Two codes match. One counter and the current code use O(1) extra space.
+  - text: '7'
+    why: Seven is the target, not the count.
+  - text: '[7, 7]'
+    why: The loop saves a count, not a new list.
+  answer: 1
+- id: st03
+  type: try
+  title: Grow the input without growing the scratch space
+  starter: |
+    codes = [7, 3]
+    found = 0
+    for code in codes:
+        if code == 7:
+            found += 1
+    print(found)
+  task: Replace the list with [7, 3, 7, 7]. Check the count. The loop still keeps just one counter.
+  check:
+    stdout_line: '3'
+- id: st04
+  type: read
+  title: Copy or change the original?
+  body: |
+    A full slice `codes[:]` copies a list's slots. A temporary copy of n slots
+    costs O(n) extra space. A slice from index 1 uses `codes[1:]`.
+    It copies all slots after index 0.
+
+    If a caller allows a change, update the original **in place**.
+    Then you can often reuse the same slots. For example, `codes[i] = 0` replaces one slot.
+- id: st05
+  type: predict
+  title: What happens to the original?
+  code: |
+    codes = [3, 7]
+    scratch = codes[:]
+    scratch[0] = 0
+    print(codes)
+  choices:
+  - text: '[0, 7]'
+    why: A list slice makes a new list, so replacing one slot leaves codes alone.
+  - text: '[0]'
+    why: The assignment only replaces one slot in scratch.
+  - text: '[3, 7]'
+    why: The original stays the same. The scratch copy takes O(n) extra space.
+  - text: '[7]'
+    why: The full slice includes every slot.
+  answer: 2
+- id: st06
+  type: parsons
+  title: Reset the original slots
+  task: Use all lines. Clear the input [6, 9] in place by index. Print [0, 0].
+  lines:
+  - codes = [6, 9]
+  - 'for index in range(len(codes)):'
+  - '    codes[index] = 0'
+  - print(codes)
+  expected_stdout: '[0, 0]'
+  hint_levels:
+  - Set the input first.
+  - Use its length for the range.
+  - Replace the slot inside the loop.
+- id: st07
+  type: code
+  title: Count large values without saving them
+  exercise: exercises/practice.py
+  function: count_large
+  test_class: CountLarge
+  hint_levels:
+  - Start with zero matches.
+  - Compare each value to limit.
+  - Add one only when value > limit.
+- id: st08
+  type: read
+  title: Count the waiting frames
+  body: |
+    A **frame** keeps a call's local names and where to return.
+    A chain of n calls can have n frames waiting at once.
+    If each call holds one index into the same list, the list is shared.
+    The frames still take O(n) extra space.
+
+    If each makes a slice with one fewer item, the live copies can have
+    n − 1, n − 2, and more slots at once. Their total grows as O(n²).
+
+    The line puzzle reset n slots in O(n) time, with O(1) extra space for the index.
+
+    Use int(True) to get one and int(False) to get zero.
+- id: st09
+  type: predict
+  title: Track the largest number of active calls
+  code: |
+    def depth(left):
+        if left == 0:
+            return 1
+        return 1 + depth(left - 1)
+
+    print(depth(3))
+  choices:
+  - text: '1'
+    why: One is the depth of the base case alone.
+  - text: '3'
+    why: The base at zero also has a frame.
+  - text: '6'
+    why: Count the frames, not the sum of their inputs.
+  - text: '4'
+    why: Calls for 3, 2, 1, and 0 are all active at the deepest point.
+  answer: 3
+- id: st10
+  type: fix
+  title: Stop copying the tail at each call
+  task: |2
+
+    Return the count of 1s from index to the end. Use recursion with the same list and a new index.
+    Inputs: a list of 0 to 80 integers and 0 <= index <= len(values). Do not change or copy the list.
+    Sample: count_ones([1, 0, 1], 1) -> 1
+  starter: |
+    def count_ones(values, index):
+        if index == len(values):
+            return 0
+        return int(values[index] == 1) + count_ones(values[1:], index)
+  solution: |
+    def count_ones(values, index):
+        if index == len(values):
+            return 0
+        return int(values[index] == 1) + count_ones(values, index + 1)
+  tests: |
+    import ast
+    import inspect
+    import sys
+
+    for values, start, expected in (([], 0, 0), ([1, 1], 2, 0), ([1, 0, 1, 1], 1, 2),
+                                    ([1, 0, 1, 1], 0, 3)):
+        indices = []
+        original = values[:]
+
+        def profile(frame, event, arg):
+            if event == "call" and frame.f_code is count_ones.__code__:
+                values_name, index_name = frame.f_code.co_varnames[:2]
+                assert frame.f_locals[values_name] is values, "Share the original list."
+                indices.append(frame.f_locals[index_name])
+
+        previous_profile = sys.getprofile()
+        sys.setprofile(profile)
+        try:
+            assert count_ones(values, start) == expected
+        finally:
+            sys.setprofile(previous_profile)
+        assert values == original
+        if start < len(values) - 1:
+            assert len(indices) > 1, "Use recursion."
+        assert all(before < after <= len(values) for before, after in zip(indices, indices[1:]))
+
+    nodes = ast.walk(ast.parse(inspect.getsource(count_ones)))
+    assert not any(isinstance(node, ast.Slice) for node in nodes), "Do not copy the list."
+  hint_levels:
+  - int(True) is 1 and int(False) is 0. That part already counts the current value.
+  - Keep the same list. Change the index instead.
+  - Call count_ones(values, index + 1).
+  explanation: There are m remaining values, so time is O(m + 1) and extra stack space is O(m + 1). The
+    frames share the list.
+- id: st11
+  type: predict
+  title: Sum the slots in active slices
+  code: |
+    def held(values):
+        if len(values) == 0:
+            return 0
+        return len(values) + held(values[1:])
+
+    print(held([1, 2, 3, 4]) - 4)
+  choices:
+  - text: '6'
+    why: The copies have 3 + 2 + 1 + 0 slots. The input's four slots are left out.
+  - text: '10'
+    why: That includes the input, which is subtracted at the end.
+  - text: '3'
+    why: Three is the first copy's size. Its children keep more.
+  - text: '0'
+    why: The lists stay live while the caller frames wait.
+  answer: 0
+- id: st12
+  type: try
+  title: Follow two frames with the same list
+  starter: |
+    def count(values, index):
+        if index == len(values):
+            return 0
+        return 1 + count(values, index + 1)
+
+    print(count([4, 5, 6], 2))
+  task: Start at index 1 instead. The two values share one input list across the calls.
+  check:
+    stdout_line: '2'
+- id: st13
+  type: read
+  title: Report the output as well
+  body: |
+    For a report with one result per input, you need O(n) slots for the result.
+    State this even if your extra space is O(1).
+    If the next job just needs a sum, a running count or total may avoid the result list.
+    If it needs the report, writing each result straight into that list avoids a scratch copy.
+- id: st14
+  type: predict
+  title: Keep only the required output
+  code: |
+    values = [6, -1, 0]
+    flags = []
+    for value in values:
+        flags.append(value > 0)
+    print(flags)
+  choices:
+  - text: '[6]'
+    why: The loop adds a Boolean for every input.
+  - text: '[True]'
+    why: It adds false values too.
+  - text: '[True, False, False]'
+    why: The output needs n slots, plus O(1) extra space outside the output.
+  - text: '[True, False, True]'
+    why: Zero is not greater than zero.
+  answer: 2
+- id: st15
+  type: code
+  title: Mark every value in one output list
+  exercise: exercises/practice.py
+  function: above_zero
+  test_class: AboveZero
+  hint_levels:
+  - Start the result with an empty list.
+  - Each comparison gives one Boolean.
+  - Append value > 0 to the result for each value.
+- id: st16
+  type: fix
+  title: Reuse the slots in place
+  task: |2
+
+    Replace negative values in values with zero. Return the original list object.
+    Inputs: 0 to 200 integers. Do the updates by index without a new list.
+    Sample: clear_negative([-2, 3]) -> [0, 3]
+  starter: |
+    def clear_negative(values):
+        result = []
+        for value in values:
+            if value < 0:
+                result.append(0)
+            else:
+                result.append(value)
+        return result
+  solution: |
+    def clear_negative(values):
+        for index in range(len(values)):
+            if values[index] < 0:
+                values[index] = 0
+        return values
+  tests: |
+    import ast
+    import inspect
+
+    for values, expected in (([], []), ([-2, 3], [0, 3]), ([0, -9, -1, 2], [0, 0, 0, 2])):
+        assert clear_negative(values) is values
+        assert values == expected
+    nodes = ast.walk(ast.parse(inspect.getsource(clear_negative)))
+    for node in nodes:
+        assert not isinstance(node, (ast.List, ast.ListComp, ast.Slice))
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Name):
+            assert node.func.id not in {"list", "sorted"}
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute):
+            assert node.func.attr != "copy"
+  hint_levels:
+  - Keep the list the caller gives you.
+  - Use indexes so you can replace a slot.
+  - Assign zero to values[index] when it is negative, then return values.
+  explanation: One pass takes O(n) time and O(1) extra space. The original list holds the result.
+- id: st17
+  type: predict
+  title: Peak space can differ from total copies
+  code: |
+    for value in [1, 2, 3]:
+        scratch = [value]
+        print(len(scratch))
+  choices:
+  - text: '3'
+    why: Each print measures the current list.
+  - text: |-
+      1
+      1
+      1
+    why: Each list has one slot. Old lists are not saved, so peak extra space stays O(1).
+  - text: |-
+      1
+      2
+      3
+    why: The loop replaces scratch instead of adding slots to it.
+  - text: |-
+      0
+      0
+      0
+    why: Each scratch list receives one value.
+  answer: 1
+- id: st18
+  type: code
+  title: Find the peak number of open requests
+  exercise: exercises/practice.py
+  function: peak_open
+  test_class: PeakOpen
+  hint_levels:
+  - Start both counts at zero.
+  - Apply each change to the current count.
+  - Replace peak only if current is larger.
+- id: st19
+  type: explain
+  title: Report space to a teammate
+  prompt: Write 2–3 English sentences. Compare a running count with a scratch copy of the entire input.
+  rubric:
+  - Define peak extra space and say what it leaves out.
+  - Give each approach's extra space in terms of n.
+review_cards:
+  from_steps:
+  - st02
+  - st05
+  - st09
+  - st11
+  - st14
+  - st17
+  vocab: true

@@ -1,4 +1,6 @@
 import shutil
+import subprocess
+import sys
 import unittest
 from collections import Counter
 from pathlib import Path
@@ -13,7 +15,8 @@ class ContentTest(unittest.TestCase):
     def test_algorithm_units_have_the_required_play_and_review_steps(self):
         catalog = load_catalog()
         units = ("s1.m02.u02", "s1.m02.u03", "s1.m02.u04", "s2.m05.u01",
-                 "s2.m05.u03", "s2.m05.u04", "s2.m05.u05")
+                 "s2.m05.u03", "s2.m05.u04", "s2.m05.u05", "s2.m02.u01", "s2.m02.u02",
+                 "s2.m02.u03", "s2.m02.u04", "s2.m02.u05", "s2.m03.u04", "s2.m03.u05")
         for uid in units:
             with self.subTest(unit=uid):
                 steps = catalog.play[uid]
@@ -79,6 +82,31 @@ class ContentTest(unittest.TestCase):
         for first, replacement, error in variants:
             with self.subTest(replacement=replacement), self.assertRaisesRegex(ContentError, error):
                 self.changed(first, replacement)
+
+    def test_rejects_invalid_parsons_alternatives(self):
+        for alternatives in ("true", "[[0, 1]]", "[[0, 0, 1]]", "[[0, 1, 3]]",
+                             "[[false, 1, 2]]", "[[0, 1, 2]]", "[[1, 0, 2], [1, 0, 2]]"):
+            with self.subTest(alternatives=alternatives), self.assertRaises(ContentError):
+                self.changed('    expected_stdout: "[\'web01\', \'web02\']"',
+                             f'    accepted_orders: {alternatives}\n    expected_stdout: example')
+
+    def test_authored_parsons_orders_produce_expected_output(self):
+        for key, step in load_catalog().steps.items():
+            if step["type"] != "parsons":
+                continue
+            lines = step["lines"]
+            for order in [list(range(len(lines))), *step.get("accepted_orders", [])]:
+                with self.subTest(step=key, order=order):
+                    source = "\n".join(lines[index] for index in order)
+                    result = subprocess.run([sys.executable, "-I", "-B", "-c", source],
+                                            capture_output=True, text=True, timeout=3)
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    self.assertEqual(result.stdout.splitlines(), step["expected_stdout"].splitlines())
+
+    def test_two_input_complexity_includes_outer_pass(self):
+        body = load_catalog().steps["s2.m02.u01/st08"]["body"]
+        self.assertIn("a × b comparisons", body)
+        self.assertIn("O(a + a × b)", body)
 
     def test_slice_lesson_shows_when_slice_length_rule_applies(self):
         body = load_catalog().steps[f"{LISTS}/st06"]["body"]

@@ -125,6 +125,14 @@ stages:
           - {id: s2.m01.u03, title: "Number bases and bits", ex: [exercism/all-your-base, exercism/secret-handshake]}
           - {id: s2.m01.u04, title: "Counting and basic probability", ex: [exercism/grains]}
           - {id: s2.m01.u05, title: "Reading a proof: induction", read: [MIT 6.1200]}
+      - id: s2.m05
+        title: Recursion
+        units:
+          - {id: s2.m05.u01, title: "Thinking recursively", ex: [exercism/flatten-array], next: [LeetCode Explore Recursion I, Recursion 中級 再帰]}
+          - {id: s2.m05.u03, title: "The call stack: how recursion runs, and recursion depth"}
+          - {id: s2.m05.u04, title: "Recursion on lists and strings: sum, reverse, palindrome, flatten"}
+          - {id: s2.m05.u05, title: "From recursion to loops: tail calls and an explicit stack"}
+          - {id: s2.m05.u02, title: "Backtracking", ex: [exercism/queen-attack, exercism/word-search], next: [LeetCode Explore Recursion II]}
       - id: s2.m02
         title: Complexity
         units:
@@ -145,14 +153,6 @@ stages:
           - {id: s2.m03.u03, title: "Hash tables", next: [LeetCode Explore Hash Table]}
           - {id: s2.m03.u08, title: "Hash functions and collisions (chaining, open addressing)"}
           - {id: s2.m03.u09, title: "Caching with a hash table: memo and LRU cache"}
-      - id: s2.m05
-        title: Recursion
-        units:
-          - {id: s2.m05.u01, title: "Thinking recursively", ex: [exercism/flatten-array], next: [LeetCode Explore Recursion I, Recursion 中級 再帰]}
-          - {id: s2.m05.u03, title: "The call stack: how recursion runs, and recursion depth"}
-          - {id: s2.m05.u04, title: "Recursion on lists and strings: sum, reverse, palindrome, flatten"}
-          - {id: s2.m05.u05, title: "From recursion to loops: tail calls and an explicit stack"}
-          - {id: s2.m05.u02, title: "Backtracking", ex: [exercism/queen-attack, exercism/word-search], next: [LeetCode Explore Recursion II]}
       - id: s2.m04
         title: Searching and Sorting
         units:

@@ -79,6 +79,25 @@ test("Play replaces an expired deadline and keeps an active deadline", async () 
   assert.ok(main.all("span").some((item) => item.textContent === "15分モード · 残り 1:00"));
 });
 
+test("Parsons reveals the next hint on request", async () => {
+  const step = {id: uid + "/st06", type: "parsons", title: "Count the levels",
+    lines: ["print(levels)", "levels = 0"], hints: ["Start with a count."], max_hints: 3};
+  const {main, load} = await boot((method, path, body) => {
+    if (method === "POST") {
+      assert.equal(path, "/api/play");
+      assert.deepEqual(JSON.parse(body), {unit: uid, step: step.id, action: "hint", level: 2});
+      return {hint: "Print after the loop."};
+    }
+    return {unit: "Lists", index: 1, total: 1, completed_steps: [], step};
+  });
+  await load("play", uid);
+  const hint = main.all("button").find((item) => item.textContent === "ヒント 2 / 3");
+  assert.ok(hint);
+  await hint.events.click();
+  assert.ok(main.all("li").some((item) => item.textContent === "Print after the loop."));
+  assert.equal(hint.textContent, "ヒント 3 / 3");
+});
+
 test("Today only selects quests with work left in 15-minute mode", async () => {
   let data = summary;
   const {main, load} = await boot(() => data);

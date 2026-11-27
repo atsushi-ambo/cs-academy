@@ -1,0 +1,360 @@
+unit: s2.m02.u01
+python_min: '3.9'
+steps:
+- id: st01
+  type: read
+  title: Count work before you time it
+  body: |
+    A library checks returned books. Let **n** be the number of returns.
+    Choose one **operation** to count, such as checking a book number.
+    In our model each check costs about the same.
+
+    If every book needs three checks, we count 3n checks.
+    **Big-O** is an **upper bound** on how fast a cost grows.
+    We usually give the tightest class that fits.
+    3n and n are both O(n), called **linear** growth.
+- id: st02
+  type: predict
+  title: Three checks for each return
+  code: |
+    n = 4
+    checks = 0
+    for book in range(n):
+        checks += 3
+    print(checks)
+  choices:
+  - text: '4'
+    why: There are four books, with three checks each.
+  - text: '7'
+    why: Each book adds three checks. Three is a factor, not a one-time fee.
+  - text: '12'
+    why: Four groups of three give twelve. The growth is still O(n).
+  - text: '81'
+    why: The checks add up. They are not a power of three.
+  answer: 2
+- id: st03
+  type: try
+  title: Double the returns
+  starter: |
+    n = 4
+    checks = 0
+    for book in range(n):
+        checks += 1
+    print(checks)
+  task: Set n to 8. Check that twice as many books need twice as many checks.
+  check:
+    stdout_line: '8'
+- id: st04
+  type: read
+  title: Fixed fees and fixed groups
+  body: |
+    Opening a box takes one action. Checking all n items takes n more.
+    The count is n + 1, and the class is O(n). For n at least 1, this count is at most 2n.
+    This is one way to show an upper bound.
+
+    Two full passes take 2n checks. A loop inside a loop does not always mean n².
+    If the inside loop has exactly four passes per item, the count is 4n.
+- id: st05
+  type: predict
+  title: An inside loop of fixed length
+  code: |
+    checks = 0
+    for book in range(6):
+        for corner in range(4):
+            checks += 1
+    print(checks)
+  choices:
+  - text: '10'
+    why: Four checks run for each book, not once at the end.
+  - text: '24'
+    why: Six books have four corners each. With n books, this is O(n).
+  - text: '36'
+    why: The inner loop runs four times per book, not six.
+  - text: '4'
+    why: The inner loop repeats for each of the six books.
+  answer: 1
+- id: st06
+  type: parsons
+  title: Count two full passes
+  task: Use all lines. Count one check per item, then one per label. There are 3 of each. Output is 6.
+  lines:
+  - checks = 0
+  - 'for item in range(3):'
+  - '    checks += 1'
+  - 'for label in range(3):'
+  - '    checks = checks + 1'
+  - print(checks)
+  accepted_orders:
+  - [0, 1, 4, 3, 2, 5]
+  expected_stdout: '6'
+  hint_levels:
+  - Put the counter first.
+  - Each pass adds three.
+  - Print only after both loops.
+- id: st07
+  type: code
+  title: Count the returns from one shelf
+  exercise: exercises/practice.py
+  function: shelf_checks
+  test_class: ShelfChecks
+  hint_levels:
+  - Start from zero checks.
+  - Add one for every code and one more for a match.
+  - Put if code == chosen inside the loop.
+- id: st08
+  type: read
+  title: When both loops grow
+  body: |
+    Suppose each returned book must match against every shelf record.
+    If there are n returns and n records, the count is n × n.
+    That is **quadratic** growth, O(n²). If the two list sizes can change
+    on their own, name them separately. With a returns and b records, there are a × b comparisons.
+    The total time is O(a + a × b), including one outer-loop pass per return even when b is zero.
+
+    The two passes you arranged earlier gave 2n, O(n), using just one counter.
+- id: st09
+  type: predict
+  title: Compare each return to all three records
+  code: |
+    pairs = 0
+    for book in range(5):
+        for record in range(3):
+            pairs += 1
+    print(pairs)
+  choices:
+  - text: '8'
+    why: The record loop runs for every book, so the counts multiply.
+  - text: '5'
+    why: Each book adds three pairs.
+  - text: '25'
+    why: The number of records is three, not five.
+  - text: '15'
+    why: Five books times three records gives fifteen pairs.
+  answer: 3
+- id: st10
+  type: fix
+  title: Keep the count across all rows
+  task: |2
+
+    Return the number of scans for rows rows with places places in each row.
+    Both inputs are integers from 0 to 40. Keep the nested loops.
+    Sample: scan_places(2, 3) -> 6
+  starter: |
+    def scan_places(rows, places):
+        count = 0
+        for row in range(rows):
+            count = 0
+            for place in range(places):
+                count += 1
+        return count
+  solution: |
+    def scan_places(rows, places):
+        count = 0
+        for row in range(rows):
+            for place in range(places):
+                count += 1
+        return count
+  tests: |
+    import ast
+    import inspect
+
+    assert scan_places(2, 3) == 6
+    assert scan_places(0, 3) == 0
+    assert scan_places(4, 0) == 0
+    assert scan_places(4, 3) == 12
+    nodes = ast.walk(ast.parse(inspect.getsource(scan_places)))
+    assert any(isinstance(node, (ast.For, ast.While))
+               and any(isinstance(child, (ast.For, ast.While))
+                       for stmt in node.body for child in ast.walk(stmt))
+               for node in nodes), "Keep the nested loops."
+  hint_levels:
+  - Look for two places that set the count to zero.
+  - Start from zero only before the outer loop.
+  - Remove count = 0 inside the first loop.
+  explanation: Each row adds places scans. Time is O(1 + rows + rows × places). Extra space is O(1).
+- id: st11
+  type: predict
+  title: Drop a fixed fee when naming the class
+  code: |
+    n = 10
+    checks = 5
+    for item in range(n):
+        checks += 2
+    print(checks)
+  choices:
+  - text: '25'
+    why: The count is 5 + 2n. The fee and factor leave the growth class at O(n).
+  - text: '20'
+    why: The five setup checks still matter to the exact count.
+  - text: '15'
+    why: Each item adds two checks, not one.
+  - text: '50'
+    why: The setup cost of five is paid once.
+  answer: 0
+- id: st12
+  type: try
+  title: Double both loop sizes
+  starter: |
+    n = 3
+    pairs = 0
+    for left in range(n):
+        for right in range(n):
+            pairs += 1
+    print(pairs)
+  task: Change n to 6. Check how many pairs there are now.
+  check:
+    stdout_line: '36'
+- id: st13
+  type: read
+  title: Count only the work that happens
+  body: |
+    Some pairs would repeat the same check. If A with B is the same as B with A,
+    check each pair once. Start the inside loop after the outside index.
+
+    With four items, the inside counts are 3, 2, 1, 0.
+    The total is n × (n − 1) / 2. The factor of one half reduces the exact count.
+    The growth stays O(n²).
+- id: st14
+  type: predict
+  title: A triangle of pairs
+  code: |
+    pairs = 0
+    for left in range(4):
+        for right in range(left + 1, 4):
+            pairs += 1
+    print(pairs)
+  choices:
+  - text: '4'
+    why: The inner loop sometimes adds more than one pair.
+  - text: '16'
+    why: That would count both orders and pairs of an item with itself.
+  - text: '6'
+    why: There are three, then two, then one, then zero new pairs.
+  - text: '12'
+    why: That counts two orders for each pair.
+  answer: 2
+- id: st15
+  type: code
+  title: Plan only the unique pairs
+  exercise: exercises/practice.py
+  function: pair_checks
+  test_class: PairChecks
+  hint_levels:
+  - Pair an item only with items after it.
+  - Use left + 1 for the first partner index.
+  - Add one inside range(left + 1, n) for each new pair.
+- id: st16
+  type: fix
+  title: Use a fixed number of label checks
+  task: |2
+
+    Count four checks per box. n is an integer from 0 to 80.
+    Change the inner loop so its length is fixed. Keep both for loops.
+    Sample: label_checks(2) -> 8
+  starter: |
+    def label_checks(n):
+        checks = 0
+        for box in range(n):
+            for label in range(n):
+                checks += 1
+        return checks
+  solution: |
+    def label_checks(n):
+        checks = 0
+        for box in range(n):
+            for label in range(4):
+                checks += 1
+        return checks
+  tests: |
+    import ast
+    import inspect
+    import sys
+
+    source, first_line = inspect.getsourcelines(label_checks)
+    loops = [node for node in ast.walk(ast.parse("".join(source))) if isinstance(node, ast.For)]
+    assert len(loops) == 2, "Keep both for loops."
+    outer, inner = sorted(loops, key=lambda loop: loop.lineno)
+    assert any(inner is node for stmt in outer.body for node in ast.walk(stmt)), "Keep the inner loop."
+    outer_line = first_line + outer.lineno - 1
+    inner_line = first_line + inner.lineno - 1
+
+    def work(n):
+        visits = {outer_line: 0, inner_line: 0}
+
+        def trace(frame, event, arg):
+            if frame.f_code is not label_checks.__code__:
+                return None
+            if event == "line" and frame.f_lineno in visits:
+                visits[frame.f_lineno] += 1
+            return trace
+
+        previous_trace = sys.gettrace()
+        sys.settrace(trace)
+        try:
+            result = label_checks(n)
+        finally:
+            sys.settrace(previous_trace)
+        return result, visits[outer_line], visits[inner_line]
+
+    # Each for header runs once per iteration and once more at exhaustion.
+    for n in (0, 2, 4, 19, 80):
+        assert work(n) == (4 * n, n + 1, 5 * n), "Visit four labels per box."
+  hint_levels:
+  - The inside length should not grow with n.
+  - A box always has four labels.
+  - Use range(4) inside range(n).
+  explanation: There are four inner passes for each box. Time is O(n) and extra space is O(1).
+- id: st17
+  type: predict
+  title: What does doubling do to pair work?
+  code: |
+    for n in [3, 6]:
+        pairs = 0
+        for left in range(n):
+            for right in range(n):
+                pairs += 1
+        print(pairs)
+  choices:
+  - text: |-
+      3
+      6
+    why: The inner loop visits every record for every item.
+  - text: |-
+      9
+      36
+    why: Both dimensions double, so the total grows by a factor of four.
+  - text: |-
+      9
+      18
+    why: That would double one dimension only.
+  - text: |-
+      6
+      12
+    why: With nested loops of length n, the two counts multiply.
+  answer: 1
+- id: st18
+  type: code
+  title: Compare two lists of shelf codes
+  exercise: exercises/practice.py
+  function: shared_shelf_pairs
+  test_class: SharedShelfPairs
+  hint_levels:
+  - Choose one return at a time.
+  - Compare that return with every record.
+  - Add one only when the two codes are equal.
+- id: st19
+  type: explain
+  title: Tell the library what will grow
+  prompt: Write 2–3 English sentences. Compare two full passes with one full loop inside another.
+  rubric:
+  - Name the input size and what you count.
+  - Explain why costs add in one case and multiply in the other.
+review_cards:
+  from_steps:
+  - st02
+  - st05
+  - st09
+  - st11
+  - st14
+  - st17
+  vocab: true

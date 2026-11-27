@@ -42,6 +42,12 @@ def sequence(value):
     return value
 
 
+def is_parsons_order(order, line_count):
+    return (isinstance(order, list) and len(order) == line_count
+            and all(type(index) is int for index in order)
+            and sorted(order) == list(range(line_count)))
+
+
 def string(value):
     require(isinstance(value, str) and bool(value.strip()), "Expected non-empty text")
     return value
@@ -220,6 +226,12 @@ def load_unit(catalog, directory, metadata):
             lines = tuple(map(string, sequence(step.get("lines"))))
             require(len(lines) >= 2 and len(set(lines)) == len(lines), f"Invalid lines: {sid}")
             string(step.get("expected_stdout"))
+            orders = sequence(step.get("accepted_orders", []))
+            seen_orders = {tuple(range(len(lines)))}
+            for order in orders:
+                require(is_parsons_order(order, len(lines)), f"Invalid accepted order: {sid}")
+                require(tuple(order) not in seen_orders, f"Duplicate accepted order: {sid}")
+                seen_orders.add(tuple(order))
         key = f"{uid}/{sid}"
         catalog.steps[key] = step
         if kind in {"code", "fix", "try"}:

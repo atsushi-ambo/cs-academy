@@ -1,0 +1,356 @@
+unit: s2.m02.u02
+python_min: '3.9'
+steps:
+- id: st01
+  type: read
+  title: Give each plan the same work to count
+  body: |
+    An alert tool checks n events. Compare three plans.
+    The first scans all events once. The second scans them once per level.
+    A level here means one step in a chain that cuts a group in half.
+    The third checks every event against every event, even itself.
+
+    Count one unit for each visit or pair check. Run the same plan with several
+    sizes. You can then compare how fast its count grows.
+- id: st02
+  type: predict
+  title: One scan of eight events
+  code: |
+    checks = 0
+    for event in range(8):
+        checks += 1
+    print(checks)
+  choices:
+  - text: '1'
+    why: One scan still checks each event.
+  - text: '8'
+    why: One visit per event gives n visits. This is O(n).
+  - text: '16'
+    why: There is only one pass.
+  - text: '64'
+    why: This loop has no second scan for each event.
+  answer: 1
+- id: st03
+  type: try
+  title: Run both a scan and a pair check
+  starter: |
+    n = 4
+    visits = 0
+    for event in range(n):
+        visits += 1
+    pairs = 0
+    for first in range(n):
+        for second in range(n):
+            pairs += 1
+    print(visits, pairs)
+  task: Set n to 8. Compare both counts with the counts for 4.
+  check:
+    stdout_line: 8 64
+- id: st04
+  type: read
+  title: A halving is one level
+  body: |
+    Start with 16. Use // 2 to keep the whole part: 16 → 8 → 4 → 2 → 1.
+    It takes four steps. The base-two **logarithm**, written log₂, asks
+    how many times to double 1 to reach a number. So log₂ 16 is 4.
+    For a size between two powers of two, our loop counts complete halving steps.
+    It also does zero steps for an empty group.
+- id: st05
+  type: predict
+  title: Halve a group of odd size
+  code: |
+    size = 9
+    levels = 0
+    while size > 1:
+        size //= 2
+        levels += 1
+    print(levels)
+  choices:
+  - text: '9'
+    why: The loop halves the size rather than visiting nine items.
+  - text: '4'
+    why: The loop stops at 1. It does not go on to zero.
+  - text: '2'
+    why: After two steps the size is 2, so one more step runs.
+  - text: '3'
+    why: The loop moves from 9 to 4 to 2 to 1. There are three moves.
+  answer: 3
+- id: st06
+  type: parsons
+  title: Count the levels
+  task: Use all lines. Start with size 8 and count 0. Halve until size is 1. Output is 3.
+  lines:
+  - size = 8
+  - levels = 0
+  - 'while size > 1:'
+  - '    size //= 2'
+  - '    levels += 1'
+  - print(levels)
+  accepted_orders:
+  - [0, 1, 2, 4, 3, 5]
+  - [1, 0, 2, 3, 4, 5]
+  - [1, 0, 2, 4, 3, 5]
+  expected_stdout: '3'
+  hint_levels:
+  - Set the start size and count first.
+  - Put both updates inside the loop.
+  - Stop with size 1 and print 3.
+- id: st07
+  type: code
+  title: Count sorting rounds in a plan
+  exercise: exercises/practice.py
+  function: halve_rounds
+  test_class: HalveRounds
+  hint_levels:
+  - Handle sizes 0 and 1 with zero rounds.
+  - Replace n with its half each round.
+  - Inside while n > 1, do n //= 2 and add one.
+- id: st08
+  type: read
+  title: A full scan at each level
+  body: |
+    Think of a team that splits into smaller groups. At each level, all groups
+    together still hold the same n items. If each item gets one check per level,
+    the work is n × the level count. With log₂ n levels, it is O(n log n).
+    For n = 8, the counts are 8 for one scan, 24 for three levels,
+    and 64 for all pairs.
+
+    In the line puzzle, counting levels alone took O(log n) time and O(1) extra space.
+- id: st09
+  type: predict
+  title: Count the checks over three levels
+  code: |
+    size = 8
+    checks = 0
+    while size > 1:
+        for event in range(8):
+            checks += 1
+        size //= 2
+    print(checks)
+  choices:
+  - text: '8'
+    why: That counts only one level.
+  - text: '3'
+    why: That counts levels without the eight checks at each.
+  - text: '24'
+    why: Each of three levels adds eight checks.
+  - text: '64'
+    why: This is three scans, not eight.
+  answer: 2
+- id: st10
+  type: fix
+  title: Scan every item at every level
+  task: |2
+
+    Return the total visits for n items checked at each halving level.
+    n is an integer from 0 to 500. Keep the while and for loops.
+    Sample: round_visits(8) -> 24
+  starter: |
+    def round_visits(n):
+        size = n
+        visits = 0
+        while size > 1:
+            for event in range(size):
+                visits += 1
+            size //= 2
+        return visits
+  solution: |
+    def round_visits(n):
+        size = n
+        visits = 0
+        while size > 1:
+            for event in range(n):
+                visits += 1
+            size //= 2
+        return visits
+  tests: |
+    import ast
+    import inspect
+
+    for n, visits in ((0, 0), (1, 0), (2, 2), (7, 14), (8, 24), (500, 4000)):
+        assert round_visits(n) == visits
+    loops = [node for node in ast.walk(ast.parse(inspect.getsource(round_visits)))
+             if isinstance(node, ast.While)]
+    assert any(isinstance(node, ast.For)
+               for loop in loops for stmt in loop.body for node in ast.walk(stmt))
+  hint_levels:
+  - Which value shrinks?
+  - All groups together still have n items.
+  - Use range(n) for the for loop.
+  explanation: This takes O(n log n) time for n at least 2. The loop keeps two counts, so extra space
+    is O(1).
+- id: st11
+  type: predict
+  title: Compare the work at n = 16
+  code: |
+    n = 16
+    print(n, n * 4, n * n)
+  choices:
+  - text: 16 64 256
+    why: One pass, four passes, and sixteen passes each visit 16 items.
+  - text: 16 32 64
+    why: There are four levels and sixteen full pair rows.
+  - text: 16 4 256
+    why: Multiply the four levels by the work at each level.
+  - text: 1 4 16
+    why: These would only count passes, not visits.
+  answer: 0
+- id: st12
+  type: try
+  title: Check three growth rates on the same input
+  starter: |
+    n = 4
+    linear = 0
+    per_level = 0
+    pairs = 0
+    for event in range(n):
+        linear += 1
+        size = n
+        while size > 1:
+            per_level += 1
+            size //= 2
+        for other in range(n):
+            pairs += 1
+    print(linear, per_level, pairs)
+  task: Change n to 16. Read the three counts from left to right.
+  check:
+    stdout_line: 16 64 256
+- id: st13
+  type: read
+  title: A stopwatch answers a different question
+  body: |
+    **Elapsed time** is how long a run took. In Python, subtract the value of
+    `time.perf_counter()` before the job from its value after the job.
+    One fast result on your laptop is for that input and that run.
+    The machine, other tasks, and setup work can all change the result.
+    For example, a pair scan can win on tiny lists if its setup is cheap.
+    Try several input sizes and repeat each run to see a pattern.
+    Here we grade operation counts so machine speed cannot change the answer.
+
+    Here is a stopwatch example. Running it on another machine can give a
+    different number of seconds.
+
+    ```python
+    from time import perf_counter
+
+    start = perf_counter()
+    checks = 0
+    for event in range(1000):
+        checks += 1
+    print(perf_counter() - start)
+    ```
+- id: st14
+  type: predict
+  title: Read a timing report from one laptop
+  code: |
+    small_scan_ms = 8
+    small_pairs_ms = 3
+    print(small_pairs_ms < small_scan_ms)
+  choices:
+  - text: 'False'
+    why: Three is less than eight in this report.
+  - text: 'True'
+    why: The pair check won this run. That alone says nothing about how the costs grow.
+  - text: O(n²)
+    why: The comparison prints a Boolean. It cannot measure a growth class.
+  - text: '5'
+    why: The code compares the two times rather than subtracting them.
+  answer: 1
+- id: st15
+  type: code
+  title: Count visits from levels without scanning
+  exercise: exercises/practice.py
+  function: planned_visits
+  test_class: PlannedVisits
+  hint_levels:
+  - Keep the original n for the size of a scan.
+  - Save a second value that you halve.
+  - Add n to visits once inside the while loop.
+- id: st16
+  type: fix
+  title: Count pairs with the full second list
+  task: |2
+
+    Count all ordered pairs of items, including an item paired with itself.
+    n is an integer from 0 to 60. Keep one nested for loop and add one per pair.
+    Sample: pair_visits(3) -> 9
+  starter: |
+    def pair_visits(n):
+        pairs = 0
+        for left in range(n):
+            for right in range(left + 1, n):
+                pairs += 1
+        return pairs
+  solution: |
+    def pair_visits(n):
+        pairs = 0
+        for left in range(n):
+            for right in range(n):
+                pairs += 1
+        return pairs
+  tests: |
+    import ast
+    import inspect
+
+    for n in (0, 1, 3, 12, 60):
+        assert pair_visits(n) == n * n
+    nodes = ast.walk(ast.parse(inspect.getsource(pair_visits)))
+    assert any(isinstance(node, ast.For) and any(isinstance(child, ast.For)
+               for stmt in node.body for child in ast.walk(stmt)) for node in nodes)
+  hint_levels:
+  - The second index can be any item.
+  - Start the second loop at index zero.
+  - Replace range(left + 1, n) with range(n).
+  explanation: For each of n left choices the loop visits n right choices. Time is O(n²) and extra space
+    is O(1).
+- id: st17
+  type: predict
+  title: What changes when the size doubles again?
+  code: |
+    for n, levels in [(8, 3), (16, 4)]:
+        print(n * levels)
+  choices:
+  - text: |-
+      8
+      16
+    why: The scan repeats at each level.
+  - text: |-
+      24
+      48
+    why: Doubling also adds one new level.
+  - text: |-
+      64
+      256
+    why: These are counts for all pairs.
+  - text: |-
+      24
+      64
+    why: There are 8 × 3 and then 16 × 4 visits.
+  answer: 3
+- id: st18
+  type: code
+  title: Find when pair work crosses a budget
+  exercise: exercises/practice.py
+  function: first_over_budget
+  test_class: FirstOverBudget
+  hint_levels:
+  - Start with size 1.
+  - A count equal to the budget still fits.
+  - Double size while size * size <= budget.
+- id: st19
+  type: explain
+  title: Choose how to compare the plans
+  prompt: Write 2–3 English sentences. A pair scan was faster once on ten items. How would you compare
+    the plans as the list gets larger?
+  rubric:
+  - Describe what one timing measures.
+  - Say what you would count and how you would change n.
+review_cards:
+  from_steps:
+  - st02
+  - st05
+  - st09
+  - st11
+  - st14
+  - st17
+  vocab: true

@@ -1,0 +1,39 @@
+id: s2.m02.u02
+title: Comparing O(n), O(n log n), O(n^2) with real timings
+stage: 2
+module: Complexity
+version: 1
+status: draft
+estimated_minutes: 75
+prerequisites:
+- s2.m05.u01
+- s2.m02.u01
+objectives:
+- Compare three growth rates by counting work.
+- Explain how halving leads to log n.
+- Explain what a single timing can tell you.
+skills:
+- python.comparing-costs
+- english.explain-code
+parts:
+- steps.yaml
+- lesson.md
+- exercises/
+- solutions/solutions.md
+references:
+- kind: official_doc
+  title: Python time module
+  url: https://docs.python.org/3.13/library/time.html#time.perf_counter
+vocab:
+- en: measurement
+  ja: 測定
+- en: elapsed time
+  ja: 経過時間
+- en: doubling
+  ja: 2倍にすること
+- en: halving
+  ja: 半分にすること
+- en: level
+  ja: 段
+- en: logarithm
+  ja: 対数

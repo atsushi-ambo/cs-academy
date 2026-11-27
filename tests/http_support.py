@@ -219,6 +219,34 @@ TRY_EDITS = {
             '        if level > 0:\n            pending.append(("open", level - 1))',
         ),
     ],
+    "s2.m02.u01": [
+        ('n = 4', 'n = 8'),
+        ('n = 3', 'n = 6'),
+    ],
+    "s2.m02.u02": [
+        ('n = 4', 'n = 8'),
+        ('n = 4', 'n = 16'),
+    ],
+    "s2.m02.u03": [
+        ('n = 2', 'n = 3'),
+        ('print(settings(4))', 'print(settings(5))'),
+    ],
+    "s2.m02.u04": [
+        ('[7, 3]', '[7, 3, 7, 7]'),
+        ('([4, 5, 6], 2)', '([4, 5, 6], 1)'),
+    ],
+    "s2.m02.u05": [
+        ('target = 8', 'target = 9'),
+        ('targets = [8, 7, 6]', 'targets = [5, 7, 6]'),
+    ],
+    "s2.m03.u04": [
+        ('alias = queue', 'alias = queue[:]'),
+        ('range(2)', 'range(3)'),
+    ],
+    "s2.m03.u05": [
+        ('slots[0]', 'slots[3]'),
+        ('range(5)', 'range(9)'),
+    ],
 }
 
 
@@ -291,6 +319,8 @@ def play_unit(case, api, uid):
                     case.assertEqual(len(finished["why"]), 4)
                 case "parsons":
                     case.assertEqual(step["lines"], raw["lines"][::-1])
+                    for level, hint in enumerate(raw.get("hint_levels", ()), 1):
+                        case.assertEqual(send("hint", level=level)["hint"], hint)
                     finished = send("order", order=list(reversed(range(len(step["lines"])))))
                 case "fix" | "code":
                     problem = catalog.problems[key]

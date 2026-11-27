@@ -1,0 +1,39 @@
+id: s2.m02.u04
+title: 'Space complexity: counting the memory an algorithm needs'
+stage: 2
+module: Complexity
+version: 1
+status: draft
+estimated_minutes: 75
+prerequisites:
+- s2.m05.u01
+- s2.m02.u03
+objectives:
+- Count peak space during a run.
+- Separate input, output, and extra space.
+- Compare stack space with loop space.
+skills:
+- python.space-complexity
+- english.explain-code
+parts:
+- steps.yaml
+- lesson.md
+- exercises/
+- solutions/solutions.md
+references:
+- kind: official_doc
+  title: Python built-in types
+  url: https://docs.python.org/3.13/library/stdtypes.html
+vocab:
+- en: space complexity
+  ja: 空間計算量
+- en: peak
+  ja: 最大値
+- en: auxiliary space
+  ja: 補助領域
+- en: in place
+  ja: 元のデータ上で
+- en: frame
+  ja: 呼び出しごとの作業領域
+- en: slice
+  ja: 一部分の取り出し
