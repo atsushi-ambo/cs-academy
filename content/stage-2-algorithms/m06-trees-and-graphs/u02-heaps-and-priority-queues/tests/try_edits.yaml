@@ -1,0 +1,13 @@
+# Test-only: one edit per try step, in step order, that makes the try check pass.
+- find: 'i = 4
+
+    '
+  replace: 'i = 5
+
+    '
+- find: 'for index, job in enumerate([(4, "archive"), (1, "z-check"), (1, "a-check")]):
+
+    '
+  replace: 'for index, job in enumerate([(0, "archive"), (1, "z-check"), (1, "a-check")]):
+
+    '

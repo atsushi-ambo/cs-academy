@@ -1,0 +1,5 @@
+# Test-only: one edit per try step, in step order, that makes the try check pass.
+- find: print(frontier.popleft())
+  replace: 'frontier.popleft()
+
+    print(frontier.popleft())'

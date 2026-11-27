@@ -1,0 +1,5 @@
+# Test-only: one edit per try step, in step order, that makes the try check pass.
+- find: target = 8
+  replace: target = 9
+- find: targets = [8, 7, 6]
+  replace: targets = [5, 7, 6]

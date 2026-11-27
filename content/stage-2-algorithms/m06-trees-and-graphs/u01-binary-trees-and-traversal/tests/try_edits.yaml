@@ -1,0 +1,13 @@
+# Test-only: one edit per try step, in step order, that makes the try check pass.
+- find: 'tree = Node("web", Node("api", Node("db")), Node("cdn"))
+
+    '
+  replace: 'tree = Node("web", Node("api", Node("db")), Node("cdn", None, Node("edge")))
+
+    '
+- find: 'tree = ("a", ("b", None, None), None)
+
+    '
+  replace: 'tree = ("a", ("b", ("c", None, None), None), None)
+
+    '

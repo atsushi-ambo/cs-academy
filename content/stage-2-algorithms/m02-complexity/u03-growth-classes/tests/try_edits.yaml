@@ -1,0 +1,5 @@
+# Test-only: one edit per try step, in step order, that makes the try check pass.
+- find: n = 2
+  replace: n = 3
+- find: print(settings(4))
+  replace: print(settings(5))

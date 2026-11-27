@@ -1,0 +1,5 @@
+# Test-only: one edit per try step, in step order, that makes the try check pass.
+- find: left = 2
+  replace: left = 4
+- find: '    checks += 1'
+  replace: "    checks += 1\n    left -= 1"

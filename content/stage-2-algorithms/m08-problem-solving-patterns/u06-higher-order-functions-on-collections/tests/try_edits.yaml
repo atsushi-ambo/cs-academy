@@ -1,0 +1,3 @@
+# Test-only: one edit per try step, in step order, that makes the try check pass.
+- find: 'values = filter(lambda n: n > 0, [3, -1, 2])'
+  replace: 'values = list(filter(lambda n: n > 0, [3, -1, 2]))'
