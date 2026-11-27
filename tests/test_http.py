@@ -1,8 +1,10 @@
 from datetime import timedelta
 from urllib.parse import urlencode
 
-from app.content import SOURCE_LIMIT, STDIN_LIMIT
+from app.content import SOURCE_LIMIT, STDIN_LIMIT, load_catalog
+from app.learning import Learning
 from app.server import MAX_BODY, TEST_PORT
+from app.storage import Store
 
 from .http_support import play_lists, play_path, socketpair_api, tcp_api
 from .support import FIX, FOR, LISTS, PLACEMENT_SOURCE, RECURSION, WHILE, AcademyCase, result
@@ -116,7 +118,8 @@ class HTTPTest(AcademyCase):
         due = self.api.get("/api/reviews")["due"]
         self.assertEqual(len(due), 2)
         self.assertEqual(due[0]["id"], f"{LISTS}/st04")
-        self.assertTrue(self.api.get("/api/today")["unit"]["skipped"])
+        self.assertIsNone(self.api.get("/api/today")["unit"])
+        self.assertTrue(self.api.get(f"/api/placement?unit={LISTS}")["skipped"])
         self.date += timedelta(days=1)
         self.assertEqual(len(self.api.get("/api/reviews")["due"]), 4)
         status, _, _ = self.api.request("/api/restore", method="POST",
@@ -183,6 +186,70 @@ class MultiUnitHTTPTest(AcademyCase):
         self.assertEqual(self.api.request(f"/api/play?unit={FOR}&unit={WHILE}")[0], 400)
         self.assertIn("loop", self.api.get(f"/api/reference?unit={FOR}")["lesson"])
         self.assertEqual(self.api.request(f"/api/placement?unit={WHILE}")[0], 404)
+
+    def test_lists_resumes_after_for_loops_becomes_playable(self):
+        catalog = self.store.catalog
+        old_catalog = load_catalog()
+        old_catalog.units[FOR]["status"] = "outline"
+        del old_catalog.play[FOR]
+        old_catalog.steps = {key: step for key, step in old_catalog.steps.items()
+                             if not key.startswith(FOR + "/")}
+        old_catalog.cards = {key: card for key, card in old_catalog.cards.items()
+                             if card["unit"] != FOR}
+        steps = old_catalog.play[LISTS]
+        half = len(steps) // 2
+        for history in ("attempt", "hint", "half-complete"):
+            with self.subTest(history=history):
+                old_store = Store(self.store.path.with_name(f"{history}.sqlite3"),
+                                  self.store.backups, old_catalog)
+                old_store.initialize()
+                old_api = socketpair_api(Learning(old_store, clock=lambda: self.date))
+                count = half if history == "half-complete" else 0
+                if history == "attempt":
+                    old_api.post("/api/play", {"unit": LISTS, "action": "start"})
+                else:
+                    with old_store.transaction() as db:
+                        version = old_catalog.units[LISTS]["version"]
+                        db.executemany(
+                            "INSERT INTO step_progress (step_id, unit_version, complete) VALUES (?, ?, 1)",
+                            ((key, version) for key in steps[:count]),
+                        )
+                        if history == "hint":
+                            code_step = next(key for key in steps if key in old_catalog.problems
+                                             and old_catalog.problems[key].hints)
+                            db.execute(
+                                "INSERT INTO step_progress (step_id, unit_version, hints) VALUES (?, ?, 1)",
+                                (code_step, version),
+                            )
+
+                upgraded = Store(old_store.path, old_store.backups, catalog)
+                upgraded.initialize()
+                api = socketpair_api(Learning(upgraded, clock=lambda: self.date))
+                summary = api.get("/api/today")["unit"]
+                self.assertEqual((summary["id"], summary["completed"], summary["blockers"]),
+                                 (LISTS, count, []))
+                self.assertEqual(api.get(f"/api/play?unit={LISTS}")["step"]["id"], steps[count])
+                self.assertTrue(api.post("/api/play", {"unit": LISTS, "action": "start"})["started"])
+                self.assertEqual(api.get(f"/api/reference?unit={LISTS}")["title"], summary["title"])
+                self.assertEqual(api.request(f"/api/play?unit={WHILE}")[0], 409)
+
+    def test_skipped_unit_resumes_after_reopening_and_making_progress(self):
+        self.api.post("/api/play", {"unit": FOR, "step": f"{FOR}/st01", "action": "continue"})
+        self.pass_placement(FOR)
+        self.api.post("/api/placement/skip", {"unit": FOR})
+        self.assertNotEqual(self.api.get("/api/today")["unit"]["id"], FOR)
+
+        self.api.post("/api/play", {"unit": FOR, "action": "start"})
+        self.assertNotEqual(self.api.get("/api/today")["unit"]["id"], FOR)
+        view = self.api.get(f"/api/play?unit={FOR}")
+        self.assertEqual(view["step"]["id"], f"{FOR}/st02")
+        answer = self.store.catalog.steps[f"{FOR}/st02"]["answer"]
+        self.api.post("/api/play", {"unit": FOR, "step": view["step"]["id"],
+                                    "action": "answer", "choice": answer})
+        summary = self.api.get("/api/today")["unit"]
+        self.assertEqual((summary["id"], summary["completed"], summary["skipped"]), (FOR, 2, True))
+        self.assertEqual(self.api.get(f"/api/play?unit={summary['id']}")["step"]["id"], f"{FOR}/st03")
+        self.assertEqual(self.api.get(f"/api/play?unit={WHILE}")["step"]["id"], f"{WHILE}/st01")
 
     def pass_placement(self, uid):
         catalog = self.store.catalog

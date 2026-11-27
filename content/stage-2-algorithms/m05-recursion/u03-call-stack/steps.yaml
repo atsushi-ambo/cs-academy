@@ -167,6 +167,15 @@ steps:
             return 0
         return n + plus(n - 1)
   tests: |
+    import ast
+    import inspect
+
+    nodes = ast.walk(ast.parse(inspect.getsource(plus)))
+    assert any(isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
+               and node.func.id == "plus" for node in nodes), (
+        "This exercise must use recursion: plus never calls itself."
+    )
+
     assert plus(0) == 0
     assert plus(4) == 10
     assert plus(5) == 15
@@ -284,6 +293,15 @@ steps:
             return square * base
         return square
   tests: |
+    import ast
+    import inspect
+
+    nodes = ast.walk(ast.parse(inspect.getsource(scale)))
+    assert any(isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
+               and node.func.id == "scale" for node in nodes), (
+        "This exercise must use recursion: scale never calls itself."
+    )
+
     assert scale(3, 0) == 1
     assert scale(3, 4) == 81
     assert scale(3, 3) == 27

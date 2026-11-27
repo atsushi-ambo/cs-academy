@@ -1,3 +1,5 @@
+import ast
+import inspect
 import sys
 import unittest
 from pathlib import Path
@@ -6,7 +8,16 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'exercises'))
 import practice
 
 
+def function_nodes(function):
+    return list(ast.walk(ast.parse(inspect.getsource(function))))
+
+
 class ChunksThatFit(unittest.TestCase):
+    def test_required_technique(self):
+        nodes = function_nodes(practice.chunks_that_fit)
+        self.assertTrue(any(isinstance(node, ast.While) for node in nodes),
+                        "chunks_that_fit must use a while loop.")
+
     def test_exact(self):
         self.assertEqual(practice.chunks_that_fit(12, 4), 3)
 
@@ -21,6 +32,11 @@ class ChunksThatFit(unittest.TestCase):
 
 
 class ChecksUsed(unittest.TestCase):
+    def test_required_technique(self):
+        nodes = function_nodes(practice.checks_used)
+        self.assertTrue(any(isinstance(node, ast.While) for node in nodes),
+                        "checks_used must use a while loop.")
+
     def test_ready_first(self):
         self.assertEqual(practice.checks_used([200, 503], 10), 1)
 
@@ -38,6 +54,11 @@ class ChecksUsed(unittest.TestCase):
 
 
 class RoundsToDrain(unittest.TestCase):
+    def test_required_technique(self):
+        nodes = function_nodes(practice.rounds_to_drain)
+        self.assertTrue(any(isinstance(node, ast.While) for node in nodes),
+                        "rounds_to_drain must use a while loop.")
+
     def test_partial_last(self):
         self.assertEqual(practice.rounds_to_drain(13, 5), 3)
 

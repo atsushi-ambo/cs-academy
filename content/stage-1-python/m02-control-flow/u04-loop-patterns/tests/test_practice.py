@@ -1,3 +1,5 @@
+import ast
+import inspect
 import sys
 import unittest
 from pathlib import Path
@@ -6,7 +8,16 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'exercises'))
 import practice
 
 
+def function_nodes(function):
+    return list(ast.walk(ast.parse(inspect.getsource(function))))
+
+
 class ErrorCount(unittest.TestCase):
+    def test_required_technique(self):
+        nodes = function_nodes(practice.error_count)
+        self.assertTrue(any(isinstance(node, (ast.For, ast.While)) for node in nodes),
+                        "error_count must use a loop.")
+
     def test_boundary(self):
         self.assertEqual(practice.error_count([499, 500, 501, 599]), 3)
 
@@ -18,6 +29,11 @@ class ErrorCount(unittest.TestCase):
 
 
 class FirstRecovery(unittest.TestCase):
+    def test_required_technique(self):
+        nodes = function_nodes(practice.first_recovery)
+        self.assertTrue(any(isinstance(node, (ast.For, ast.While)) for node in nodes),
+                        "first_recovery must use a loop.")
+
     def test_empty(self):
         self.assertEqual(practice.first_recovery([]), -1)
 
@@ -32,6 +48,11 @@ class FirstRecovery(unittest.TestCase):
 
 
 class LargeFiles(unittest.TestCase):
+    def test_required_technique(self):
+        nodes = function_nodes(practice.large_files)
+        loops = [node for node in nodes if isinstance(node, (ast.For, ast.While))]
+        self.assertGreaterEqual(len(loops), 2, "large_files must use two loops.")
+
     def test_empty(self):
         self.assertEqual(practice.large_files([], 10), 0)
 

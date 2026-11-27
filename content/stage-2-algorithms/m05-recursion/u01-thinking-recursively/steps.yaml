@@ -215,6 +215,15 @@ steps:
             return 0
         return 1 + checks(n - 1)
   tests: |
+    import ast
+    import inspect
+
+    nodes = ast.walk(ast.parse(inspect.getsource(checks)))
+    assert any(isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
+               and node.func.id == "checks" for node in nodes), (
+        "This exercise must use recursion: checks never calls itself."
+    )
+
     assert checks(1) == 1
     assert checks(5) == 5
     assert checks(0) == 0
@@ -273,6 +282,15 @@ steps:
             return 1
         return n * factorial(n - 1)
   tests: |
+    import ast
+    import inspect
+
+    nodes = ast.walk(ast.parse(inspect.getsource(factorial)))
+    assert any(isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
+               and node.func.id == "factorial" for node in nodes), (
+        "This exercise must use recursion: factorial never calls itself."
+    )
+
     assert factorial(0) == 1
     assert factorial(4) == 24
   hint_levels:
@@ -389,6 +407,15 @@ placement:
         """
         raise NotImplementedError
   tests: |
+    import ast
+    import inspect
+
+    nodes = ast.walk(ast.parse(inspect.getsource(scan_pages)))
+    assert any(isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
+               and node.func.id == "scan_pages" for node in nodes), (
+        "This exercise must use recursion: scan_pages never calls itself."
+    )
+
     assert scan_pages(0) == 0
     assert scan_pages(1) == 2
     assert scan_pages(3) == 12

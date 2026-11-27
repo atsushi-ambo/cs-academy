@@ -1,3 +1,5 @@
+import ast
+import inspect
 import sys
 import unittest
 from pathlib import Path
@@ -6,7 +8,25 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'exercises'))
 import practice
 
 
+def function_nodes(function):
+    return list(ast.walk(ast.parse(inspect.getsource(function))))
+
+
+def named_calls(nodes, name):
+    return [node for node in nodes if isinstance(node, ast.Call)
+            and (isinstance(node.func, ast.Name) and node.func.id == name
+                 or isinstance(node.func, ast.Attribute) and node.func.attr == name
+                 and isinstance(node.func.value, ast.Name) and node.func.value.id == "builtins")]
+
+
 class SizeTotal(unittest.TestCase):
+    def test_required_technique(self):
+        nodes = function_nodes(practice.size_total)
+        self.assertTrue(named_calls(nodes, "size_total"),
+                        "This exercise must use recursion: size_total never calls itself.")
+        self.assertFalse(any(isinstance(node, ast.Slice) for node in nodes),
+                         "size_total must not use slices.")
+
     def test_base(self):
         self.assertEqual(practice.size_total([7], 1), 0)
 
@@ -21,6 +41,17 @@ class SizeTotal(unittest.TestCase):
 
 
 class ReverseLabel(unittest.TestCase):
+    def test_required_technique(self):
+        nodes = function_nodes(practice.reverse_label)
+        self.assertTrue(named_calls(nodes, "reverse_label"),
+                        "This exercise must use recursion: reverse_label never calls itself.")
+        self.assertTrue(any(isinstance(node, ast.Slice) for node in nodes),
+                        "reverse_label must use slices.")
+        self.assertFalse(named_calls(nodes, "reversed"), "reverse_label must not use reversed().")
+        self.assertFalse(any(isinstance(node, ast.Slice) and isinstance(node.step, ast.UnaryOp)
+                             and isinstance(node.step.op, ast.USub) for node in nodes),
+                         "reverse_label must not use a negative slice step.")
+
     def test_empty(self):
         self.assertEqual(practice.reverse_label(""), '')
 
@@ -35,6 +66,13 @@ class ReverseLabel(unittest.TestCase):
 
 
 class IsMirror(unittest.TestCase):
+    def test_required_technique(self):
+        nodes = function_nodes(practice.is_mirror)
+        self.assertTrue(named_calls(nodes, "is_mirror"),
+                        "This exercise must use recursion: is_mirror never calls itself.")
+        self.assertFalse(any(isinstance(node, ast.Slice) for node in nodes),
+                         "is_mirror must not use slices.")
+
     def test_empty(self):
         self.assertEqual(practice.is_mirror(""), True)
 
@@ -52,6 +90,11 @@ class IsMirror(unittest.TestCase):
 
 
 class FlattenSizes(unittest.TestCase):
+    def test_required_technique(self):
+        nodes = function_nodes(practice.flatten_sizes)
+        self.assertTrue(named_calls(nodes, "flatten_sizes"),
+                        "This exercise must use recursion: flatten_sizes never calls itself.")
+
     def test_empty(self):
         self.assertEqual(practice.flatten_sizes([[], []]), [])
 

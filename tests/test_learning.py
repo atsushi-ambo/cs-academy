@@ -236,8 +236,8 @@ class LearningTest(AcademyCase):
             self.assertEqual(self.learning.today(db, self.date)["unit"]["completed"], 4)
             self.learning.skip(db, {"unit": LISTS}, self.date)
             self.learning.skip(db, {"unit": LISTS}, self.date)
-            self.assertTrue(self.learning.today(db, self.date)["unit"]["skipped"])
-            self.assertEqual(self.learning.today(db, self.date)["unit"]["completed"], 4)
+            self.assertIsNone(self.learning.today(db, self.date)["unit"])
+            self.assertEqual(len(self.learning.step_view(db, LISTS)["completed_steps"]), 4)
             self.assertEqual(good_day, (self.date + timedelta(days=3)).isoformat())
             rows = db.execute(
                 "SELECT due_day, COUNT(*) FROM review_cards WHERE due_day IS NOT NULL GROUP BY due_day"
@@ -247,7 +247,8 @@ class LearningTest(AcademyCase):
             wrong = (self.learning.card(key)["answer"] + 1) % 4
             self.learning.review(db, {"card": key, "retry": False, "choice": wrong}, self.date)
             self.learning.place(db, {"unit": LISTS, "answers": [2, 0, 3, 2], "source": PLACEMENT_SOURCE}, self.date)
-            self.assertTrue(self.learning.today(db, self.date)["unit"]["recommend"])
+            self.assertEqual([unit["id"] for unit in self.learning.today(db, self.date)["recommended"]],
+                             [LISTS])
             self.assertEqual(db.execute("SELECT COUNT(*) FROM review_logs").fetchone()[0], 2)
 
     def test_backup_online_round_trip_and_rejects_invalid_backup(self):

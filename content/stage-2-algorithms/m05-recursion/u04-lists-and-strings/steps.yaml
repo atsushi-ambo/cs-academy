@@ -165,6 +165,15 @@ steps:
             return True
         return text[0] == text[-1] and same(text[1:-1])
   tests: |
+    import ast
+    import inspect
+
+    nodes = ast.walk(ast.parse(inspect.getsource(same)))
+    assert any(isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
+               and node.func.id == "same" for node in nodes), (
+        "This exercise must use recursion: same never calls itself."
+    )
+
     assert same("") is True
     assert same("abba") is True
     assert same("abca") is False
@@ -235,6 +244,15 @@ steps:
                 out.append(item)
         return out
   tests: |
+    import ast
+    import inspect
+
+    nodes = ast.walk(ast.parse(inspect.getsource(flat)))
+    assert any(isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
+               and node.func.id == "flat" for node in nodes), (
+        "This exercise must use recursion: flat never calls itself."
+    )
+
     assert flat([1, [2]]) == [1, 2]
     assert flat([3, []]) == [3]
     assert flat([]) == []

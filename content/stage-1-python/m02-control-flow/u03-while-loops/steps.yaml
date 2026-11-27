@@ -179,6 +179,15 @@ steps:
             left -= 1
         return count
   tests: |
+    import ast
+    import inspect
+
+    nodes = ast.walk(ast.parse(inspect.getsource(retries)))
+    assert any(isinstance(node, ast.While) and isinstance(node.test, ast.BoolOp)
+               and isinstance(node.test.op, ast.And) for node in nodes), (
+        "retries must keep the guard in the while condition."
+    )
+
     assert retries(1) == 1
     assert retries(3) == 3
     assert retries(0) == 0
@@ -287,6 +296,15 @@ steps:
                   return line
               return None
   tests: |
+    import ast
+    import inspect
+
+    nodes = ast.walk(ast.parse(inspect.getsource(first_line)))
+    assert any(isinstance(node, ast.While) and isinstance(node.test, ast.BoolOp)
+               and isinstance(node.test.op, ast.And) for node in nodes), (
+        "first_line must keep the guard in the while condition."
+    )
+
     assert first_line(["", "ready", "later"]) == "ready"
     assert first_line([""]) is None
     assert first_line([]) is None

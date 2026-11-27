@@ -100,19 +100,32 @@ class Learning:
                JOIN units AS u ON u.id=s.unit_id AND u.version=s.unit_version"""
         ))
 
-    def blockers(self, uid, done, skips):
-        if uid in skips or self.current(uid, done) is None:
+    def activity(self, db):
+        return dict(db.execute(
+            """SELECT unit_id, MAX(resumed) FROM (
+                   SELECT a.unit_id, a.id AS attempt_id, a.action='resume' AS resumed
+                   FROM attempts AS a
+                   JOIN units AS u ON u.id=a.unit_id AND u.version=a.unit_version
+                   UNION ALL
+                   SELECT s.unit_id, NULL, 0 FROM step_progress AS p
+                   JOIN steps AS s ON s.id=p.step_id
+                   JOIN units AS u ON u.id=s.unit_id AND u.version=p.unit_version
+               ) GROUP BY unit_id ORDER BY MAX(attempt_id) DESC, unit_id"""
+        ))
+
+    def blockers(self, uid, done, skips, activity):
+        if uid in skips or uid in activity:
             return []
         return [key for key in self.catalog.units[uid]["prerequisites"]
                 if key in self.catalog.play and key not in skips and self.current(key, done)]
 
-    def require_open(self, uid, done, skips):
-        blocked = self.blockers(uid, done, skips)
+    def require_open(self, db, uid, done):
+        blocked = self.blockers(uid, done, self.skips(db), self.activity(db))
         if blocked:
             names = ", ".join(self.catalog.units[key]["title"] for key in blocked)
             raise RequestError(f"Complete or skip first: {names}", 409)
 
-    def unit_summary(self, uid, done, skips):
+    def unit_summary(self, uid, done, skips, activity):
         sequence = self.catalog.play.get(uid, [])
         count = sum(key in done for key in sequence)
         unit = self.catalog.units[uid]
@@ -122,12 +135,12 @@ class Learning:
             "status": "completed" if sequence and count == len(sequence) else unit["status"],
             "skipped": uid in skips, "recommend": bool(skips.get(uid)),
             "blockers": [{"id": key, "title": self.catalog.units[key]["title"]}
-                         for key in self.blockers(uid, done, skips)] if sequence else [],
+                         for key in self.blockers(uid, done, skips, activity)] if sequence else [],
             "placement": uid in self.catalog.placements,
         }
 
     def path(self, db):
-        done, skips = self.completed(db), self.skips(db)
+        done, skips, activity = self.completed(db), self.skips(db), self.activity(db)
         stages = {number: {"number": number, "title": title, "modules": []}
                   for number, title in self.catalog.stages.items()}
         modules = {}
@@ -135,33 +148,27 @@ class Learning:
             modules[mid] = {"id": mid, "title": module["title"], "units": []}
             stages[module["stage"]]["modules"].append(modules[mid])
         for uid, unit in self.catalog.units.items():
-            modules[unit["module_id"]]["units"].append(self.unit_summary(uid, done, skips))
+            modules[unit["module_id"]]["units"].append(self.unit_summary(uid, done, skips, activity))
         return {"stages": list(stages.values())}
 
     def reference(self, db, uid):
         unit = self.playable(uid)
-        self.require_open(uid, self.completed(db), self.skips(db))
+        self.require_open(db, uid, self.completed(db))
         return {"title": unit["title"], **self.catalog.resources[uid]}
 
     def today(self, db, today):
         day = today.isoformat()
-        done, skips = self.completed(db), self.skips(db)
-        units = {uid: self.unit_summary(uid, done, skips)
+        done, skips, activity = self.completed(db), self.skips(db), self.activity(db)
+        units = {uid: self.unit_summary(uid, done, skips, activity)
                  for uid in self.catalog.units if uid in self.catalog.play}
         open_units = {uid: unit for uid, unit in units.items() if not unit["blockers"]}
         unfinished = {uid: unit for uid, unit in open_units.items()
-                      if unit["status"] != "completed" and not unit["skipped"]}
-        recent = [row[0] for row in db.execute(
-            """SELECT a.unit_id FROM attempts AS a
-               JOIN units AS u ON u.id=a.unit_id AND u.version=a.unit_version
-               GROUP BY a.unit_id ORDER BY MAX(a.id) DESC"""
-        )]
-        candidates = [*recent, *(uid for uid, unit in unfinished.items() if unit["completed"]),
-                      *unfinished]
+                      if unit["status"] != "completed" and (uid not in skips or activity.get(uid))}
+        candidates = [*activity, *unfinished]
         selected = next((unfinished[uid] for uid in candidates if uid in unfinished), None)
         if selected is None:
-            selected = next((open_units[uid] for uid in [*recent, *open_units]
-                             if uid in open_units), None)
+            selected = next((open_units[uid] for uid in [*activity, *open_units]
+                             if uid in open_units and uid not in skips), None)
         remaining = [key for uid in unfinished for key in self.catalog.play[uid] if key not in done]
         code_remaining = sum(self.catalog.steps[key]["type"] in {"fix", "code"} for key in remaining)
         quest = dict(db.execute("SELECT kind, progress FROM daily_quest WHERE day=?", (day,)))
@@ -183,7 +190,7 @@ class Learning:
     def step_view(self, db, uid, selected=None):
         unit = self.playable(uid)
         done = self.completed(db)
-        self.require_open(uid, done, self.skips(db))
+        self.require_open(db, uid, done)
         sequence = self.catalog.play[uid]
         current = self.current(uid, done)
         completed = [
@@ -237,11 +244,22 @@ class Learning:
                VALUES (?, ?, ?, ?, ?, ?, ?)""", (uid, key, self.version(uid), day, action, result, answer),
         )
 
+    def record_resumed_progress(self, db, uid, key, day):
+        db.execute(
+            """INSERT INTO attempts (unit_id, step_id, unit_version, day, action, result)
+               SELECT s.unit_id, ?, s.unit_version, ?, 'resume', 'progress'
+               FROM unit_skips AS s WHERE s.unit_id=? AND s.unit_version=? AND NOT EXISTS (
+                   SELECT 1 FROM attempts AS a WHERE a.unit_id=s.unit_id
+                   AND a.unit_version=s.unit_version AND a.action='resume'
+               )""", (key, day, uid, self.version(uid)),
+        )
+
     def complete(self, db, uid, key, day, points):
         db.execute(
             """INSERT INTO step_progress (step_id, unit_version, complete) VALUES (?, ?, 1)
                ON CONFLICT(step_id, unit_version) DO UPDATE SET complete=1""", (key, self.version(uid)),
         )
+        self.record_resumed_progress(db, uid, key, day)
         if points:
             award(db, f"step:{key}:{self.version(uid)}", day, points)
         progress(db, day, "step")
@@ -256,7 +274,7 @@ class Learning:
         uid, action = body.get("unit"), body.get("action")
         self.playable(uid)
         done = self.completed(db)
-        self.require_open(uid, done, self.skips(db))
+        self.require_open(db, uid, done)
         current = self.current(uid, done)
         if action == "start":
             fields(body, "unit", "action")
@@ -289,6 +307,8 @@ class Learning:
                    ON CONFLICT(step_id, unit_version) DO UPDATE SET hints=MAX(hints, excluded.hints)
                 """, (key, self.version(uid), level),
             )
+            if level > state["hints"]:
+                self.record_resumed_progress(db, uid, key, day)
             return {"hint": hints[level - 1]}
 
         if kind == "read" and action == "continue":
@@ -364,6 +384,7 @@ class Learning:
                        ON CONFLICT(step_id, unit_version) DO UPDATE SET failures=failures+1""",
                     (key, self.version(uid)),
                 )
+                self.record_resumed_progress(db, uid, key, day)
         return {**result, "complete": status == "passed", "failures": failures,
                 "can_open_solution": status == "passed" or failures >= 3}
 

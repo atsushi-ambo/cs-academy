@@ -95,6 +95,16 @@ steps:
             n -= 1
         return total
   tests: |
+    import ast
+    import inspect
+
+    nodes = list(ast.walk(ast.parse(inspect.getsource(work))))
+    assert not any(isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
+                   and node.func.id == "work" for node in nodes), (
+        "work must not call itself. Use a loop instead."
+    )
+    assert any(isinstance(node, ast.While) for node in nodes), "work must use a while loop."
+
     assert work(3) == 6
     assert work(1) == 1
     assert work(0) == 0
@@ -252,6 +262,20 @@ steps:
                 result.append(item)
         return result
   tests: |
+    import ast
+    import inspect
+
+    nodes = list(ast.walk(ast.parse(inspect.getsource(unpack))))
+    assert not any(isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
+                   and node.func.id == "unpack" for node in nodes), (
+        "unpack must not call itself. Use a loop instead."
+    )
+    assert any(isinstance(node, ast.While) for node in nodes), "unpack must use a while loop."
+    assert any(isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)
+               and node.func.attr == "pop" for node in nodes), (
+        "unpack must pop from an explicit stack."
+    )
+
     assert unpack([1, [2, 3], 4]) == [1, 2, 3, 4]
     assert unpack([[], [0]]) == [0]
   hint_levels:
