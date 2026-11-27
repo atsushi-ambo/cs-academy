@@ -22,7 +22,7 @@ PLACEMENT_SOLUTIONS = {
 }
 
 
-WORKERS = min(8, (os.cpu_count() or 2) * 2)
+WORKERS = min(4, os.cpu_count() or 2)
 
 
 def parallel(function, jobs):
