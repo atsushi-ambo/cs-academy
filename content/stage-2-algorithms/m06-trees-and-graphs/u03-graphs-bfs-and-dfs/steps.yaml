@@ -255,7 +255,8 @@ steps:
   type: fix
   title: Close a DFS loop with a visited set
   task: 'Return the set of vertices reachable from start using recursive DFS. All vertices and start have
-    keys. Allow cycles and leave graph unchanged. Example: reachable({''a'': [''b''], ''b'': [''a'']},
+    keys. Allow cycles and leave graph unchanged. The graph has at most 300 vertices, so the recursion
+    stays within Python''s default limit. Example: reachable({''a'': [''b''], ''b'': [''a'']},
     ''a'') returns {''a'', ''b''}.'
   starter: |
     def reachable(graph, start):
@@ -280,18 +281,28 @@ steps:
         visit(start)
         return seen
   tests: |
-    import ast
-    import inspect
+    import sys
 
     graph = {'a': ['b', 'b'], 'b': ['a'], 'c': []}
     assert reachable(graph, 'a') == {'a', 'b'}
     assert reachable({'a': ['a']}, 'a') == {'a'}
     assert graph == {'a': ['b', 'b'], 'b': ['a'], 'c': []}
-    nodes = ast.walk(ast.parse(inspect.getsource(reachable)))
-    assert any(isinstance(fn, ast.FunctionDef) and any(
-        isinstance(call, ast.Call) and isinstance(call.func, ast.Name)
-        and call.func.id == fn.name for call in ast.walk(fn)
-    ) for fn in nodes), "Use a recursive call to visit a neighbor."
+    chain = {i: [i + 1] for i in range(120)}
+    chain[120] = []
+    calls = {'depth': 0, 'deepest': 0}
+    def watch(frame, event, arg):
+        if event == 'call':
+            calls['depth'] += 1
+            calls['deepest'] = max(calls['deepest'], calls['depth'])
+        elif event == 'return':
+            calls['depth'] -= 1
+    sys.setprofile(watch)
+    try:
+        found = reachable(chain, 0)
+    finally:
+        sys.setprofile(None)
+    assert found == set(range(121))
+    assert calls['deepest'] >= 100, "Use a recursive call to visit a neighbor."
   hint_levels: &id001
   - Trace a to b to a.
   - Mark each node before visiting its neighbors.
@@ -439,7 +450,8 @@ steps:
   - type: fix
     title: Close a DFS loop with a visited set
     task: 'Return the set of vertices reachable from start using recursive DFS. All vertices and start
-      have keys. Allow cycles and leave graph unchanged. Example: reachable({''a'': [''b''], ''b'': [''a'']},
+      have keys. Allow cycles and leave graph unchanged. The graph has at most 300 vertices, so the recursion
+      stays within Python''s default limit. Example: reachable({''a'': [''b''], ''b'': [''a'']},
       ''a'') returns {''a'', ''b''}.'
     starter: |
       def reachable(graph, start):
@@ -464,18 +476,28 @@ steps:
           visit(start)
           return seen
     tests: |
-      import ast
-      import inspect
+      import sys
 
       graph = {'a': ['b', 'b'], 'b': ['a'], 'c': []}
       assert reachable(graph, 'a') == {'a', 'b'}
       assert reachable({'a': ['a']}, 'a') == {'a'}
       assert graph == {'a': ['b', 'b'], 'b': ['a'], 'c': []}
-      nodes = ast.walk(ast.parse(inspect.getsource(reachable)))
-      assert any(isinstance(fn, ast.FunctionDef) and any(
-          isinstance(call, ast.Call) and isinstance(call.func, ast.Name)
-          and call.func.id == fn.name for call in ast.walk(fn)
-      ) for fn in nodes), "Use a recursive call to visit a neighbor."
+      chain = {i: [i + 1] for i in range(120)}
+      chain[120] = []
+      calls = {'depth': 0, 'deepest': 0}
+      def watch(frame, event, arg):
+          if event == 'call':
+              calls['depth'] += 1
+              calls['deepest'] = max(calls['deepest'], calls['depth'])
+          elif event == 'return':
+              calls['depth'] -= 1
+      sys.setprofile(watch)
+      try:
+          found = reachable(chain, 0)
+      finally:
+          sys.setprofile(None)
+      assert found == set(range(121))
+      assert calls['deepest'] >= 100, "Use a recursive call to visit a neighbor."
     hint_levels: *id001
     explanation: Marking on entry stops recursive cycles. Time is O(V + E). The set and deepest chain
       of calls use O(V) extra space.

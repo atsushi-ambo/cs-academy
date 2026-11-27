@@ -18,7 +18,8 @@ def make_stack():
 def make_two_stack_queue():
     """Return a fresh empty FIFO queue. Use two Python lists as stacks.
     enqueue(value) pushes an integer. dequeue() returns the oldest value or None.
-    Use append and pop at the end, with a transfer only when the output stack is empty.
+    Keep new values in the lists named incoming and outgoing. Use append and pop at the end.
+    Move values from incoming to outgoing only when outgoing is empty.
     Example: enqueue(4), enqueue(8), dequeue(), enqueue(2), dequeue() removes 4 then 8."""
     class Queue:
         def __init__(self):

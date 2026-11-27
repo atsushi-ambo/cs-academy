@@ -32,7 +32,9 @@ steps:
 - id: st03
   type: try
   title: Change only the message
-  task: Change the second body to b'down' while keeping the key the same.
+  task: |-
+    hmac.digest(key, message, "sha256") returns a tag as bytes. hmac.compare_digest(a, b) returns True when two byte strings are equal.
+    Change the second body to b'down' while keeping the key the same.
   starter: |
     import hmac
 
@@ -63,9 +65,9 @@ steps:
     print(first == second, len(second))
   choices:
   - text: True 32
-    why: The key is part of HMAC, so the same body is insufficient.
+    why: The key is part of HMAC, so the same body is not enough to predict the tag.
   - text: False 32
-    why: Changing the key changes the tag. SHA-256 gives 32 raw bytes.
+    why: These two keys give different tags for the same body. SHA-256 gives 32 raw bytes.
   - text: False 64
     why: This is raw bytes. A hex display would have 64 characters.
   - text: True 64
@@ -144,7 +146,9 @@ steps:
     hmac.compare_digest avoids returning early based on matching bytes. Use equal-length byte tags.
     A hex string is another display for bytes. This sandbox sends raw tags inside Python.
     Compute the expected tag over the received bytes. Parsing and reformatting may change those bytes.
-    A message with a valid tag can still be replayed. Real webhooks may check timestamps and unique IDs.
+    A message with a valid tag can still be replayed. A real receiver needs a freshness check.
+    Put a timestamp and a unique event ID inside the signed bytes. Reject a timestamp outside a short time window.
+    Record each event ID atomically and reject a repeat before applying the event.
 - id: st09
   type: predict
   title: Same JSON meaning, changed bytes
@@ -199,15 +203,42 @@ steps:
         return compare_digest(expected, supplied)
   tests: |
     import hmac
-    from unittest.mock import patch
+
+    real_compare = hmac.compare_digest
+    compare_calls = []
+
+
+    def spy(first, second):
+        compare_calls.append((first, second))
+        return real_compare(first, second)
+
+
+    def run_with_spy(function, *args):
+        compare_calls.clear()
+        patched = [name for name, value in function.__globals__.items() if value is real_compare and name != "real_compare"]
+        for name in patched:
+            function.__globals__[name] = spy
+        hmac.compare_digest = spy
+        try:
+            return function(*args)
+        finally:
+            hmac.compare_digest = real_compare
+            for name in patched:
+                function.__globals__[name] = real_compare
+
 
     expected = b"a" * 32
     assert same_tag(expected, b"a" + b"b" * 31) is False
     assert same_tag(expected, b"") is False
     assert same_tag(expected, b"a" * 33) is False
-    with patch("hmac.compare_digest", wraps=hmac.compare_digest) as compare:
-        assert same_tag(expected, expected) is True
-        compare.assert_called_once_with(expected, expected)
+    assert same_tag(expected, b"a" * 31) is False
+    assert same_tag(expected, b"b" * 32) is False
+    assert same_tag(expected, expected) is True
+    assert run_with_spy(same_tag, expected, expected) is True
+    assert compare_calls == [(expected, expected)], "compare the tags with compare_digest"
+    different = b"a" * 31 + b"b"
+    assert run_with_spy(same_tag, expected, different) is False
+    assert compare_calls == [(expected, different)], "compare_digest must also run for a tag of the same length that differs"
   hint_levels:
   - A partial match is never enough.
   - Reject an invalid size, then compare all bytes.
@@ -221,6 +252,7 @@ steps:
     The receiver must have the same secret as the sender. Keep it outside the source repository.
     Reject a missing or wrong-size tag before hashing. Then recompute over the exact body.
     Use a fixed algorithm from trusted configuration. The incoming message cannot choose how you verify it.
+    Make the secret with secrets.token_bytes(32). Short or guessable keys are weak, and HMAC pads keys, so b"k" and b"k\x00" give the same tag.
     A tag does not hide the body. Protect private data with a secure transport too.
 - id: st13
   type: predict
@@ -351,9 +383,10 @@ steps:
   rubric:
   - Mention the shared secret and exact bytes.
   - Distinguish integrity from confidentiality.
-  - Name a freshness check.
+  - Name a freshness check and say what it must cover.
   model_answer: A matching HMAC checks that the exact bytes came with a tag made using the shared key.
-    The tag does not hide the message. I also check a timestamp and an event ID to reject replays.
+    The tag does not hide the message. To stop replays, the timestamp and event ID must be inside the
+    signed bytes. I accept only a timestamp within a short window and record each event ID once before acting.
 - id: st20
   type: terminal
   title: Hands-on in the Python sandbox

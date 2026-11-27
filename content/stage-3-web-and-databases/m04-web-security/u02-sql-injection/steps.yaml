@@ -127,6 +127,26 @@ steps:
     assert find_hosts(db, "missing") == []
     assert find_hosts(db, "") == [("",)]
     assert db.execute("SELECT count(*) FROM hosts").fetchone() == (4,)
+
+    class Spy:
+        def __init__(self, db):
+            self.db, self.calls = db, []
+
+        def execute(self, sql, params=()):
+            self.calls.append((sql, params))
+            return self.db.execute(sql, params)
+
+    texts = set()
+    for name in ("edge", "O'Neil", "x' OR '1'='1"):
+        spy = Spy(db)
+        find_hosts(spy, name)
+        assert spy.calls, "run the query with db.execute"
+        for sql, params in spy.calls:
+            assert name not in sql, "keep the name out of the SQL text"
+            values = list(params.values()) if isinstance(params, dict) else list(params)
+            assert name in values, "pass the name as a bound parameter"
+            texts.add(sql)
+    assert len(texts) == 1, "the SQL text must not change with the name"
   hint_levels:
   - Separate the name from the SQL text.
   - Use one question mark in the WHERE clause.
@@ -200,6 +220,26 @@ steps:
     assert service_count(db, "CACHE") == 0
     assert service_count(db, "") == 1
     assert db.execute("SELECT count(*) FROM services").fetchone()[0] == 4
+
+    class Spy:
+        def __init__(self, db):
+            self.db, self.calls = db, []
+
+        def execute(self, sql, params=()):
+            self.calls.append((sql, params))
+            return self.db.execute(sql, params)
+
+    texts = set()
+    for label in ("cache", "ca%", "x' OR '1'='1"):
+        spy = Spy(db)
+        service_count(spy, label)
+        assert spy.calls, "run the query with db.execute"
+        for sql, params in spy.calls:
+            assert label not in sql, "keep the label out of the SQL text"
+            values = list(params.values()) if isinstance(params, dict) else list(params)
+            assert label in values, "pass the label as a bound parameter"
+            texts.add(sql)
+    assert len(texts) == 1, "the SQL text must not change with the label"
   hint_levels:
   - The value is already bound. Look at the operator.
   - Select exact equality instead of pattern matching.
@@ -290,7 +330,7 @@ steps:
   function: team_services
   test_class: TeamServices
   hint_levels:
-  - There are two separate kinds of input here.
+  - Which input is only data, and which input would choose SQL syntax?
   - Pick the sort clause from code-owned options. Bind only the team value.
   - Append a fixed clause from orders.get(order), then execute(sql, (team,)).
 - id: st18

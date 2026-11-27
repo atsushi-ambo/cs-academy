@@ -34,6 +34,6 @@ def login(records, account, password, current_n, verify, register):
     record = records.get(account)
     if record is None or not verify(password, record):
         return False
-    if record["n"] != current_n:
+    if record["n"] < current_n:
         records[account] = register(password, current_n)
     return True

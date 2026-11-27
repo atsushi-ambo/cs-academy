@@ -6,7 +6,7 @@ These tests use fixed bounds and Python length lookups. Time and extra space are
 
 ## `report_path`
 
-Resolution follows path components and links. With bounded path sizes and filesystem limits, this check uses bounded time and space, excluding filesystem latency.
+Resolution follows path components and links. With bounded path sizes and filesystem limits, this check takes O(d) time and O(d) space for d path components, excluding filesystem latency.
 
 ## `edit_label`
 

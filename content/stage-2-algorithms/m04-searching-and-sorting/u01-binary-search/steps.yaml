@@ -59,7 +59,7 @@ steps:
     stdout_line: 0 1
 - id: st05
   type: predict
-  title: How many items does this guard skip?
+  title: How many times does the loop run?
   code: |
     values = [41]
     lo, hi = 0, len(values) - 1
@@ -224,7 +224,8 @@ steps:
   title: Search capacities instead of list indexes
   body: |
     A backup sends files in order. Each day can send at most the same **capacity**, measured in file size units.
-    Keep each file whole. Send files until the next one would exceed the daily limit.
+    Assume the capacity is at least the size of the largest file. A smaller capacity can never send that file,
+    however many days you allow. Keep each file whole. Send files until the next one would exceed the daily limit.
     Then open another day. This **greedy check** fills each day as far as possible.
 
     This check uses the fewest days for a given capacity. No valid first day can take a longer prefix.
@@ -323,11 +324,41 @@ steps:
             else:
                 hi = mid
         return lo
-  tests: |
+  tests: &id003 |
+    import ast
+    tree = ast.parse(open(__file__, encoding="utf-8").read())
+    for node in ast.walk(tree):
+        names = [alias.name for alias in getattr(node, "names", [])] + [getattr(node, "module", None) or ""]
+        assert not any(name.split(".")[0] in ("bisect", "_bisect", "importlib") for name in names), "Write the search yourself"
+        assert not (isinstance(node, ast.Constant) and node.value in ("bisect", "_bisect")), "Write the search yourself"
     assert insert_slot([2, 4, 4], 4) == 1
     assert insert_slot([2, 4], 8) == 2
     assert insert_slot([], 1) == 0
     assert insert_slot([2], 2) == 0
+    assert insert_slot([2], 1) == 0
+    assert insert_slot([2, 4, 4, 4, 9], 4) == 1
+    assert insert_slot([2, 4, 4, 4, 9], 5) == 4
+    values = [1] * 1000 + [2] * 3000 + [3] * 96
+    reads = [0]
+    class Counted(list):
+        def __getitem__(self, index):
+            reads[0] += 1
+            return list.__getitem__(self, index)
+        def __iter__(self):
+            for index in range(len(self)):
+                yield self[index]
+        def copy(self):
+            reads[0] += len(self)
+            return list(list.__iter__(self))
+        def index(self, *args):
+            reads[0] += len(self)
+            return list.index(self, *args)
+    data = Counted(values)
+    assert insert_slot(data, 2) == 1000
+    assert insert_slot(data, 3) == 4000
+    assert insert_slot(data, 4) == 4096
+    assert reads[0] <= 60, "Use binary search, not a scan"
+    assert list(list.__iter__(data)) == values
   hint_levels: &id001
   - Look at what happens when the middle value equals the target.
   - An equal value could be the first match. Keep its position as a candidate.
@@ -385,11 +416,7 @@ steps:
               else:
                   hi = mid
           return lo
-    tests: |
-      assert insert_slot([2, 4, 4], 4) == 1
-      assert insert_slot([2, 4], 8) == 2
-      assert insert_slot([], 1) == 0
-      assert insert_slot([2], 2) == 0
+    tests: *id003
     hint_levels: *id001
     explanation: Equality moves the upper bound to the matching position. That preserves the first match.
       Time is O(log n) for n ≥ 2 and extra space is O(1).

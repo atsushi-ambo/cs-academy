@@ -21,7 +21,7 @@ Adding one JSON space changes the bytes. A tag for the old body should fail on t
 
 - A plain hash gives no key-based proof.
 - An HMAC gives integrity. Confidentiality requires encryption.
-- A valid tag alone gives no replay protection.
+- A valid tag alone gives no replay protection. Sign the timestamp and event ID too, limit the time window, and record each ID atomically.
 
 ## At work
 
@@ -34,4 +34,4 @@ Use library HMAC and compare the complete tag. Verify freshness separately and r
 
 ## Model answer
 
-A matching HMAC checks that the exact bytes came with a tag made using the shared key. The tag does not hide the message. I also check a timestamp and an event ID to reject replays.
+A matching HMAC checks that the exact bytes came with a tag made using the shared key. The tag does not hide the message. To stop replays, the timestamp and event ID must be inside the signed bytes. I accept only a timestamp within a short window and record each event ID once before acting.

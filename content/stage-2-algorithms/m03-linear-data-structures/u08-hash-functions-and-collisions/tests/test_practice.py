@@ -23,6 +23,10 @@ def reject_shortcuts(test, function, names):
                 test.assertNotIn(imported.name, names)
 
 
+def pairs(slots):
+    return [None if pair is None else tuple(pair) for pair in slots]
+
+
 class StringSlot(unittest.TestCase):
     def test_hash(self):
         for key, capacity, expected in (
@@ -75,7 +79,7 @@ class MakeProbingMap(unittest.TestCase):
         self.assertIsNone(table.get("c"))
         for key, value in (("c", 6), ("g", 3), ("k", 0), ("o", 3)):
             self.assertIs(table.put(key, value), True)
-        self.assertEqual(slots, [("g", 3), ("k", 0), ("o", 3), ("c", 6)])
+        self.assertEqual(pairs(slots), [("g", 3), ("k", 0), ("o", 3), ("c", 6)])
         self.assertEqual(table.get("k"), 0)
         self.assertEqual(table.get("c"), 6)
         self.assertIsNone(table.get("s"))
@@ -83,6 +87,18 @@ class MakeProbingMap(unittest.TestCase):
         self.assertIs(table.put("k", 9), True)
         self.assertEqual(table.get("k"), 9)
         self.assertIs(table.slots, slots)
+
+    def test_multi_character_keys(self):
+        table = practice.make_probing_map(4)
+        for key, value in (("ba", 1), ("cc", 2), ("db", 3), ("api", 4)):
+            self.assertIs(table.put(key, value), True)
+        self.assertEqual(pairs(table.slots), [("cc", 2), ("api", 4), ("db", 3), ("ba", 1)])
+        for key, value in (("ba", 1), ("cc", 2), ("db", 3), ("api", 4)):
+            self.assertEqual(table.get(key), value)
+        self.assertIsNone(table.get("ab"))
+        self.assertIs(table.put("db", 8), True)
+        self.assertEqual(table.get("db"), 8)
+        self.assertIs(table.put("ab", 5), False)
 
     def test_one_slot_and_technique(self):
         import ast

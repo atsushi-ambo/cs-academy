@@ -220,7 +220,7 @@ steps:
 - id: st12
   type: parsons
   title: Forward an argument and return the result
-  task: Place the inner function inside the decorator. Try it on abs.
+  task: Place the inner function inside the decorator. Try it on `abs`, a built-in function where `abs(-4)` returns `4`.
   lines:
   - 'def logged(fn):'
   - '    def wrapper(value):'

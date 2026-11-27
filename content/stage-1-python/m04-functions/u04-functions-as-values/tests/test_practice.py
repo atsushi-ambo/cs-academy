@@ -36,6 +36,10 @@ class Slowest(unittest.TestCase):
         self.assertEqual(practice.slowest(logs), ('web', 9))
         self.assertEqual(logs, [('api', 1), ('web', 9), ('db', 9), ('web', 9)])
 
+    def test_first_tie_ignores_name_order(self):
+        self.assertEqual(practice.slowest([('db', 9), ('web', 9)]), ('db', 9))
+        self.assertEqual(practice.slowest([('web', 9), ('db', 9)]), ('web', 9))
+
 
 class IncidentOrder(unittest.TestCase):
     def test_empty(self):

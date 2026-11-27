@@ -72,3 +72,56 @@ class MakeSinglyLinkedList(unittest.TestCase):
         self.assertIs(chain.head, chain.tail)
         self.assertEqual((len(chain), chain.to_list()), (1, [0]))
         self.assertEqual((len(other), other.to_list()), (0, []))
+
+    def test_remove_head_keeps_rest(self):
+        chain = practice.make_singly_linked_list()
+        for value in [1, 2, 3]:
+            chain.append(value)
+        second = chain.head.next
+        last = chain.tail
+        self.assertIs(chain.remove(1), True)
+        self.assertIs(chain.head, second)
+        self.assertIs(chain.tail, last)
+        self.assertEqual((len(chain), chain.to_list()), (2, [2, 3]))
+        self.assertIs(chain.remove(2), True)
+        self.assertIs(chain.head, last)
+        self.assertIs(chain.tail, last)
+        self.assertEqual((len(chain), chain.to_list()), (1, [3]))
+
+    def test_remove_tail_then_append(self):
+        chain = practice.make_singly_linked_list()
+        for value in [1, 2, 3]:
+            chain.append(value)
+        self.assertIs(chain.remove(3), True)
+        self.assertEqual(chain.tail.value, 2)
+        self.assertIsNone(chain.tail.next)
+        chain.append(5)
+        self.assertEqual(chain.to_list(), [1, 2, 5])
+        self.assertEqual(len(chain), 3)
+
+    def test_append_does_not_walk_the_chain(self):
+        chain = practice.make_singly_linked_list()
+        chain.append(0)
+        node_class = type(chain.head)
+        reads = []
+        original = node_class.__dict__.get("next")
+
+        def get_next(node):
+            reads.append(1)
+            return node.__dict__["next"]
+
+        def set_next(node, value):
+            node.__dict__["next"] = value
+
+        node_class.next = property(get_next, set_next)
+        try:
+            for value in range(1, 301):
+                chain.append(value)
+            self.assertEqual(len(chain), 301)
+            self.assertLessEqual(len(reads), 600)
+        finally:
+            if original is None:
+                del node_class.next
+            else:
+                node_class.next = original
+        self.assertEqual(chain.to_list(), list(range(301)))

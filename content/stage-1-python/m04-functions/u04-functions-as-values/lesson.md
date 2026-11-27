@@ -26,7 +26,8 @@ Output is `[('api', 9), ('web', 9)]`.
 
 Pass `key=rule` so Python can call it on each record.
 Calling `rule()` right away passes its result instead.
-`reverse=True` reverses the full ordering, including the name tie-breaker.
+`reverse=True` flips the comparison direction of every field in a tuple key, including the name tie-breaker.
+Records with exactly equal keys keep their input order.
 
 ## At work
 

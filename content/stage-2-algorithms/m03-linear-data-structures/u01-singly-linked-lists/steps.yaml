@@ -10,6 +10,16 @@ steps:
     A **singly linked list** goes forward by following these links.
     Its **head** is the first node. Its **tail** is the last node.
     You will build both the nodes and the list that holds them.
+    In Python, a **class** is a recipe for making objects. Here is a tiny one:
+
+        class Node:
+            def __init__(self, value):
+                self.value = value
+                self.next = None
+
+    `Node("scan")` makes an object. Python runs `__init__` for you.
+    `self` is the new object. `self.value` and `self.next` are its fields.
+    Read a field with a dot: `job.value`.
 - id: st02
   type: predict
   title: Two names can point to the same node

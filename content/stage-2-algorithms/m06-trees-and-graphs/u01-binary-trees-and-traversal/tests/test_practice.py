@@ -14,23 +14,39 @@ class Node:
         self.left = left
         self.right = right
 
+def run_traced(function, *args):
+    """Run function and report (result, recursed, calls) using call events from practice.py."""
+    stack = []
+    state = {"recursed": False, "calls": 0}
+    own_file = practice.__file__
+
+    def profiler(frame, event, arg):
+        if event == "call" and frame.f_code.co_filename == own_file:
+            if frame.f_code in stack:
+                state["recursed"] = True
+            stack.append(frame.f_code)
+            state["calls"] += 1
+        elif event == "return" and frame.f_code.co_filename == own_file and stack:
+            stack.pop()
+
+    sys.setprofile(profiler)
+    try:
+        result = function(*args)
+    finally:
+        sys.setprofile(None)
+    return result, state["recursed"], state["calls"]
+
+
 def uses_recursion(function):
-    tree = ast.parse(inspect.getsource(practice))
-    graph = {}
-    for node in ast.walk(tree):
-        if isinstance(node, ast.FunctionDef):
-            graph[node.name] = {
-                call.func.id if isinstance(call.func, ast.Name) else call.func.attr
-                for call in ast.walk(node)
-                if isinstance(call, ast.Call) and isinstance(call.func, (ast.Name, ast.Attribute))
-            }
+    chain = Node(1, Node(2, Node(3)))
+    return run_traced(function, chain)[1]
 
-    def has_cycle(name, active):
-        if name in active:
-            return True
-        return any(has_cycle(child, active | {name}) for child in graph.get(name, ()))
 
-    return has_cycle(function.__name__, set())
+def chain_tree(size):
+    root = None
+    for number in range(size):
+        root = Node(number, root, Node(-number))
+    return root
 
 
 def sample():
@@ -140,5 +156,16 @@ class TreeStats(unittest.TestCase):
         self.assertIs(root.left, left)
         self.assertIsNone(root.right)
 
+    def test_right_only_children(self):
+        root = Node(1, None, Node(2, Node(3), Node(4)))
+        self.assertEqual(practice.tree_stats(root), (3, 2))
+
     def test_recursion(self):
         self.assertTrue(uses_recursion(practice.tree_stats), "Measure subtrees with recursion.")
+
+    def test_single_traversal(self):
+        root = chain_tree(12)
+        nodes = 24
+        result, _, calls = run_traced(practice.tree_stats, root)
+        self.assertEqual(result, (13, 12))
+        self.assertLessEqual(calls, 2 * nodes + 2, "Compute height and leaves in one pass.")

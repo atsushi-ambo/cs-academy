@@ -129,11 +129,43 @@ steps:
         visit(0)
         return result
   tests: |
+    import ast, sys
+    tree = ast.parse(open(__file__, encoding="utf-8").read())
+    for node in ast.walk(tree):
+        names = [alias.name.split(".")[0] for alias in getattr(node, "names", []) if isinstance(node, ast.Import)]
+        names += [(node.module or "").split(".")[0]] if isinstance(node, ast.ImportFrom) else []
+        assert not set(names) & {"itertools", "importlib"}, "Build the choices yourself"
+        assert not (isinstance(node, ast.Attribute) and node.attr in ("permutations", "combinations", "product")), "Build the choices yourself"
+        assert not (isinstance(node, ast.Name) and node.id in ("permutations", "combinations", "product")), "Build the choices yourself"
+    def trace(call):
+        stack, seen = [], [False]
+        def profile(frame, event, argument):
+            if frame.f_code.co_filename != __file__ or frame.f_code.co_name.startswith("<"):
+                return
+            if event == "call":
+                if frame.f_code in stack:
+                    seen[0] = True
+                stack.append(frame.f_code)
+            elif event == "return" and stack:
+                stack.pop()
+        sys.setprofile(profile)
+        try:
+            answer = call()
+        finally:
+            sys.setprofile(None)
+        return answer, seen[0]
     assert service_groups([]) == [[]]
     assert sorted(service_groups(["api"])) == [[], ["api"]]
     services = ["api", "db"]
     assert sorted(service_groups(services)) == [[], ["api"], ["api", "db"], ["db"]]
     assert services == ["api", "db"]
+    names = ["a", "b", "c", "d", "e"]
+    groups, recursed = trace(lambda: service_groups(names))
+    assert recursed, "Use recursion"
+    assert len(groups) == 32 and len({tuple(group) for group in groups}) == 32
+    assert all(list(group) == [name for name in names if name in group] for group in groups)
+    assert len({id(group) for group in groups}) == 32, "Save a copy of the path each time"
+    assert names == ["a", "b", "c", "d", "e"]
   hint_levels:
   - See what happens to an old result after path.pop().
   - Save a new list at each completed path.
@@ -217,6 +249,8 @@ steps:
     Moving down and right keeps r - c the same. Moving down and left keeps r + c the same.
     Use three sets to store used columns and the two kinds of diagonal labels.
     A set holds each value once. Use set() for an empty set. Use add() and remove() to change it.
+    You can also write a set with braces: {1} is a set with one value, and {-1, 4} has two.
+    Keep the three kinds of label apart. A column 3 and a sum of 3 are different things. Check each label in its own set.
 - id: st13
   type: predict
   title: Will the next branch see the old set?
@@ -349,12 +383,46 @@ steps:
 
         visit()
         return result
-  tests: |
-    assert sorted(job_orders(["api", "db"])) == [["api", "db"], ["db", "api"]]
-    assert job_orders([]) == [[]]
+  tests: &id003 |
+    import ast, sys
+    tree = ast.parse(open(__file__, encoding="utf-8").read())
+    for node in ast.walk(tree):
+        names = [alias.name.split(".")[0] for alias in getattr(node, "names", []) if isinstance(node, ast.Import)]
+        names += [(node.module or "").split(".")[0]] if isinstance(node, ast.ImportFrom) else []
+        assert not set(names) & {"itertools", "importlib"}, "Build the choices yourself"
+        assert not (isinstance(node, ast.Attribute) and node.attr in ("permutations", "combinations", "product")), "Build the choices yourself"
+        assert not (isinstance(node, ast.Name) and node.id in ("permutations", "combinations", "product")), "Build the choices yourself"
+    def trace(call):
+        stack, seen = [], [False]
+        def profile(frame, event, argument):
+            if frame.f_code.co_filename != __file__ or frame.f_code.co_name.startswith("<"):
+                return
+            if event == "call":
+                if frame.f_code in stack:
+                    seen[0] = True
+                stack.append(frame.f_code)
+            elif event == "return" and stack:
+                stack.pop()
+        sys.setprofile(profile)
+        try:
+            answer = call()
+        finally:
+            sys.setprofile(None)
+        return answer, seen[0]
+    assert sorted(tuple(order) for order in job_orders(["api", "db"])) == [("api", "db"), ("db", "api")]
+    assert [tuple(order) for order in job_orders([])] == [()]
     jobs = ["a", "b", "c"]
-    assert len({tuple(order) for order in job_orders(jobs)}) == 6
+    orders, recursed = trace(lambda: job_orders(jobs))
+    assert recursed, "Use recursion"
+    assert sorted(tuple(order) for order in orders) == [
+        ("a", "b", "c"), ("a", "c", "b"), ("b", "a", "c"),
+        ("b", "c", "a"), ("c", "a", "b"), ("c", "b", "a")]
     assert jobs == ["a", "b", "c"]
+    assert len({id(order) for order in orders}) == 6
+    seven = ["j0", "j1", "j2", "j3", "j4", "j5", "j6"]
+    found = [tuple(order) for order in job_orders(seven)]
+    assert len(found) == 5040 and len(set(found)) == 5040
+    assert all(sorted(order) == seven for order in found)
   hint_levels: &id001
   - Follow what happens when the first full path returns.
   - Undoing the append still leaves one other record of the choice.
@@ -375,8 +443,9 @@ steps:
   - Say how to detect a diagonal conflict.
   - Explain what restoring state lets the next branch do.
   model_answer: Squares on the same diagonal have the same row minus column or the same row plus column.
-    I skip a square if a queen already uses one of its labels. When I return, I remove the column and
-    both labels so the next choice starts from the same board.
+    I keep three sets, one for columns, one for differences, and one for sums, and I never mix them. I
+    skip a square if its column, difference, or sum is already in the matching set. When I return, I
+    remove those three values so the next choice starts from the same board.
 - id: st21
   type: boss
   title: 'Unit challenge: Backtracking'
@@ -432,12 +501,7 @@ steps:
 
           visit()
           return result
-    tests: |
-      assert sorted(job_orders(["api", "db"])) == [["api", "db"], ["db", "api"]]
-      assert job_orders([]) == [[]]
-      jobs = ["a", "b", "c"]
-      assert len({tuple(order) for order in job_orders(jobs)}) == 6
-      assert jobs == ["a", "b", "c"]
+    tests: *id003
     hint_levels: *id001
     explanation: Every sibling branch must see the flags as they were before the choice. Time and output
       space are O(n·n!) for n ≥ 1. Working space is O(n).

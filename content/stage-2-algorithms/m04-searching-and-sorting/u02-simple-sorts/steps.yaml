@@ -17,6 +17,8 @@ steps:
     This is the **sorted prefix**. A prefix is the start of a list.
     Each **pass** scans the rest of the list to find its smallest item.
     Then **swap**, or trade, that item and the item at start.
+    A swap can be one line: `a, b = b, a`. Python first reads both values on the right.
+    Then it stores them in the names on the left. So the two values trade places and nothing is lost.
 
     ```python
     values = [8, 4, 6]
@@ -222,6 +224,13 @@ steps:
             result[j + 1] = saved
         return result
   tests: |
+    import ast
+    tree = ast.parse(open(__file__, encoding="utf-8").read())
+    used = {node.id for node in ast.walk(tree) if isinstance(node, ast.Name)}
+    used |= {node.attr for node in ast.walk(tree) if isinstance(node, ast.Attribute)}
+    used |= {alias.name.split(".")[0] for node in ast.walk(tree) if isinstance(node, ast.Import) for alias in node.names}
+    used |= {(node.module or "").split(".")[0] for node in ast.walk(tree) if isinstance(node, ast.ImportFrom)}
+    assert not used & {"sorted", "sort", "heapq", "bisect", "importlib"}, "Write the sort yourself"
     assert order_ties([(2, "b"), (1, "x"), (2, "a")]) == [(1, "x"), (2, "b"), (2, "a")]
     assert order_ties([(5, "z"), (5, "a")]) == [(5, "z"), (5, "a")]
     assert order_ties([]) == []
@@ -229,6 +238,11 @@ steps:
     result = order_ties(jobs)
     assert result == [(1, "y"), (5, "x")] and result is not jobs
     assert jobs == [(5, "x"), (1, "y")]
+    many = [((index * 7) % 5, f"n{index}") for index in range(120)]
+    before = list(many)
+    expected = [job for key in range(5) for job in before if job[0] == key]
+    assert order_ties(many) == expected
+    assert many == before
   hint_levels:
   - Trace two jobs with the same size.
   - The new job must stay after the older equal job.
@@ -346,11 +360,37 @@ steps:
             if not swapped:
                 break
         return checks
-  tests: |
+  tests: &id004 |
+    import ast
+    tree = ast.parse(open(__file__, encoding="utf-8").read())
+    used = {node.id for node in ast.walk(tree) if isinstance(node, ast.Name)}
+    used |= {node.attr for node in ast.walk(tree) if isinstance(node, ast.Attribute)}
+    used |= {alias.name.split(".")[0] for node in ast.walk(tree) if isinstance(node, ast.Import) for alias in node.names}
+    used |= {(node.module or "").split(".")[0] for node in ast.walk(tree) if isinstance(node, ast.ImportFrom)}
+    assert not used & {"sorted", "sort", "heapq", "bisect", "importlib"}, "Write the sort yourself"
     assert count_checks([2, 1, 3, 4, 5]) == 7
     assert count_checks([1, 2, 3, 4, 5]) == 4
     assert count_checks([4, 3, 2, 1]) == 6
     assert count_checks([]) == 0
+    assert count_checks([7]) == 0
+    assert count_checks([1, 1, 1, 4, 6]) == 4
+    log = []
+    class Key(int):
+        def __gt__(self, other):
+            log.append(1)
+            return int.__gt__(self, other)
+        def __lt__(self, other):
+            log.append(1)
+            return int.__lt__(self, other)
+    values = [Key(value) for value in (9, 3, 3, 8, 1, 7, 2, 2)]
+    shown = [int(value) for value in values]
+    reply = count_checks(values)
+    assert reply == len(log), "Count each value comparison"
+    assert [int(value) for value in values] == shown, "Keep the input unchanged"
+    big = list(range(200, 0, -1))
+    assert count_checks(big) == 19900
+    assert big == list(range(200, 0, -1))
+    assert count_checks(list(range(200))) == 199
   hint_levels: &id001
   - Ask what the flag says in the second pass.
   - The flag should report swaps during the current pass only.
@@ -417,11 +457,7 @@ steps:
               if not swapped:
                   break
           return checks
-    tests: |
-      assert count_checks([2, 1, 3, 4, 5]) == 7
-      assert count_checks([1, 2, 3, 4, 5]) == 4
-      assert count_checks([4, 3, 2, 1]) == 6
-      assert count_checks([]) == 0
+    tests: *id004
     hint_levels: *id001
     explanation: Resetting the flag lets a quiet pass end the loop. Time is O(n) in the best case and
       O(n²) in the worst case. The copy uses O(n) extra space.

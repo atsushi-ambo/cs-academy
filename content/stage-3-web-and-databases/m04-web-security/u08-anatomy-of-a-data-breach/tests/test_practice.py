@@ -52,5 +52,22 @@ class ExportTitle(unittest.TestCase):
         self.assertEqual(reports, {"r1": {"owner": "lee", "title": "", "internal": "private-toy"}})
         self.assertEqual(grants, {("read", "reports")})
 
+    def test_returns_title_and_logs_request(self):
+        log = []
+        reports = {"r1": {"owner": "lee", "title": "", "internal": "x"},
+                   "r2": {"owner": "lee", "title": "Quarterly uptime", "internal": "y"},
+                   "r3": {"owner": "kai", "title": "Other", "internal": "z"}}
+        grants = {("read", "reports"), ("read", "accounts")}
+        self.assertEqual(practice.export_title("lee", reports, "r2", grants, "req-9", log), "Quarterly uptime")
+        self.assertEqual(log, [{"request_id": "req-9", "decision": "allowed"}])
+        self.assertEqual(practice.export_title("lee", reports, "r1", grants, "req-10", log), "")
+        self.assertIsNone(practice.export_title("lee", reports, "r3", grants, "req-11", log))
+        self.assertEqual(practice.export_title("kai", reports, "r3", grants, "req-12", log), "Other")
+        self.assertEqual(log, [{"request_id": "req-9", "decision": "allowed"},
+                               {"request_id": "req-10", "decision": "allowed"},
+                               {"request_id": "req-11", "decision": "denied"},
+                               {"request_id": "req-12", "decision": "allowed"}])
+        self.assertEqual(reports["r2"], {"owner": "lee", "title": "Quarterly uptime", "internal": "y"})
+
 if __name__ == "__main__":
     unittest.main()

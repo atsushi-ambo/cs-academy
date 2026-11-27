@@ -10,7 +10,7 @@ Bounded profiles keep storage mistakes from selecting huge costs. Valid verifica
 
 ## `login`
 
-Successful logins can upgrade records without storing plaintext. Time is one verification plus at most one registration. Peak extra space is the higher KDF memory cost.
+A successful login can replace an older record with a stronger one without storing plaintext. A record that is already as strong or stronger stays as it is. Time is one verification plus at most one registration, with O(1) work of its own for the dictionary lookup and write. Peak extra space is the higher KDF memory cost.
 
 ## Next practice
 

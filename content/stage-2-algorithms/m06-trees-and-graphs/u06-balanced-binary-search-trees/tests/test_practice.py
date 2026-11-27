@@ -116,6 +116,59 @@ class AvlInsert(unittest.TestCase):
                 self.assertEqual(root.key, 20)
                 self.assertEqual(self.check_tree(root), ([10, 20, 30], 2))
 
+    def test_rotation_calls_for_each_case(self):
+        expected = {
+            (30, 20, 10): [("right", 30)],
+            (10, 20, 30): [("left", 10)],
+            (30, 10, 20): [("left", 10), ("right", 30)],
+            (10, 30, 20): [("right", 30), ("left", 10)],
+        }
+        for order, calls_wanted in expected.items():
+            with self.subTest(order=order):
+                calls = []
+                made = []
+
+                def spy_left(node):
+                    calls.append(("left", node.key))
+                    return left_turn(node)
+
+                def spy_right(node):
+                    calls.append(("right", node.key))
+                    return right_turn(node)
+
+                def spy_node(key):
+                    made.append(key)
+                    return Node(key)
+
+                root = None
+                for key in order:
+                    root = practice.avl_insert(root, key, spy_node, spy_left, spy_right)
+                self.assertEqual(calls, calls_wanted)
+                self.assertEqual(made, list(order))
+                self.assertEqual(root.key, 20)
+
+    def test_balanced_inserts_do_not_rotate_or_rebuild(self):
+        calls = []
+        made = []
+
+        def spy_left(node):
+            calls.append(node.key)
+            return left_turn(node)
+
+        def spy_right(node):
+            calls.append(node.key)
+            return right_turn(node)
+
+        def spy_node(key):
+            made.append(key)
+            return Node(key)
+
+        root = None
+        for key in (20, 10, 30, 5, 15, 25, 35, 20, 5):
+            root = practice.avl_insert(root, key, spy_node, spy_left, spy_right)
+        self.assertEqual(calls, [])
+        self.assertEqual(made, [20, 10, 30, 5, 15, 25, 35])
+
     def test_sorted_stream_and_internal_rotations(self):
         root = Node(0)
         for key in range(1, 40):

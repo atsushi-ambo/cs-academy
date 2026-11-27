@@ -25,27 +25,30 @@ digest bytes 32
 
 ## Measure the cost per known input
 
-Change calls from 4 to 8. Compare the printed average times. The test counts examples, so timer noise cannot fail it.
+Change calls from 4 to 8. Compare the printed average times. The test counts examples, so timer noise cannot fail it. The scrypt n=1024 and the 10000 PBKDF2 steps are lab-only values. Real settings are in the next step.
 
 Completed sample
 
 ```python
-from hashlib import pbkdf2_hmac, scrypt, sha256
+import hashlib
 from time import perf_counter
+
+if not hasattr(hashlib, "scrypt"):
+    raise SystemExit("This Python has no scrypt. Run the lab in the app's Python 3.13 sandbox.")
 
 known = b"public-demo"
 calls = 8
 start = perf_counter()
 for _ in range(calls):
-    sha256(known).digest()
+    hashlib.sha256(known).digest()
 print("fast ms/call", 1000 * (perf_counter() - start) / calls)
 start = perf_counter()
 for _ in range(calls):
-    scrypt(known, salt=b"timer-fixture", n=1024, r=8, p=1, dklen=32)
+    hashlib.scrypt(known, salt=b"timer-fixture", n=1024, r=8, p=1, dklen=32)
 print("scrypt ms/call", 1000 * (perf_counter() - start) / calls)
 start = perf_counter()
 for _ in range(calls):
-    pbkdf2_hmac("sha256", known, b"timer-fixture", 10000)
+    hashlib.pbkdf2_hmac("sha256", known, b"timer-fixture", 10000)
 print("PBKDF2 ms/call", 1000 * (perf_counter() - start) / calls)
 print("calls per method", calls)
 ```

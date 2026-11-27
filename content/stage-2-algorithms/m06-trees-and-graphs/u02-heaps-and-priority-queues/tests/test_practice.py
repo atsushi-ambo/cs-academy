@@ -27,21 +27,54 @@ def sift_down(heap, i):
         i = child
 
 
-def check_manual(test, function):
-    source = ast.parse(inspect.getsource(practice))
-    for item in source.body:
-        if isinstance(item, ast.FunctionDef) and item.name != function.__name__:
+FORBIDDEN_NAMES = {"sorted", "__import__", "importlib", "builtins", "eval", "exec", "getattr"}
+FORBIDDEN_TEXT = {"sort", "sorted", "heapq", "_heapq"}
+
+
+def heapq_aliases(tree):
+    aliases = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                if alias.name.split(".")[0] in {"heapq", "_heapq"}:
+                    aliases.add((alias.asname or alias.name).split(".")[0])
+        if isinstance(node, ast.ImportFrom) and (node.module or "").split(".")[0] in {"heapq", "_heapq"}:
+            for alias in node.names:
+                aliases.add(alias.asname or alias.name)
+    return aliases
+
+
+def check_manual(test, function=None):
+    """Whole-module check: only schedule may touch heapq. No sorting anywhere."""
+    tree = ast.parse(inspect.getsource(practice))
+    aliases = heapq_aliases(tree)
+    scopes = [node for node in tree.body if not (isinstance(node, ast.FunctionDef) and node.name == "schedule")]
+    for scope in scopes:
+        if isinstance(scope, (ast.Import, ast.ImportFrom)):
             continue
-        for node in ast.walk(item):
-            if isinstance(node, ast.Import):
-                test.assertTrue(all(alias.name not in {"heapq", "_heapq"} for alias in node.names))
-            if isinstance(node, ast.ImportFrom):
-                test.assertNotIn(node.module, {"heapq", "_heapq"})
-            if isinstance(node, ast.Call):
-                if isinstance(node.func, ast.Name):
-                    test.assertNotEqual(node.func.id, "sorted")
-                if isinstance(node.func, ast.Attribute):
-                    test.assertNotIn(node.func.attr, {"sort", "sorted"})
+        for node in ast.walk(scope):
+            if isinstance(node, (ast.Import, ast.ImportFrom)):
+                names = [alias.name for alias in node.names] + [getattr(node, "module", None) or ""]
+                test.assertFalse(
+                    any(name.split(".")[0] in {"heapq", "_heapq", "importlib", "builtins"} for name in names),
+                    "Do not import a heap library outside schedule.",
+                )
+            if isinstance(node, ast.Name):
+                test.assertNotIn(node.id, FORBIDDEN_NAMES | aliases)
+            if isinstance(node, ast.Attribute):
+                test.assertNotIn(node.attr, {"sort", "sorted", "heapify", "heappush", "heappop", "nsmallest"})
+            if isinstance(node, ast.Constant) and isinstance(node.value, str):
+                test.assertNotIn(node.value, FORBIDDEN_TEXT)
+
+
+def is_heap_at(heap, root):
+    if root >= len(heap):
+        return True
+    for child in (2 * root + 1, 2 * root + 2):
+        if child < len(heap):
+            if heap[root] > heap[child] or not is_heap_at(heap, child):
+                return False
+    return True
 
 
 def assert_heap(test, heap):
@@ -64,6 +97,14 @@ class SiftUp(unittest.TestCase):
         self.assertEqual(heap, [1, 2, 5, 7])
         check_manual(self, practice.sift_up)
 
+    def test_stops_midway_after_append(self):
+        heap = [1, 4, 3, 8, 6, 2]
+        practice.sift_up(heap, 5)
+        self.assertEqual(heap, [1, 4, 2, 8, 6, 3])
+        heap = [1, 4, 3, 8, 6, 5]
+        practice.sift_up(heap, 5)
+        self.assertEqual(heap, [1, 4, 3, 8, 6, 5])
+
 
 class Push(unittest.TestCase):
     def test_empty_and_duplicate(self):
@@ -77,6 +118,17 @@ class Push(unittest.TestCase):
         practice.push(heap, 3, sift_up)
         self.assertEqual(heap, [3, 5, 8, 7])
         check_manual(self, practice.push)
+
+    def test_uses_given_sift_up(self):
+        calls = []
+
+        def spy(heap, i):
+            calls.append((id(heap), i, list(heap)))
+
+        heap = [5, 7, 8]
+        practice.push(heap, 3, spy)
+        self.assertEqual(calls, [(id(heap), 3, [5, 7, 8, 3])])
+        self.assertEqual(heap, [5, 7, 8, 3])
 
 
 class SiftDown(unittest.TestCase):
@@ -93,6 +145,14 @@ class SiftDown(unittest.TestCase):
         practice.sift_down(heap, 0)
         self.assertEqual(heap, [3, 6, 4, 7, 9, 10])
         check_manual(self, practice.sift_down)
+
+    def test_long_path_and_right_child(self):
+        heap = [20, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]
+        practice.sift_down(heap, 0)
+        self.assertEqual(heap, [3, 5, 4, 9, 6, 7, 8, 20, 10, 11, 12, 13, 14, 15, 16])
+        heap = [1, 5, 7, 4, 2, 6, 3, 99]
+        practice.sift_down(heap, 2)
+        self.assertEqual(heap, [1, 5, 3, 4, 2, 6, 7, 99])
 
     def test_subtree(self):
         heap = [1, 9, 3, 5, 5, 8]
@@ -118,6 +178,19 @@ class PopMin(unittest.TestCase):
         self.assertEqual(heap, [])
         check_manual(self, practice.pop_min)
 
+    def test_uses_given_sift_down(self):
+        calls = []
+
+        def spy(heap, i):
+            calls.append((id(heap), i))
+            sift_down(heap, i)
+
+        heap = [2, 3, 4, 7]
+        self.assertEqual(practice.pop_min(heap, spy), 2)
+        self.assertEqual(calls, [(id(heap), 0)])
+        assert_heap(self, heap)
+        self.assertCountEqual(heap, [3, 4, 7])
+
 
 class Heapify(unittest.TestCase):
     def test_empty_and_one(self):
@@ -138,6 +211,8 @@ class Heapify(unittest.TestCase):
             self.assertIs(heap, original_heap)
             self.assertGreaterEqual(i, 0)
             self.assertLess(i, len(heap) // 2)
+            for child in (2 * i + 1, 2 * i + 2):
+                self.assertTrue(is_heap_at(heap, child), "Repair children before their parent.")
             repaired.append(i)
             sift_down(heap, i)
 
@@ -147,6 +222,20 @@ class Heapify(unittest.TestCase):
         self.assertCountEqual(heap, original)
         assert_heap(self, heap)
         check_manual(self, practice.heapify)
+
+    def test_children_are_repaired_before_parents(self):
+        heap = [9, 7, 8, 6, 5, -10, 4, -3, 8]
+        original = heap.copy()
+
+        def ordered_sift(heap, i):
+            for child in (2 * i + 1, 2 * i + 2):
+                self.assertTrue(is_heap_at(heap, child), "Repair children before their parent.")
+            sift_down(heap, i)
+
+        practice.heapify(heap, ordered_sift)
+        assert_heap(self, heap)
+        self.assertEqual(heap[0], -10)
+        self.assertCountEqual(heap, original)
 
 
 class Schedule(unittest.TestCase):
@@ -159,3 +248,33 @@ class Schedule(unittest.TestCase):
         snapshot = jobs.copy()
         self.assertEqual(practice.schedule(jobs), ["alert", "z-check", "a-check", "report", "report"])
         self.assertEqual(jobs, snapshot)
+
+    def test_uses_heapq_push_and_pop(self):
+        import heapq
+        import importlib
+
+        counts = {"push": 0, "pop": 0, "heapify": 0}
+        real = (heapq.heappush, heapq.heappop, heapq.heapify)
+
+        def push(heap, item):
+            counts["push"] += 1
+            real[0](heap, item)
+
+        def pop(heap):
+            counts["pop"] += 1
+            return real[1](heap)
+
+        def build(heap):
+            counts["heapify"] += 1
+            real[2](heap)
+
+        heapq.heappush, heapq.heappop, heapq.heapify = push, pop, build
+        try:
+            module = importlib.reload(practice)
+            jobs = [(2, "log"), (1, "alert"), (2, "sync"), (0, "page")]
+            self.assertEqual(module.schedule(jobs), ["page", "alert", "log", "sync"])
+        finally:
+            heapq.heappush, heapq.heappop, heapq.heapify = real
+            importlib.reload(practice)
+        self.assertGreaterEqual(counts["pop"], 4)
+        self.assertGreater(counts["push"] + counts["heapify"], 0)

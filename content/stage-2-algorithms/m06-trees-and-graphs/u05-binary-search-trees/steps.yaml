@@ -170,7 +170,8 @@ steps:
   type: read
   title: Delete by returning the new subtree root
   body: |
-    Delete first follows the usual search path. Return None if the path has no match.
+    Delete first follows the usual search path. A call that reaches an empty link returns None.
+    The parent stores that None back in the same link, so the tree is unchanged.
     If the matched node has no children, replace it with None.
     If it has one child, replace it with that child. This keeps every key below it attached.
     At the parent, store the returned link. At the top, keep the returned root in your own variable.

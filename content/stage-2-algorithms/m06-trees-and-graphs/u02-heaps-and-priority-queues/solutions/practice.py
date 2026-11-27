@@ -1,8 +1,8 @@
 def sift_up(heap, i):
     """
-    Change a list of integers in place and return None. Index i is valid. Only that value
-    may be too small for its parent. Use index comparisons and swaps, with no heap
-    library or sort. Sift up at index 3 in [2, 7, 5, 1] to get [1, 2, 5, 7].
+    Change a list of integers in place and return None. The list was a min-heap until
+    one value was just appended; i is that last index. Use index comparisons and swaps,
+    with no heap library or sort. Sift up at index 3 in [2, 7, 5, 1] to get [1, 2, 5, 7].
     """
     while i > 0:
         parent = (i - 1) // 2

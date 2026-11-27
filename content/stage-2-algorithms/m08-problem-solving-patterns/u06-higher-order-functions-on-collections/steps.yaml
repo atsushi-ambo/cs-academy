@@ -35,10 +35,6 @@ steps:
     print(len(calls))
     print(list(result))
   choices:
-  - text: '0
-
-      [4, 6]'
-    why: Creating map does not call double. The list call consumes the items.
   - text: '2
 
       [4, 6]'
@@ -51,7 +47,11 @@ steps:
 
       []'
     why: The iterator still has both items when list first reads it.
-  answer: 0
+  - text: '0
+
+      [4, 6]'
+    why: Creating map does not call double. The list call consumes the items.
+  answer: 3
 - id: st04
   type: code
   title: Implement my_map with a loop or comprehension
@@ -81,15 +81,15 @@ steps:
     records = [("api", 5), ("db", 1), ("ops", 7)]
     print(list(filter(lambda row: row[1] > 3, records)))
   choices:
-  - text: '[True, False, True]'
-    why: These are test results. The iterator yields the kept records.
   - text: '[(''api'', 5), (''ops'', 7)]'
     why: The two original records pass the delay test.
+  - text: '[True, False, True]'
+    why: These are test results. The iterator yields the kept records.
   - text: '[5, 7]'
     why: The code uses the delay to test each row and keeps the full row.
   - text: '[(''db'', 1)]'
     why: The rule keeps delays greater than 3.
-  answer: 1
+  answer: 0
 - id: st07
   type: fix
   title: Keep matching items instead of test results
@@ -116,6 +116,12 @@ steps:
     assert select(items, lambda n: n) == [3, 3, -1]
     assert select([], bool) == []
     assert items == [3, 0, 3, -1]
+    calls = []
+    def seen(n):
+        calls.append(n)
+        return n > 0
+    assert select(items, seen) == [3, 3]
+    assert calls == [3, 0, 3, -1]
   hint_levels:
   - Separate the thing you test from the thing you collect.
   - Use the callback result only as the if condition.
@@ -180,13 +186,13 @@ steps:
   choices:
   - text: '11'
     why: This would group the two input values before combining with 10.
+  - text: '5'
+    why: Starting at 10 gives (10 - 2) - 3 = 5.
   - text: '-1'
     why: The explicit initial value 10 is used before item 2.
   - text: '-5'
     why: The first argument to the rule holds the running total.
-  - text: '5'
-    why: Starting at 10 gives (10 - 2) - 3 = 5.
-  answer: 3
+  answer: 1
 - id: st13
   type: parsons
   title: Build a reduction from a running value

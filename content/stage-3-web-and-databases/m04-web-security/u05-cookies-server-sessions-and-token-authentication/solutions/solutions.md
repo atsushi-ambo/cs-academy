@@ -10,7 +10,7 @@ For d draws with bounded IDs, expected time is O(d) and extra space is O(1). For
 
 ## `rotate`
 
-Rotation retires the earlier ID. Besides ID generation, average time and extra space are O(1) with bounded IDs.
+Rotation retires the earlier ID and keeps it out of the choices, even when it is already absent from the table. Copying the table costs O(s) time and space for s stored sessions. Besides ID generation, the other table operations are O(1) on average with bounded IDs.
 
 ## Next practice
 

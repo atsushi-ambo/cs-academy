@@ -17,15 +17,15 @@ steps:
     sessions = {sid: {"user": "lee", "expires": 40}}
     print(sid, sessions[sid]["user"])
   choices:
-  - text: lee lee
-    why: The account name is only in the server record.
-  - text: toy-opaque toy-opaque
-    why: The dictionary lookup returns a user record.
   - text: toy-opaque lee
     why: The cookie carries an ID. The server stores the user's name.
+  - text: toy-opaque toy-opaque
+    why: The dictionary lookup returns a user record.
+  - text: lee lee
+    why: The account name is only in the server record.
   - text: 40 lee
     why: The expiry is a stored field, separate from the ID.
-  answer: 2
+  answer: 0
 - id: st03
   type: try
   title: See how a cookie flag changes the header
@@ -58,15 +58,15 @@ steps:
     cookie["sid"]["secure"] = True
     print(cookie["sid"].OutputString())
   choices:
-  - text: sid=toy; Secure
-    why: Secure is a flag in the header, and the value is still toy.
+  - text: sid=Secure
+    why: Secure is an attribute. It does not replace the ID.
   - text: sid=toy
     why: OutputString includes the enabled flag.
   - text: sid=toy; secure=True
     why: Cookie flags appear without a value.
-  - text: sid=Secure
-    why: Secure is an attribute. It does not replace the ID.
-  answer: 0
+  - text: sid=toy; Secure
+    why: Secure is a flag in the header, and the value is still toy.
+  answer: 3
 - id: st06
   type: parsons
   title: Prepare an opaque ID and expiry
@@ -125,15 +125,15 @@ steps:
     why: That would accept a time after expiry.
   - text: |-
       True
-      True
-      True
-    why: Holding a cookie cannot extend its lifetime.
-  - text: |-
-      True
       False
       False
     why: The time must be strictly before the deadline.
-  answer: 3
+  - text: |-
+      True
+      True
+      True
+    why: Holding a cookie cannot extend its lifetime.
+  answer: 2
 - id: st10
   type: fix
   title: Reject expired server sessions
@@ -199,6 +199,7 @@ steps:
     Session fixation means someone already knows the ID that survives another user's login.
     After authentication, generate a fresh ID with secrets.token_urlsafe(32). Then invalidate the old ID.
     The function encodes the random bytes as URL-safe text. A random draw could collide. The exercise checks for a collision before writing the new record.
+    The new ID must also differ from the old one. dict(table) makes a copy you can extend without changing the table.
     In a shared store, reserve a unique ID and switch records as one operation.
 - id: st13
   type: try
@@ -266,27 +267,28 @@ steps:
     why: The opaque lookup now fails.
   - text: False False
     why: The local check uses no lookup or revocation list here.
-  - text: False True
-    why: Removing the opaque entry has no effect on the independent local claim check.
   - text: True False
     why: Only the opaque entry was changed.
-  answer: 2
+  - text: False True
+    why: Removing the opaque entry has no effect on the independent local claim check.
+  answer: 3
 - id: st18
   type: code
   title: 'Checkpoint: rotate after an authenticated login'
   task: |
     rotate(sessions, old_id, user, expires, fresh_id) returns the new ID.
     Trust user and expires because authentication already passed. IDs and user are short strings, and expires is an integer.
-    Call fresh_id(sessions) before removing old_id. It returns an ID absent from the table.
-    Remove just old_id if present, then store (user, expires) under the new ID.
+    Make a copy of sessions and add old_id to it, with None as the value. Pass that copy to fresh_id.
+    It returns an ID absent from the copy, so the new ID is never old_id, even if old_id is not in sessions.
+    Remove just old_id from sessions if present, then store (user, expires) under the new ID.
     Example: rotating guest to next leaves {"next": ("lee", 30)} if guest was the only entry.
   exercise: exercises/practice.py
   function: rotate
   test_class: Rotate
   hint_levels:
-  - Choose a fresh ID before removing anything.
-  - Drop the old ID, then create the authenticated entry.
-  - Use sessions.pop(old_id, None) and sessions[sid] = (user, expires).
+  - Choose a fresh ID before removing anything, and keep the old ID off the list of choices.
+  - Copy the table and add the old ID to the copy. Draw from that copy, then drop the old ID and create the entry.
+  - taken = dict(sessions), taken[old_id] = None, sid = fresh_id(taken). Then sessions.pop(old_id, None) and sessions[sid] = (user, expires).
 - id: st19
   type: predict
   title: An old session cookie after logout

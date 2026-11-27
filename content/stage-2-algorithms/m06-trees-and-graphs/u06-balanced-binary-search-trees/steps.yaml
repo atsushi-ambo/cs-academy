@@ -18,6 +18,7 @@ steps:
     The **balance factor** is left height minus right height.
     At every AVL node, it must be -1, 0, or 1.
     After a link changes, refresh the height before a parent reads it.
+    In code, `0 if node is None else node.height` means 0 when the link is empty, otherwise the stored height.
 - id: st03
   type: predict
   title: Find the sign of a right-heavy tree
@@ -344,7 +345,7 @@ steps:
   - text: left child left, then root right
     why: The parent factor is negative, so the left branch is not the heavy one.
   - text: right child right, then root left
-    why: Use that second turn at the child only for an inner RL lean.
+    why: Use that first turn at the right child only for an inner RL lean.
   answer: 0
 - id: st16
   type: code

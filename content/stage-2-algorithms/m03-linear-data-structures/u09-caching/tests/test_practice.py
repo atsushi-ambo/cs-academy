@@ -81,6 +81,26 @@ class MakeLru(unittest.TestCase):
         self.assert_order(cache, ["log", "api"])
         reject_shortcuts(self, practice.make_lru, {"OrderedDict", "deque", "lru_cache", "move_to_end"})
 
+    def test_middle_node_moves_keep_links(self):
+        cache = practice.make_lru(3)
+        for key, value in (("a", 1), ("b", 2), ("c", 3)):
+            cache.put(key, value)
+        self.assertEqual(cache.get("b"), 2)
+        self.assert_order(cache, ["a", "c", "b"])
+        self.assertIs(cache.nodes["c"].prev, cache.nodes["a"])
+        cache.put("c", 9)
+        self.assert_order(cache, ["a", "b", "c"])
+        cache.put("b", 7)
+        self.assert_order(cache, ["a", "c", "b"])
+        cache.put("d", 4)
+        self.assert_order(cache, ["c", "b", "d"])
+        self.assertEqual(cache.get("c"), 9)
+        self.assert_order(cache, ["b", "d", "c"])
+        self.assertEqual(cache.get("d"), 4)
+        self.assert_order(cache, ["b", "c", "d"])
+        self.assertEqual(cache.get("d"), 4)
+        self.assert_order(cache, ["b", "c", "d"])
+
     def test_capacity_zero_and_one(self):
         zero = practice.make_lru(0)
         zero.put("api", 4)

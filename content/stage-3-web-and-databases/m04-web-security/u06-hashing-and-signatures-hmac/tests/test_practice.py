@@ -1,9 +1,23 @@
+import hmac
 import sys
 import unittest
+from contextlib import ExitStack, contextmanager
 from pathlib import Path
+from unittest.mock import Mock, patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "exercises"))
 import practice
+
+
+@contextmanager
+def replaced(owner, name, replacement):
+    original = getattr(owner, name)
+    with ExitStack() as stack:
+        stack.enter_context(patch.object(owner, name, replacement))
+        for key, value in list(vars(practice).items()):
+            if value is original:
+                stack.enter_context(patch.object(practice, key, replacement))
+        yield replacement
 
 
 class Sign(unittest.TestCase):
@@ -17,19 +31,28 @@ class Sign(unittest.TestCase):
 
 class VerifyTag(unittest.TestCase):
     def test_contract(self):
-        import hmac
-        from unittest.mock import patch
-
         key, body = b"toy", b"up"
         tag = hmac.digest(key, body, "sha256")
-        with patch("hmac.compare_digest", wraps=hmac.compare_digest) as compare:
+        compare = Mock(wraps=hmac.compare_digest)
+        with replaced(hmac, "compare_digest", compare):
             self.assertIs(practice.verify_tag(key, body, tag), True)
-            compare.assert_called_once_with(tag, tag)
+        compare.assert_called_once_with(tag, tag)
         self.assertIs(practice.verify_tag(key, b"up ", tag), False)
         self.assertIs(practice.verify_tag(b"other", body, tag), False)
         self.assertIs(practice.verify_tag(key, b"", hmac.digest(key, b"", "sha256")), True)
         for bad in (None, b"", tag[:1], tag + b"x"):
             self.assertIs(practice.verify_tag(key, body, bad), False)
+
+    def test_same_length_mismatch_uses_compare_digest(self):
+        key, body = b"toy", b"up"
+        expected = hmac.digest(key, body, "sha256")
+        wrong = bytes([expected[0] ^ 1]) + expected[1:]
+        other = hmac.digest(key, b"down", "sha256")
+        for supplied in (wrong, other, expected[:-1] + bytes([expected[-1] ^ 1])):
+            compare = Mock(wraps=hmac.compare_digest)
+            with replaced(hmac, "compare_digest", compare):
+                self.assertIs(practice.verify_tag(key, body, supplied), False)
+            compare.assert_called_once_with(expected, supplied)
 
 
 class AcceptEvent(unittest.TestCase):

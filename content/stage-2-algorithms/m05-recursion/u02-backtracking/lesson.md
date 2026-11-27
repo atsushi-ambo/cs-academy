@@ -34,4 +34,4 @@ Choose, explore, and undo. Prune a choice when no answer can follow it.
 
 **Model answer**
 
-Squares on the same diagonal have the same row minus column or the same row plus column. I skip a square if a queen already uses one of its labels. When I return, I remove the column and both labels so the next choice starts from the same board.
+Squares on the same diagonal have the same row minus column or the same row plus column. I keep three sets, one for columns, one for differences, and one for sums, and I never mix them. I skip a square if its column, difference, or sum is already in the matching set. When I return, I remove those three values so the next choice starts from the same board.

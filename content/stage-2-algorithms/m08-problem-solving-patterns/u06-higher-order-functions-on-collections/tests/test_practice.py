@@ -1,11 +1,48 @@
-import ast
-import inspect
+import builtins
+import itertools
+import functools
 import sys
 import unittest
 from pathlib import Path
 
+WATCH = {'active': False, 'used': []}
+_originals = []
+
+
+def _watch(owner, name):
+    real = getattr(owner, name)
+    _originals.append((owner, name, real))
+
+    def wrapper(*args, **kwargs):
+        if WATCH['active']:
+            WATCH['used'].append(name)
+        return real(*args, **kwargs)
+
+    setattr(owner, name, wrapper)
+
+
+for _owner, _name in [(builtins, 'map'), (builtins, 'filter'), (functools, 'reduce'),
+                      (itertools, 'starmap'), (itertools, 'filterfalse'), (itertools, 'compress'),
+                      (itertools, 'accumulate')]:
+    _watch(_owner, _name)
+
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'exercises'))
 import practice
+
+
+def tearDownModule():
+    for owner, name, real in _originals:
+        setattr(owner, name, real)
+
+
+def used_helpers(call):
+    WATCH['used'] = []
+    WATCH['active'] = True
+    try:
+        result = call()
+    finally:
+        WATCH['active'] = False
+    return result, list(WATCH['used'])
 
 
 class MyMap(unittest.TestCase):
@@ -27,13 +64,9 @@ class MyMap(unittest.TestCase):
 
     def test_iterator_and_technique(self):
         self.assertEqual(practice.my_map(str, iter([3, 4])), ['3', '4'])
-        tree = ast.parse(inspect.getsource(practice.my_map))
-        for node in ast.walk(tree):
-            if isinstance(node, ast.Call):
-                name = getattr(node.func, 'id', getattr(node.func, 'attr', None))
-                self.assertNotEqual(name, 'map', 'Implement map behavior yourself.')
-            if isinstance(node, ast.ImportFrom) and node.module in ('builtins', 'functools'):
-                self.assertNotIn('map', [alias.name for alias in node.names])
+        result, used = used_helpers(lambda: practice.my_map(str, [1, 2]))
+        self.assertEqual(result, ['1', '2'])
+        self.assertEqual(used, [], 'Implement map behavior yourself.')
 
 
 class MyFilter(unittest.TestCase):
@@ -54,13 +87,9 @@ class MyFilter(unittest.TestCase):
 
     def test_iterator_and_technique(self):
         self.assertEqual(practice.my_filter(bool, iter([0, 2])), [2])
-        tree = ast.parse(inspect.getsource(practice.my_filter))
-        for node in ast.walk(tree):
-            if isinstance(node, ast.Call):
-                name = getattr(node.func, 'id', getattr(node.func, 'attr', None))
-                self.assertNotEqual(name, 'filter', 'Implement filter behavior yourself.')
-            if isinstance(node, ast.ImportFrom) and node.module in ('builtins', 'functools'):
-                self.assertNotIn('filter', [alias.name for alias in node.names])
+        result, used = used_helpers(lambda: practice.my_filter(bool, [0, 2]))
+        self.assertEqual(result, [2])
+        self.assertEqual(used, [], 'Implement filter behavior yourself.')
 
 
 class MyReduce(unittest.TestCase):
@@ -82,13 +111,9 @@ class MyReduce(unittest.TestCase):
 
     def test_iterator_and_technique(self):
         self.assertEqual(practice.my_reduce(lambda a, n: a - n, iter([2, 3]), 10), 5)
-        tree = ast.parse(inspect.getsource(practice.my_reduce))
-        for node in ast.walk(tree):
-            if isinstance(node, ast.Call):
-                name = getattr(node.func, 'id', getattr(node.func, 'attr', None))
-                self.assertNotEqual(name, 'reduce', 'Implement reduce behavior yourself.')
-            if isinstance(node, ast.ImportFrom) and node.module in ('builtins', 'functools'):
-                self.assertNotIn('reduce', [alias.name for alias in node.names])
+        result, used = used_helpers(lambda: practice.my_reduce(lambda a, n: a + n, [1, 2], 0))
+        self.assertEqual(result, 3)
+        self.assertEqual(used, [], 'Implement reduce behavior yourself.')
 
 
 class IncidentReport(unittest.TestCase):

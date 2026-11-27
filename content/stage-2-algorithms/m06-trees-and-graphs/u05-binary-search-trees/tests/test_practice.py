@@ -18,7 +18,50 @@ def keys(root):
     return keys(root.left) + [root.key] + keys(root.right)
 
 
+class Traced:
+    visited = []
+
+    def __init__(self, key, left=None, right=None):
+        self._key = key
+        self.left = left
+        self.right = right
+
+    @property
+    def key(self):
+        Traced.visited.append(self)
+        return self._key
+
+
+def traced_tree():
+    off_path = Traced(3, Traced(1), Traced(5))
+    leaf = Traced(15, Traced(13), None)
+    mid = Traced(12, Traced(10), leaf)
+    root = Traced(8, off_path, mid)
+    return root, [root, mid, leaf], off_path
+
+
 class Search(unittest.TestCase):
+    def test_goes_right_when_left_exists(self):
+        left = Node(3, Node(1), Node(5))
+        root = Node(8, left, Node(12, None, Node(15)))
+        for key in (12, 15, 8, 5, 1):
+            self.assertTrue(practice.search(root, key), key)
+        for key in (9, 20, 4, 0):
+            self.assertFalse(practice.search(root, key), key)
+
+    def test_reads_only_one_path(self):
+        root, path, off_path = traced_tree()
+        Traced.visited = []
+        self.assertTrue(practice.search(root, 15))
+        self.assertTrue(all(node in path for node in Traced.visited))
+        self.assertTrue(all(node is not off_path for node in Traced.visited))
+        Traced.visited = []
+        self.assertFalse(practice.search(root, 20))
+        self.assertTrue(all(any(node is p for p in path) for node in Traced.visited))
+        Traced.visited = []
+        self.assertFalse(practice.search(root, 9))
+        self.assertLessEqual(len(set(map(id, Traced.visited))), 3)
+
     def test_empty_and_single(self):
         self.assertFalse(practice.search(None, 1))
         self.assertTrue(practice.search(Node(1), 1))

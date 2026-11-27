@@ -104,9 +104,9 @@ steps:
 - id: st08
   type: code
   title: Implement sift up
-  task: Change a list of integers in place and return None. Index i is valid. Only that value may be too
-    small for its parent. Use index comparisons and swaps, with no heap library or sort. Sift up at index
-    3 in [2, 7, 5, 1] to get [1, 2, 5, 7].
+  task: Change a list of integers in place and return None. The list was a min-heap until one value
+    was just appended; i is that last index. Use index comparisons and swaps, with no heap library or sort.
+    Sift up at index 3 in [2, 7, 5, 1] to get [1, 2, 5, 7].
   exercise: exercises/practice.py
   function: sift_up
   test_class: SiftUp
@@ -133,6 +133,7 @@ steps:
     To **pop** the minimum, save the root. Move the last value into the root slot and shorten the list.
     The new root may be too large. **Sift down** by swapping it with the smaller existing child.
     A child exists only when its index is below the list length.
+    In code, `a if test else b` means a when test is true, otherwise b. It picks one of two values.
     Stop if no child exists or the smaller child is at least as large as the parent.
 - id: st11
   type: predict
@@ -189,6 +190,9 @@ steps:
     heap = [4, 1]
     sift_down(heap, 0)
     assert heap == [1, 4]
+    heap = [10, 6, 3, 7, 9, 4]
+    sift_down(heap, 0)
+    assert heap == [3, 6, 4, 7, 9, 10]
   hint_levels: &id001
   - Which child must become the parent of both children?
   - Use the left child first. Check whether the right is smaller.
@@ -211,7 +215,7 @@ steps:
   type: fix
   title: Do not restore a removed singleton
   task: Fix pop_min for an integer min-heap. Return its minimum or None if empty, and update the same heap
-    list. For [7], return 7 and leave [].
+    list. Repair it with the given sift_down(heap, 0). For [7], return 7 and leave [].
   starter: |
     def sift_down(heap, i):
         while 2*i + 1 < len(heap):
@@ -257,8 +261,14 @@ steps:
     assert heap == []
     assert pop_min(heap, sift_down) is None
     heap = [2, 3, 4, 7]
-    assert pop_min(heap, sift_down) == 2
-    assert heap == [3, 7, 4]
+    calls = []
+    def spy(h, i):
+        calls.append(i)
+        sift_down(h, i)
+    assert pop_min(heap, spy) == 2
+    assert calls == [0]
+    assert sorted(heap) == [3, 4, 7]
+    assert all(heap[(k - 1) // 2] <= heap[k] for k in range(1, len(heap)))
   hint_levels:
   - What remains after removing the last slot of a one-item heap?
   - The last value only replaces the root when there are items left.
@@ -448,6 +458,9 @@ steps:
       heap = [4, 1]
       sift_down(heap, 0)
       assert heap == [1, 4]
+      heap = [10, 6, 3, 7, 9, 4]
+      sift_down(heap, 0)
+      assert heap == [3, 6, 4, 7, 9, 10]
     hint_levels: *id001
     explanation: Choosing the smaller child preserves its new place above both children. Following one path
       takes O(log n) time and O(1) extra space.

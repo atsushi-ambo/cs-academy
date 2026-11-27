@@ -36,12 +36,18 @@ class ReportPath(unittest.TestCase):
             (root / "daily" / "a.txt").touch()
             (root / "outside-link").symlink_to(other, target_is_directory=True)
             (root / "loop").symlink_to(root / "loop")
+            (root / "inside-file").symlink_to(root / "a.txt")
+            (root / "inside-dir").symlink_to(root / "daily", target_is_directory=True)
+            (root / "outside-file").symlink_to(other / "a.txt")
             self.assertEqual(practice.report_path(root, "a.txt"), root / "a.txt")
             self.assertEqual(practice.report_path(root, "daily/a.txt"), root / "daily/a.txt")
+            self.assertEqual(practice.report_path(root, "inside-file"), root / "a.txt")
+            self.assertEqual(practice.report_path(root, "inside-dir/a.txt"), root / "daily" / "a.txt")
             for bad in ("", ".", "missing.txt", str(root / "a.txt"), "../reports-old/a.txt",
-                        "outside-link/a.txt", "loop/a.txt", "bad" + chr(0)):
+                        "outside-link/a.txt", "outside-file", "loop/a.txt", "bad" + chr(0)):
                 self.assertIsNone(practice.report_path(root, bad))
-            self.assertEqual(sorted(path.name for path in root.iterdir()), ["a.txt", "daily", "loop", "outside-link"])
+            self.assertEqual(sorted(path.name for path in root.iterdir()), ["a.txt", "daily", "inside-dir", "inside-file", "loop",
+                                                                   "outside-file", "outside-link"])
 
 
 class EditLabel(unittest.TestCase):

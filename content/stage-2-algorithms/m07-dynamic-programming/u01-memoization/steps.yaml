@@ -37,15 +37,15 @@ steps:
     calls = 0
     print(fib(4), calls)
   choices:
-  - text: 3 9
-    why: fib(4) returns 3. The tree has one root and branches of five and three calls.
   - text: 3 5
     why: There are five distinct inputs. Some are used more than once.
+  - text: 3 9
+    why: fib(4) returns 3. The tree has one root and branches of five and three calls.
   - text: 3 8
     why: The counter includes the first call.
   - text: 4 9
     why: The Fibonacci value at index 4 is 3.
-  answer: 0
+  answer: 1
 - id: st04
   type: try
   title: Count the tree for a smaller input
@@ -80,13 +80,13 @@ steps:
   choices:
   - text: False False
     why: The in test checks keys, so key 0 is present.
-  - text: True False
-    why: Key 0 exists. Its stored value 0 becomes False when tested as a boolean.
   - text: True True
     why: A present key may store a value that counts as false.
   - text: False True
     why: The key exists and its value is zero.
-  answer: 1
+  - text: True False
+    why: Key 0 exists. Its stored value 0 becomes False when tested as a boolean.
+  answer: 3
 - id: st07
   type: parsons
   title: Share one memo across child calls
@@ -165,15 +165,15 @@ steps:
 
     print(ways(3), ways.cache_info().misses, ways.cache_info().hits)
   choices:
+  - text: 3 4 1
+    why: There are four distinct states from 0 to 3. The second request for 1 is a hit.
   - text: 3 5 0
     why: The second request for 1 reuses its saved value.
   - text: 3 3 2
     why: The base state 0 is also stored when first reached.
-  - text: 3 4 1
-    why: There are four distinct states from 0 to 3. The second request for 1 is a hit.
   - text: 2 4 1
     why: The three routes are 1+1+1, 1+2, and 2+1.
-  answer: 2
+  answer: 0
 - id: st12
   type: read
   title: Count paths to the top of the stairs
@@ -227,17 +227,17 @@ steps:
     why: After skipping 1, the remaining coins cannot make 4.
   - text: 3 0
     why: The recurrence counts 1 plus 3 only once.
-  - text: 1 1
-    why: 3 alone cannot pay exactly 4, and having 1 gives two combinations.
   - text: 2 0
     why: With both values, use four ones or one of each. 3 alone cannot make 4.
-  answer: 3
+  - text: 1 1
+    why: 3 alone cannot pay exactly 4, and having 1 gives two combinations.
+  answer: 2
 - id: st16
   type: fix
   title: Stop a repeated coin choice when the amount is zero
   task: Return the number of combinations of one positive coin value with unlimited copies that sum to
     a nonnegative amount. Use recursion. count_one(3, 6) returns 1 and count_one(3, 5) returns 0. An empty
-    choice pays 0.
+    choice pays 0. left is an integer from 0 to 400, so the recursion stays shallow.
   starter: |
     def count_one(coin, left):
         if left <= 0:
@@ -254,6 +254,7 @@ steps:
     assert count_one(3, 6) == 1
     assert count_one(3, 5) == 0
     assert count_one(8, 0) == 1
+    assert count_one(1, 400) == 1
   hint_levels: &id001
   - Separate exact payment from paying too much.
   - Give amount 0 its own base case.
@@ -273,15 +274,15 @@ steps:
 
     print(ways(0), ways(2), ways(6))
   choices:
-  - text: 1 0 1
-    why: Zero needs no coins, 2 cannot be made, and 6 uses two coins.
   - text: 0 0 1
     why: The base case counts the empty choice as one way.
   - text: 1 1 1
     why: One coin of 3 overshoots 2.
   - text: 1 0 2
     why: The two identical coins form a single combination.
-  answer: 0
+  - text: 1 0 1
+    why: Zero needs no coins, 2 cannot be made, and 6 uses two coins.
+  answer: 3
 - id: st18
   type: code
   title: 'Boss: count coin combinations without repeats'
@@ -327,7 +328,7 @@ steps:
     title: Stop a repeated coin choice when the amount is zero
     task: Return the number of combinations of one positive coin value with unlimited copies that sum
       to a nonnegative amount. Use recursion. count_one(3, 6) returns 1 and count_one(3, 5) returns 0.
-      An empty choice pays 0.
+      An empty choice pays 0. left is an integer from 0 to 400, so the recursion stays shallow.
     starter: |
       def count_one(coin, left):
           if left <= 0:
@@ -344,6 +345,7 @@ steps:
       assert count_one(3, 6) == 1
       assert count_one(3, 5) == 0
       assert count_one(8, 0) == 1
+      assert count_one(1, 400) == 1
     hint_levels: *id001
     explanation: Exactly zero means a completed choice. With amount A and coin c, the call chain uses
       O(1 + A/c) time and stack space.

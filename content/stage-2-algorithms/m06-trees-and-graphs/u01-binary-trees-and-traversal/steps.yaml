@@ -381,6 +381,8 @@ steps:
     assert count(("a", ("b", ("d", None, None), ("e", None, None)), None)) == 2
     assert count(("a", None, None)) == 1
     assert count(None) == 0
+    assert count(("a", None, ("b", ("c", None, None), ("d", None, None)))) == 2
+    assert count(("a", ("b", None, None), None)) == 1
   hint_levels:
   - Try a node with only one child that has two leaves.
   - Check both missing links together.

@@ -31,6 +31,38 @@ class InsertAfter(unittest.TestCase):
         self.assertEqual((chain.size, first.value, middle.value, last.value), (3, 2, 8, 8))
 
 
+    def test_head_stays_and_links_are_consistent(self):
+        from types import SimpleNamespace
+
+        chain = SimpleNamespace(head=None, tail=None, size=0)
+
+        def make_node(value):
+            return SimpleNamespace(value=value, prev=None, next=None)
+
+        def forward(start):
+            nodes = []
+            while start is not None:
+                nodes.append(start)
+                start = start.next
+            return nodes
+
+        first = practice.insert_after(chain, None, 1, make_node)
+        order = [first]
+        for value, position in ((2, 0), (3, 1), (4, 2), (5, 0), (6, 4)):
+            left = order[position]
+            node = practice.insert_after(chain, left, value, make_node)
+            order.insert(position + 1, node)
+            self.assertIs(chain.head, first)
+            self.assertEqual(forward(chain.head), order)
+            self.assertIs(chain.tail, order[-1])
+            self.assertEqual(chain.size, len(order))
+            for before, after in zip(order, order[1:]):
+                self.assertIs(after.prev, before)
+            self.assertIsNone(first.prev)
+            self.assertIsNone(order[-1].next)
+        self.assertEqual([node.value for node in order], [1, 5, 2, 3, 4, 6])
+
+
 class RemoveNode(unittest.TestCase):
     def test_remove(self):
         from types import SimpleNamespace

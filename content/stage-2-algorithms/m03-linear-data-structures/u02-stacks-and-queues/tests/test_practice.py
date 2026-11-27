@@ -35,6 +35,45 @@ class MakeTwoStackQueue(unittest.TestCase):
         self.assertEqual([queue.dequeue(), queue.dequeue(), queue.dequeue(), queue.dequeue()], [8, 8, 2, None])
         self.assertIsNone(other.dequeue())
 
+    def test_two_stack_state(self):
+        queue = practice.make_two_stack_queue()
+        for value in [1, 2, 3]:
+            queue.enqueue(value)
+        self.assertEqual((queue.incoming, queue.outgoing), ([1, 2, 3], []))
+        self.assertEqual(queue.dequeue(), 1)
+        self.assertEqual((queue.incoming, queue.outgoing), ([], [3, 2]))
+        queue.enqueue(4)
+        self.assertEqual((queue.incoming, queue.outgoing), ([4], [3, 2]))
+        self.assertEqual(queue.dequeue(), 2)
+        self.assertEqual((queue.incoming, queue.outgoing), ([4], [3]))
+        self.assertEqual([queue.dequeue(), queue.dequeue(), queue.dequeue()], [3, 4, None])
+
+    def test_amortized_cost(self):
+        class CountingList(list):
+            moves = 0
+
+            def append(self, value):
+                CountingList.moves += 1
+                super().append(value)
+
+            def pop(self, *args):
+                CountingList.moves += 1
+                return super().pop(*args)
+
+        queue = practice.make_two_stack_queue()
+        queue.incoming = CountingList()
+        queue.outgoing = CountingList()
+        count = 400
+        for value in range(count):
+            queue.enqueue(value)
+            if value % 3 == 0:
+                self.assertEqual(queue.dequeue(), value // 3)
+        taken = (count + 2) // 3
+        for value in range(taken, count):
+            self.assertEqual(queue.dequeue(), value)
+        self.assertIsNone(queue.dequeue())
+        self.assertLessEqual(CountingList.moves, 6 * count)
+
     def test_stack_access(self):
         import ast
         import inspect
@@ -58,9 +97,9 @@ class MakeTwoStackQueue(unittest.TestCase):
 
 class BracketsMatch(unittest.TestCase):
     def test_brackets(self):
-        for text in ("", "([])[]", "()", "[[[]]]", "()()"):
+        for text in ("", "([])[]", "()", "[[[]]]", "()()", "[()]", "[([])]", "([()])", "[](())[()]"):
             self.assertIs(practice.brackets_match(text), True, text)
-        for text in ("([)]", "]", "(", "()[", "())", "(]"):
+        for text in ("([)]", "]", "(", "()[", "())", "(]", "[(])", "[(", "([(])"):
             self.assertIs(practice.brackets_match(text), False, text)
 
 

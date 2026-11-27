@@ -9,7 +9,7 @@ Index 2 has the highest load. Index 4 is newer and has a lower load.
 **Example.** If the window starts at 3, remove index 2. Index 4 now gives the peak.
 
 **Common mistake.** Values alone do not tell you which measurement left the window.
-Keep indexes so you can use the window's left edge.
+Keep indexes so you can use the window's left edge: with an index, expiry is one comparison with the window's start.
 
 **Real work.** A monitoring tool can show the highest load over the last 60 readings.
 

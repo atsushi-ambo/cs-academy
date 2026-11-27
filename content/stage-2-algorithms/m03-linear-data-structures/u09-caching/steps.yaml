@@ -109,8 +109,8 @@ steps:
             print("compute", key)
             memo[key] = len(key)
     print(len(memo))
-  task: Replace 'mail' with 'api'. The last line should count only distinct keys. Check that compute api appears
-    once.
+  task: Replace 'mail' with 'api'. The last line should count only distinct keys. Check by eye that the line compute api
+    appears once. The app checks only the last line.
   check:
     stdout_line: '2'
 - id: st07
@@ -127,8 +127,8 @@ steps:
   function: memoize_count
   test_class: MemoizeCount
   hint_levels:
-  - Keep a dict outside the returned function.
-  - Compute and save only after a membership miss.
+  - What must still exist on the second call with the same key?
+  - Keep that dict outside the returned function. Compute and save only after a membership miss.
   - Inside get, assign memo[key] = compute(key) only when key not in memo. Then return memo[key].
 - id: st08
   type: predict

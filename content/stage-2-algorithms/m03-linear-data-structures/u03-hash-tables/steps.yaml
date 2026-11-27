@@ -33,7 +33,9 @@ steps:
   body: |
     A dict maps each key to one value. A set stores unique items without extra values.
     A **membership** test asks if an item is present. Use in for dict keys or set items.
+    Make an empty set with `set()`. Add an item with `seen.add(item)`.
     Keys and set items must be **hashable**. Their hash must stay the same during use.
+    Objects that are equal must have the same hash. So `1` and `1.0` are one key.
     Strings and integers work. Lists can change and cannot be used as keys.
     For keys of fixed length with good hash distribution, lookup takes O(1) average time.
     Many collisions can make a lookup O(n). Reading a long string to hash it also takes work.
@@ -211,6 +213,9 @@ steps:
     assert rows == [("api", 200), ("db", 503), ("api", 200)]
     assert collect([]) == {}
     assert collect([("db", 0)]) == {"db": [0]}
+    mixed = [("api", 503), ("db", 1), ("api", 200), ("api", 503)]
+    assert collect(mixed) == {"api": [503, 200, 503], "db": [1]}
+    assert collect(mixed)["api"] is not collect(mixed)["api"]
   hint_levels:
   - Two keys may hold the same object.
   - Make a fresh list for each missing key.
@@ -240,29 +245,31 @@ steps:
     For a current value x, the **complement** is target - x.
     Store earlier values with their first index. Ask whether the complement is in this dict.
     Check before storing x so a position cannot match itself.
+    Store a value only if it is not in the dict yet, so the dict keeps its first index.
     Use range(len(values)) to get the positions from left to right.
 - id: st16
   type: predict
-  title: Use a duplicate from an earlier position
+  title: Keep the first index of a repeated value
   code: |
-    values = [5, 5]
+    values = [4, 4, 6]
     seen = {}
     for i in range(len(values)):
         value = values[i]
         if 10 - value in seen:
             print(seen[10 - value], i)
             break
-        seen[value] = i
+        if value not in seen:
+            seen[value] = i
   choices:
-  - text: 0 0
-    why: The first item is checked before it enters seen.
-  - text: 1 1
-    why: The second item finds a different earlier position.
+  - text: 1 2
+    why: The second 4 is not stored. The dict still keeps index 0 for 4.
+  - text: 0 2
+    why: The 6 at index 2 needs 4. The dict holds the first 4, at index 0.
   - text: 0 1
-    why: The first 5 is already in seen when the second 5 arrives.
-  - text: 1 0
-    why: The earlier position comes first.
-  answer: 2
+    why: The second 4 needs a 6, and no 6 has been seen yet.
+  - text: 2 0
+    why: The earlier position comes first in the printed pair.
+  answer: 1
 - id: st17
   type: code
   title: Find the first pair that reaches a target

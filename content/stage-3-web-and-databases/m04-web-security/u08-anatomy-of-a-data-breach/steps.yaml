@@ -21,11 +21,11 @@ steps:
     why: Permissions can limit access, but they do not change copied plaintext.
   - text: HTML escaping
     why: This is a password storage issue.
-  - text: salted slow KDF
-    why: It removes plaintext from the intended storage design and makes guesses costly.
   - text: notification
     why: Notification responds to an incident rather than protecting stored passwords.
-  answer: 2
+  - text: salted slow KDF
+    why: It removes plaintext from the intended storage design and makes guesses costly.
+  answer: 3
 - id: st03
   type: try
   title: Flag a risk in a fictitious config
@@ -164,13 +164,13 @@ steps:
   choices:
   - text: True True
     why: The allowlist contains just the two safe fields.
-  - text: False True
-    why: The event contains the token, but the allowlist omits it.
-  - text: False False
-    why: The field still exists in the incoming event.
   - text: True False
     why: A field allowlist keeps the token outside the log record.
-  answer: 3
+  - text: False False
+    why: The field still exists in the incoming event.
+  - text: False True
+    why: The event contains the token, but the allowlist omits it.
+  answer: 1
 - id: st10
   type: fix
   title: Stop logging whole request records
@@ -238,17 +238,17 @@ steps:
     why: Both keys are enabled before removal.
   - text: |-
       True
-      False
-    why: Adding a replacement leaves the older key valid. Revoking the old one stops it.
-  - text: |-
-      True
       True
     why: The code removes old from the active set.
+  - text: |-
+      True
+      False
+    why: Adding a replacement leaves the older key valid. Revoking the old one stops it.
   - text: |-
       False
       True
     why: The set loses an entry during containment.
-  answer: 1
+  answer: 2
 - id: st14
   type: fix
   title: Cut the export service's permissions
@@ -294,15 +294,15 @@ steps:
     service_read = True
     print(service_read, actor == report["owner"])
   choices:
-  - text: False False
-    why: The service has its table permission.
-  - text: True True
-    why: The service grant does not switch ownership.
   - text: True False
     why: The service can read the table, but the owner check rejects this actor.
+  - text: True True
+    why: The service grant does not switch ownership.
+  - text: False False
+    why: The service has its table permission.
   - text: False True
     why: The service grant is true and the IDs differ.
-  answer: 2
+  answer: 0
 - id: st17
   type: code
   title: 'Checkpoint: repair a toy report export'
@@ -327,15 +327,15 @@ steps:
     inventory = {"installed": 2, "first_fixed": 3}
     print(inventory["installed"] >= inventory["first_fixed"])
   choices:
-  - text: 'False'
-    why: The installed toy version is below the first fixed version. Update and verify it.
   - text: 'True'
     why: Version 2 is below 3 in this numeric example.
+  - text: 'False'
+    why: The installed toy version is below the first fixed version. Update and verify it.
   - text: '2'
     why: The expression compares version numbers.
   - text: '3'
     why: The expression checks the installed version against the fixed version.
-  answer: 0
+  answer: 1
 - id: st19
   type: explain
   title: Explain your first incident actions

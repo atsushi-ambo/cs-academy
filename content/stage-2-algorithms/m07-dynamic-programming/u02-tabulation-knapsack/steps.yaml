@@ -41,8 +41,10 @@ steps:
 - id: st04
   type: fix
   title: Make a fresh list for every row
-  task: Return a rows-by-cols table of zeros whose rows can be changed independently. Both sizes are nonnegative
+  task: 'Return a rows-by-cols table of zeros whose rows can be changed independently. Both sizes are nonnegative
     integers. For zeros(2, 2), setting table[0][0] to 7 leaves table[1][0] at 0. zeros(0, 2) returns [].
+    Build a new inner list on every pass of a for loop: start with table = [], then call table.append([0] * cols)
+    once per row. A list comprehension is a short form of that loop: [[0] * cols for row in range(rows)].'
   starter: |
     def zeros(rows, cols):
         return [[0] * cols] * rows
@@ -57,7 +59,7 @@ steps:
     assert zeros(2, 0) == [[], []]
   hint_levels:
   - List repetition can share one inner list.
-  - Make a new inner list for each row in a comprehension or loop.
+  - Make a new inner list on each pass of a loop, then append it to table.
   - Return [[0] * cols for row in range(rows)].
   explanation: 'The starter has aliasing: all its rows point to one list. Independent rows take O(rows
     × (cols + 1)) time and space.'

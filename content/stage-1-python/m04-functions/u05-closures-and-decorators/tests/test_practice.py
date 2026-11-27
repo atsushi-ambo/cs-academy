@@ -71,6 +71,26 @@ class RetryWithLog(unittest.TestCase):
         self.assertEqual(notes, [1, 2])
         self.assertEqual(replies, [7])
 
+    def test_success_is_judged_by_identity_with_none(self):
+        class EqualsNone:
+            def __eq__(self, other):
+                return other is None
+
+            def __ne__(self, other):
+                return other is not None
+
+            __hash__ = None
+
+        reply = EqualsNone()
+        calls, notes = [], []
+        def get():
+            calls.append('call')
+            return reply
+        wrapped = practice.retry_with_log(get, 3, notes.append)
+        self.assertIs(wrapped(), reply)
+        self.assertEqual(notes, [1])
+        self.assertEqual(calls, ['call'])
+
     def test_all_fail(self):
         notes = []
         wrapped = practice.retry_with_log(lambda: None, 3, notes.append)

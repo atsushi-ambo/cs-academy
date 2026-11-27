@@ -18,15 +18,15 @@ steps:
     relay = [3, 4]
     print(len(direct), sum(direct), len(relay), sum(relay))
   choices:
-  - text: 1 12 2 7
-    why: The one-hop route costs 12. The two-hop route costs only 7.
   - text: 1 7 2 12
     why: The direct link weighs 12 on its own.
   - text: 12 1 7 2
     why: Each pair prints the length before the sum.
+  - text: 1 12 2 7
+    why: The one-hop route costs 12. The two-hop route costs only 7.
   - text: 1 12 2 4
     why: Sum adds both relay weights, 3 and 4.
-  answer: 0
+  answer: 2
 - id: st03
   type: read
   title: Take the cheapest known route next
@@ -47,15 +47,15 @@ steps:
     heappush(heap, (2, "cache"))
     print(heappop(heap))
   choices:
-  - text: (9, 'api')
-    why: The largest cost waits in the heap.
   - text: (2, 'cache')
     why: Both low costs are 2. The string cache sorts before db.
+  - text: (9, 'api')
+    why: The largest cost waits in the heap.
   - text: (2, 'db')
     why: Equal costs are compared by the second tuple field.
   - text: '2'
     why: heappop returns the full pair.
-  answer: 1
+  answer: 0
 - id: st05
   type: try
   title: Make the relay-first item cheaper
@@ -93,11 +93,11 @@ steps:
     why: The current cost can change before it is settled.
   - text: '4'
     why: The last edge is just part of the route.
-  - text: '7'
-    why: The route adds both weights and replaces 12 with 7.
   - text: '19'
     why: The new route replaces the old cost rather than adding to it.
-  answer: 2
+  - text: '7'
+    why: The route adds both weights and replaces 12 with 7.
+  answer: 3
 - id: st08
   type: parsons
   title: Set a new best distance and queue it
@@ -175,7 +175,7 @@ steps:
     assert best == {'db': 4, 'api': 5}
     assert current([], {}) == []
   hint_levels:
-  - Find which pair is current.
+  - When the same host appears twice, which cost does best still hold for it?
   - Compare a popped cost with the best known cost for that node.
   - Append only when cost == best[node].
   explanation: The old heap entry can stay until popped. Checking n entries takes O(n) time and at most
@@ -212,13 +212,13 @@ steps:
   choices:
   - text: '[7, 12]'
     why: The old cost stays in the heap but is skipped after removal.
+  - text: '[7]'
+    why: The smaller pair leaves first. The old cost fails the equality check.
   - text: '[12]'
     why: The heap pops 7 first, and 12 no longer matches best.
   - text: '[]'
     why: The pair with 7 still matches the dictionary.
-  - text: '[7]'
-    why: The smaller pair leaves first. The old cost fails the equality check.
-  answer: 3
+  answer: 1
 - id: st12
   type: read
   title: Save predecessors as you improve costs
@@ -294,15 +294,15 @@ steps:
     cost, node = heappop(heap)
     print(node, cost, 5 + (-4))
   choices:
-  - text: target 2 1
-    why: The target comes out first, but a later negative edge could give a cost of 1.
   - text: relay 5 1
     why: The heap orders candidates by known cost, so 2 leaves before 5.
   - text: target 1 1
     why: The route through relay has not been explored when the target is popped.
+  - text: target 2 1
+    why: The target comes out first, but a later negative edge could give a cost of 1.
   - text: target 2 9
     why: Adding a negative weight lowers the relay cost.
-  answer: 0
+  answer: 2
 - id: st17
   type: code
   title: 'Boss: return the cheapest path and its cost'

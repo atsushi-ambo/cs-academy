@@ -19,7 +19,9 @@ def new_id(sessions, draw):
 
 
 def rotate(sessions, old_id, user, expires, fresh_id):
-    sid = fresh_id(sessions)
+    taken = dict(sessions)
+    taken[old_id] = None
+    sid = fresh_id(taken)
     sessions.pop(old_id, None)
     sessions[sid] = (user, expires)
     return sid

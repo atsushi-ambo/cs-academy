@@ -218,6 +218,7 @@ steps:
     After removing smaller values from the right, the largest candidate is at the left.
     A deque that keeps values in one direction is a **monotonic deque**.
     This example keeps values in decreasing order.
+    Because you store indexes, one comparison with the window's left edge tells you if an entry expired.
 - id: st14
   type: fix
   title: Keep the index at the left edge

@@ -1,11 +1,58 @@
-import ast
-import inspect
+import importlib.util
 import sys
 import unittest
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'exercises'))
+EXERCISES = Path(__file__).resolve().parents[1] / 'exercises'
+sys.path.insert(0, str(EXERCISES))
 import practice
+
+
+class TooManyCalls(Exception):
+    pass
+
+
+def fresh_practice():
+    spec = importlib.util.spec_from_file_location('practice_fresh', EXERCISES / 'practice.py')
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def measure(call, module, max_calls):
+    """Run call() and return (result, python call count, deepest nesting) inside the exercise file."""
+    path = str(EXERCISES / 'practice.py')
+    state = {'calls': 0, 'depth': 0, 'deepest': 0}
+
+    def profiler(frame, event, arg):
+        if frame.f_code.co_filename != path:
+            return
+        if event == 'call':
+            state['calls'] += 1
+            state['depth'] += 1
+            state['deepest'] = max(state['deepest'], state['depth'])
+            if state['calls'] > max_calls:
+                raise TooManyCalls()
+        elif event == 'return':
+            state['depth'] -= 1
+
+    sys.setprofile(profiler)
+    try:
+        result = call()
+    except TooManyCalls:
+        result = None
+        state['calls'] = max_calls + 1
+    finally:
+        sys.setprofile(None)
+    return result, state['calls'], state['deepest']
+
+
+def coin_reference(coins, amount):
+    table = [1] + [0] * amount
+    for coin in sorted(set(coins)):
+        for total in range(coin, amount + 1):
+            table[total] += table[total - coin]
+    return table[amount]
 
 
 class FibMisses(unittest.TestCase):
@@ -23,15 +70,12 @@ class FibMisses(unittest.TestCase):
         self.assertEqual(practice.fib_misses(5), (5, 6))
         self.assertEqual(practice.fib_misses(2), (1, 3))
 
-    def test_recursive(self):
-        self.assertEqual(practice.fib_misses(5), (5, 6))
-        tree = ast.parse(inspect.getsource(practice.fib_misses))
-        self.assertTrue(any(
-            isinstance(node, ast.FunctionDef) and any(
-                isinstance(call, ast.Call) and isinstance(call.func, ast.Name)
-                and call.func.id == node.name for call in ast.walk(node)
-            ) for node in ast.walk(tree)
-        ), 'Use a recursive call to compute a smaller state.')
+    def test_recursive_and_cached(self):
+        module = fresh_practice()
+        result, calls, deepest = measure(lambda: module.fib_misses(30), module, 400)
+        self.assertEqual(result, (832040, 31))
+        self.assertLessEqual(calls, 150, 'Each fib state should be computed once.')
+        self.assertGreaterEqual(deepest, 15, 'Use a recursive call to compute a smaller state.')
 
 
 class StairWays(unittest.TestCase):
@@ -47,20 +91,11 @@ class StairWays(unittest.TestCase):
         self.assertEqual(practice.stair_ways(35), 14930352)
 
     def test_cached_recursion(self):
-        self.assertEqual(practice.stair_ways(3), 3)
-        tree = ast.parse(inspect.getsource(practice.stair_ways))
-        self.assertTrue(any(
-            isinstance(node, ast.FunctionDef) and any(
-                isinstance(call, ast.Call) and isinstance(call.func, ast.Name)
-                and call.func.id == node.name for call in ast.walk(node)
-            ) for node in ast.walk(tree)
-        ), 'Use a recursive call to compute a smaller state.')
-        self.assertTrue(any(
-            isinstance(node, ast.ImportFrom) and node.module == 'functools'
-            and any(alias.name == 'lru_cache' for alias in node.names)
-            or isinstance(node, ast.Attribute) and node.attr == 'lru_cache'
-            for node in ast.walk(tree)
-        ), 'Use functools.lru_cache to store stair counts.')
+        module = fresh_practice()
+        result, calls, deepest = measure(lambda: module.stair_ways(30), module, 400)
+        self.assertEqual(result, 1346269)
+        self.assertLessEqual(calls, 150, 'Store each answer so a repeated stair count is not recomputed.')
+        self.assertGreaterEqual(deepest, 15, 'Use a recursive call to compute a smaller state.')
 
 
 class CoinWays(unittest.TestCase):
@@ -84,15 +119,19 @@ class CoinWays(unittest.TestCase):
     def test_counts_each_combination_once(self):
         self.assertEqual(practice.coin_ways([1, 2, 5], 10), 10)
 
-    def test_recursive(self):
-        self.assertEqual(practice.coin_ways([1], 2), 1)
-        tree = ast.parse(inspect.getsource(practice.coin_ways))
-        self.assertTrue(any(
-            isinstance(node, ast.FunctionDef) and any(
-                isinstance(call, ast.Call) and isinstance(call.func, ast.Name)
-                and call.func.id == node.name for call in ast.walk(node)
-            ) for node in ast.walk(tree)
-        ), 'Use a recursive call to compute a smaller state.')
+    def test_matches_reference_on_many_inputs(self):
+        for coins, amount in [([2, 5, 3, 6], 10), ([7], 49), ([7], 50), ([1, 1, 2], 6),
+                              ([4, 4, 8], 16), ([9, 5, 2], 0)]:
+            self.assertEqual(practice.coin_ways(coins, amount), coin_reference(coins, amount))
+
+    def test_recursive_and_each_state_once(self):
+        coins, amount = [1, 2, 5], 100
+        module = fresh_practice()
+        states = len(coins) * (amount + 1)
+        result, calls, deepest = measure(lambda: module.coin_ways(coins, amount), module, 4 * states + 50)
+        self.assertEqual(result, coin_reference(coins, amount))
+        self.assertLessEqual(calls, 4 * states + 50, 'Cache each (index, left) state so it is solved once.')
+        self.assertGreaterEqual(deepest, 10, 'Use a recursive call to compute a smaller state.')
 
 
 if __name__ == "__main__":

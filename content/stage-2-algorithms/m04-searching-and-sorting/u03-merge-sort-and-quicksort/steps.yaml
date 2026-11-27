@@ -100,6 +100,27 @@ steps:
                 j += 1
         return result + left[i:] + right[j:]
   tests: |
+    import ast
+    tree = ast.parse(open(__file__, encoding="utf-8").read())
+    used = {node.id for node in ast.walk(tree) if isinstance(node, ast.Name)}
+    used |= {node.attr for node in ast.walk(tree) if isinstance(node, ast.Attribute)}
+    used |= {alias.name.split(".")[0] for node in ast.walk(tree) if isinstance(node, ast.Import) for alias in node.names}
+    used |= {(node.module or "").split(".")[0] for node in ast.walk(tree) if isinstance(node, ast.ImportFrom)}
+    assert not used & {"sorted", "sort", "heapq", "bisect", "importlib"}, "Write it yourself"
+    log = []
+    class Key(int):
+        def __le__(self, other):
+            log.append(1)
+            return int.__le__(self, other)
+        def __lt__(self, other):
+            log.append(1)
+            return int.__lt__(self, other)
+        def __gt__(self, other):
+            log.append(1)
+            return int.__gt__(self, other)
+        def __ge__(self, other):
+            log.append(1)
+            return int.__ge__(self, other)
     assert merge_numbers([1, 4], [2, 5]) == [1, 2, 4, 5]
     assert merge_numbers([3, 5], [1]) == [1, 3, 5]
     assert merge_numbers([], [6, 6]) == [6, 6]
@@ -108,6 +129,13 @@ steps:
     result = merge_numbers(left, right)
     assert result == [2, 2, 2] and result is not left and result is not right
     assert left == [2, 2] and right == [2]
+    assert merge_numbers([1, 2, 3], [7, 8]) == [1, 2, 3, 7, 8]
+    assert merge_numbers([7, 8], [1, 2, 3]) == [1, 2, 3, 7, 8]
+    big_left = [Key(3 * index) for index in range(200)]
+    big_right = [Key(3 * index + 1) for index in range(200)]
+    merged = merge_numbers(big_left, big_right)
+    assert [int(value) for value in merged] == sorted(int(value) for value in big_left + big_right)
+    assert len(log) <= 400, "Compare each front item once; do not rescan"
   hint_levels:
   - Look at the indexes when the loop stops.
   - At least one side is done. Both slices can be added because an exhausted slice is empty.
@@ -440,7 +468,28 @@ steps:
                 order(cut + 1, hi)
 
         order(0, len(values) - 1)
-  tests: |
+  tests: &id003 |
+    import ast
+    tree = ast.parse(open(__file__, encoding="utf-8").read())
+    used = {node.id for node in ast.walk(tree) if isinstance(node, ast.Name)}
+    used |= {node.attr for node in ast.walk(tree) if isinstance(node, ast.Attribute)}
+    used |= {alias.name.split(".")[0] for node in ast.walk(tree) if isinstance(node, ast.Import) for alias in node.names}
+    used |= {(node.module or "").split(".")[0] for node in ast.walk(tree) if isinstance(node, ast.ImportFrom)}
+    assert not used & {"sorted", "sort", "heapq", "bisect", "importlib"}, "Write it yourself"
+    log = []
+    class Key(int):
+        def __le__(self, other):
+            log.append(1)
+            return int.__le__(self, other)
+        def __lt__(self, other):
+            log.append(1)
+            return int.__lt__(self, other)
+        def __gt__(self, other):
+            log.append(1)
+            return int.__gt__(self, other)
+        def __ge__(self, other):
+            log.append(1)
+            return int.__ge__(self, other)
     values = [4, 7, 3, 1]
     assert sort_with_cut(values) is None
     assert values == [1, 3, 4, 7]
@@ -452,6 +501,16 @@ steps:
     values = [4, 4, 4]
     sort_with_cut(values)
     assert values == [4, 4, 4]
+    for values in ([3, 1] * 60, list(range(80)), list(range(80, 0, -1)), [5], [2, 1]):
+        expected = sorted(values)
+        same = values
+        sort_with_cut(values)
+        assert values is same and values == expected
+    mixed = [Key((index * 37) % 101) for index in range(200)]
+    log.clear()
+    sort_with_cut(mixed)
+    assert [int(value) for value in mixed] == sorted(int(value) for value in mixed)
+    assert len(log) <= 8000, "Partition the range; do not rescan every pair"
   hint_levels: &id001
   - Trace the index skipped by both calls.
   - The left side includes the cut index. It may still be out of order.
@@ -540,18 +599,7 @@ steps:
                   order(cut + 1, hi)
 
           order(0, len(values) - 1)
-    tests: |
-      values = [4, 7, 3, 1]
-      assert sort_with_cut(values) is None
-      assert values == [1, 3, 4, 7]
-      empty = []
-      assert sort_with_cut(empty) is None and empty == []
-      values = [3, 2, 1, 0]
-      sort_with_cut(values)
-      assert values == [0, 1, 2, 3]
-      values = [4, 4, 4]
-      sort_with_cut(values)
-      assert values == [4, 4, 4]
+    tests: *id003
     hint_levels: *id001
     explanation: Hoare returns the last index of the left group. Both groups must be sorted. Balanced
       time and stack space are O(n log n) and O(log n). Worst-case time and stack space are O(n²) and
