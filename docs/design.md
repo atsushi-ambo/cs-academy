@@ -249,6 +249,7 @@ cs-academy/
 - 演習: 模範解答で全テスト合格、書きかけで全テスト失敗（`NotImplementedError` によるエラーも「失敗」として数える）。
 - Predict: `code` を実行した出力と、正解の選択肢が一致する。
 - Parsons・Fix・Boss: 正しい答えで合格、出題したままのコードで不合格。
+- Try の通しテスト用に、各Unitの `tests/try_edits.yaml` に「Tryごとに1つ、チェックを通す書き換え（find → replace）」を置く。
 - Parsons の `lines` は基準解の順で書く。別の正解順は `accepted_orders` に追加できる。各順序は `lines` の 0 始まりの添字をすべて一度ずつ使い、課題の条件と `expected_stdout` を満たすこと。
 - lesson・handson のコード: 実行できるものは全部実行し、書いてある出力と比べる。
 - 対象のPython: 3.9（macOS標準）と 3.13 の両方。

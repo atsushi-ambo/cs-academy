@@ -1,0 +1,354 @@
+unit: s2.m07.u01
+python_min: '3.9'
+steps:
+- id: st01
+  type: read
+  title: Do the same small calculation once
+  body: |
+    A service estimates how many ways a job can use small groups of workers.
+    Several plans may leave the same amount of work.
+    A **subproblem** is one smaller question inside the original question.
+    Its **state** is the input that identifies that smaller question.
+    When the same state appears again, the subproblems **overlap**.
+    You can save a result and look it up the next time.
+    This is **memoization**, one method in **dynamic programming**.
+- id: st02
+  type: read
+  title: Count how many calls a Fibonacci tree makes
+  body: |
+    The **Fibonacci numbers** start with 0 and 1.
+    Each later value is the sum of the last two.
+    An equation using smaller states to find a value is a **recurrence**.
+    For fib(4), fib(2) appears once under fib(3) and once directly under fib(4).
+
+    Use a call counter during an experiment. `global calls` updates a module-level name.
+    Each function entry adds 1, including entries that hit the **base case**.
+- id: st03
+  type: predict
+  title: Count calls, including the first call
+  code: |
+    def fib(n):
+        global calls
+        calls += 1
+        if n < 2:
+            return n
+        return fib(n - 1) + fib(n - 2)
+
+    calls = 0
+    print(fib(4), calls)
+  choices:
+  - text: 3 5
+    why: There are five distinct inputs. Some are used more than once.
+  - text: 3 9
+    why: fib(4) returns 3. The tree has one root and branches of five and three calls.
+  - text: 3 8
+    why: The counter includes the first call.
+  - text: 4 9
+    why: The Fibonacci value at index 4 is 3.
+  answer: 1
+- id: st04
+  type: try
+  title: Count the tree for a smaller input
+  task: Change fib(4) to fib(3). Check the Fibonacci value and the number of calls.
+  starter: |
+    def fib(n):
+        global calls
+        calls += 1
+        if n < 2:
+            return n
+        return fib(n - 1) + fib(n - 2)
+
+    calls = 0
+    print(fib(4), calls)
+  check:
+    stdout_line: 2 5
+- id: st05
+  type: read
+  title: Store results by input
+  body: |
+    A **cache** stores results for reuse. The **cache key** identifies one state.
+    With a dict, `n in memo` checks whether the state is present.
+    A **cache hit** reuses a stored value. A **cache miss** needs a calculation.
+    A hit still enters the function. A miss does the work to compute the value.
+    Use one dict per run and share it with all child calls.
+- id: st06
+  type: predict
+  title: A cached zero is still a hit
+  code: |
+    memo = {0: 0, 1: 1}
+    print(0 in memo, bool(memo[0]))
+  choices:
+  - text: False False
+    why: The in test checks keys, so key 0 is present.
+  - text: True True
+    why: A present key may store a value that counts as false.
+  - text: False True
+    why: The key exists and its value is zero.
+  - text: True False
+    why: Key 0 exists. Its stored value 0 becomes False when tested as a boolean.
+  answer: 3
+- id: st07
+  type: parsons
+  title: Share one memo across child calls
+  task: Return a saved result when present. Compute, store, and return a new value on a miss.
+  lines:
+  - 'def fib(n, memo):'
+  - '    if n in memo:'
+  - '        return memo[n]'
+  - '    memo[n] = fib(n - 1, memo) + fib(n - 2, memo)'
+  - '    return memo[n]'
+  - 'print(fib(4, {0: 0, 1: 1}))'
+  expected_stdout: '3'
+- id: st08
+  type: fix
+  title: Keep the result in the memo the caller passed in
+  task: 'Compute Fibonacci recursively. memo starts with {0: 0, 1: 1}. Use the same dict in child calls
+    and update it with newly computed states. Example: fib(3, memo) returns 2 and memo[3] becomes 2.'
+  starter: |
+    def fib(n, memo):
+        memo = {0: 0, 1: 1}
+        if n not in memo:
+            memo[n] = fib(n - 1, memo) + fib(n - 2, memo)
+        return memo[n]
+  solution: |
+    def fib(n, memo):
+        if n not in memo:
+            memo[n] = fib(n - 1, memo) + fib(n - 2, memo)
+        return memo[n]
+  tests: |
+    memo = {0: 0, 1: 1}
+    assert fib(4, memo) == 3
+    assert memo == {0: 0, 1: 1, 2: 1, 3: 2, 4: 3}
+    assert fib(0, memo) == 0
+    assert fib(5, memo) == 5
+    assert memo[5] == 5
+  hint_levels:
+  - Find the line that makes every call forget earlier work.
+  - Let the caller own the dict. Share that dict in both child calls.
+  - 'Delete the assignment memo = {0: 0, 1: 1} inside fib.'
+  explanation: With a shared cache, each fresh state expands once. From a fresh base memo to n, time and
+    space are O(n), counting arithmetic as O(1).
+- id: st09
+  type: code
+  title: Count distinct Fibonacci states
+  task: 'Use recursive Fibonacci with a fresh dict that starts empty. Return (value, misses), counting
+    a base case as a miss on its first call. Input n is an integer from 0 to 200. Example: fib_misses(5)
+    returns (5, 6) and fib_misses(0) returns (0, 1).'
+  exercise: exercises/practice.py
+  function: fib_misses
+  test_class: FibMisses
+  hint_levels:
+  - Think of memo as a list of states already computed.
+  - Store base values in memo too. Let child calls share the dict.
+  - Return memo[k] on a hit. On a miss store k or fib(k - 1) + fib(k - 2). Report len(memo).
+- id: st10
+  type: read
+  title: Let lru_cache store the arguments and results
+  body: |
+    `@lru_cache(maxsize=None)` stores every result for that function.
+    Import it from functools and put it above the function definition.
+    Arguments must be **hashable**. Integers and tuples of integers work. Lists do not.
+    The method `fn.cache_info().misses` counts requests with no stored answer.
+    Create a new cached inner function for each run that needs a fresh cache.
+    Cache a **pure function**, whose result depends only on its input and has no side effects.
+- id: st11
+  type: predict
+  title: Read the cache counts after finding stair routes
+  code: |
+    from functools import lru_cache
+
+    @lru_cache(maxsize=None)
+    def ways(n):
+        if n <= 1:
+            return 1
+        return ways(n - 1) + ways(n - 2)
+
+    print(ways(3), ways.cache_info().misses, ways.cache_info().hits)
+  choices:
+  - text: 3 4 1
+    why: There are four distinct states from 0 to 3. The second request for 1 is a hit.
+  - text: 3 5 0
+    why: The second request for 1 reuses its saved value.
+  - text: 3 3 2
+    why: The base state 0 is also stored when first reached.
+  - text: 2 4 1
+    why: The three routes are 1+1+1, 1+2, and 2+1.
+  answer: 0
+- id: st12
+  type: read
+  title: Count paths to the top of the stairs
+  body: |
+    One move climbs one or two stairs.
+    The first move leaves n−1 or n−2 stairs.
+    Because those two choices start differently, add their counts.
+    There is one way to finish from zero stairs: make no further moves.
+    There is also one way to climb a single stair.
+- id: st13
+  type: code
+  title: Memoize a stair count with lru_cache
+  task: 'Return the number of ordered move sequences that climb exactly n stairs using moves of 1 or 2.
+    Use recursive calls with an lru_cache. n is an integer from 0 to 200. An empty move sequence counts
+    as one. Example: stair_ways(3) returns 3.'
+  exercise: exercises/practice.py
+  function: stair_ways
+  test_class: StairWays
+  hint_levels:
+  - Split by the size of the first move.
+  - Cache a helper that accepts the remaining number of stairs.
+  - Return 1 for 0 or 1. Otherwise return ways(remaining - 1) + ways(remaining - 2).
+- id: st14
+  type: read
+  title: Use two values to name a coin state
+  body: |
+    A **denomination** is a coin's value. You may use that coin value many times.
+    Count **combinations**. A 1 coin then a 3 coin counts the same as 3 then 1.
+    At index i, either use the current value or move on without using it.
+    Using the coin keeps i and reduces the **remaining amount**.
+    Skipping the coin keeps the amount and increases i.
+    A cache key needs both i and the remaining amount.
+- id: st15
+  type: predict
+  title: The same amount can have different counts
+  code: |
+    from functools import lru_cache
+
+    coins = (1, 3)
+    @lru_cache(maxsize=None)
+    def count(i, left):
+        if left == 0:
+            return 1
+        if left < 0 or i == len(coins):
+            return 0
+        return count(i, left - coins[i]) + count(i + 1, left)
+
+    print(count(0, 4), count(1, 4))
+  choices:
+  - text: 2 2
+    why: After skipping 1, the remaining coins cannot make 4.
+  - text: 3 0
+    why: The recurrence counts 1 plus 3 only once.
+  - text: 2 0
+    why: With both values, use four ones or one of each. 3 alone cannot make 4.
+  - text: 1 1
+    why: 3 alone cannot pay exactly 4, and having 1 gives two combinations.
+  answer: 2
+- id: st16
+  type: fix
+  title: Stop a repeated coin choice when the amount is zero
+  task: Return the number of combinations of one positive coin value with unlimited copies that sum to
+    a nonnegative amount. Use recursion. count_one(3, 6) returns 1 and count_one(3, 5) returns 0. An empty
+    choice pays 0. left is an integer from 0 to 400, so the recursion stays shallow.
+  starter: |
+    def count_one(coin, left):
+        if left <= 0:
+            return 0
+        return count_one(coin, left - coin)
+  solution: |
+    def count_one(coin, left):
+        if left == 0:
+            return 1
+        if left < 0:
+            return 0
+        return count_one(coin, left - coin)
+  tests: |
+    assert count_one(3, 6) == 1
+    assert count_one(3, 5) == 0
+    assert count_one(8, 0) == 1
+    assert count_one(1, 400) == 1
+  hint_levels: &id001
+  - Separate exact payment from paying too much.
+  - Give amount 0 its own base case.
+  - Return 1 when left == 0 and 0 when left < 0.
+  explanation: Exactly zero means a completed choice. With amount A and coin c, the call chain uses O(1
+    + A/c) time and stack space.
+- id: st17
+  type: predict
+  title: The empty choice pays zero
+  code: |
+    def ways(left):
+        if left == 0:
+            return 1
+        if left < 0:
+            return 0
+        return ways(left - 3)
+
+    print(ways(0), ways(2), ways(6))
+  choices:
+  - text: 0 0 1
+    why: The base case counts the empty choice as one way.
+  - text: 1 1 1
+    why: One coin of 3 overshoots 2.
+  - text: 1 0 2
+    why: The two identical coins form a single combination.
+  - text: 1 0 1
+    why: Zero needs no coins, 2 cannot be made, and 6 uses two coins.
+  answer: 3
+- id: st18
+  type: code
+  title: 'Boss: count coin combinations without repeats'
+  task: 'Use memoized recursion to count unordered ways to pay amount using unlimited coins. coins is
+    a list of at most 20 positive integer denominations. Treat duplicate denominations as one value. amount
+    is an integer from 0 to 200. Leave coins unchanged. Example: coin_ways([1, 3, 3], 4) returns 2. An
+    empty choice pays zero.'
+  exercise: exercises/practice.py
+  function: coin_ways
+  test_class: CoinWays
+  hint_levels:
+  - Remove duplicate denominations and decide whether to use or skip the current one.
+  - Memoize (index, left). Stop when left is zero, negative, or there are no denominations left.
+  - On use, call count(index, left - values[index]). On skip, call count(index + 1, left). Add them.
+- id: st19
+  type: explain
+  title: Explain it to a teammate
+  prompt: Write 2–4 English sentences. Explain why coin combinations need a two-part cache key. After
+    writing, compare with the model answer in the lesson.
+  rubric:
+  - Name both parts of the key.
+  - Explain why the amount alone can give a wrong count.
+  model_answer: I store the coin index and the remaining amount as the key. The same amount can give a
+    different count when fewer coin values are available. Each pair needs its own saved result.
+- id: st20
+  type: terminal
+  title: 'Hands-on: run and change the sample'
+  guide: handson.md
+  check: The original sample prints the expected output in the guide.
+- id: st21
+  type: boss
+  title: 'Mini boss: review and repair'
+  time_limit_minutes: 15
+  pass_rule: Answer at least 4 of 5 predicts and pass the bug-fix tests.
+  draws_from: &id002
+  - st03
+  - st06
+  - st11
+  - st15
+  - st17
+  plus:
+  - type: fix
+    title: Stop a repeated coin choice when the amount is zero
+    task: Return the number of combinations of one positive coin value with unlimited copies that sum
+      to a nonnegative amount. Use recursion. count_one(3, 6) returns 1 and count_one(3, 5) returns 0.
+      An empty choice pays 0. left is an integer from 0 to 400, so the recursion stays shallow.
+    starter: |
+      def count_one(coin, left):
+          if left <= 0:
+              return 0
+          return count_one(coin, left - coin)
+    solution: |
+      def count_one(coin, left):
+          if left == 0:
+              return 1
+          if left < 0:
+              return 0
+          return count_one(coin, left - coin)
+    tests: |
+      assert count_one(3, 6) == 1
+      assert count_one(3, 5) == 0
+      assert count_one(8, 0) == 1
+      assert count_one(1, 400) == 1
+    hint_levels: *id001
+    explanation: Exactly zero means a completed choice. With amount A and coin c, the call chain uses
+      O(1 + A/c) time and stack space.
+review_cards:
+  from_steps: *id002
+  vocab: true

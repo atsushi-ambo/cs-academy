@@ -1,0 +1,76 @@
+id: s1.m04.u05
+title: Closures and decorators
+stage: 1
+module: Functions
+version: 1
+status: draft
+estimated_minutes: 100
+prerequisites:
+- s1.m04.u02
+- s1.m04.u03
+- s1.m04.u04
+objectives:
+- Keep state in a nested function and update it with nonlocal.
+- Avoid late binding when making several callbacks.
+- Wrap calls with logging, timing, or a bounded retry while preserving the function name.
+skills:
+- python.closures
+- python.decorators
+- english.explain-code
+parts:
+- steps.yaml
+- lesson.md
+- handson.md
+- exercises/
+- tests/
+- solutions/solutions.md
+references:
+- kind: official_doc
+  title: Python scope and namespaces
+  url: https://docs.python.org/3.13/tutorial/classes.html#python-scopes-and-namespaces
+- kind: official_doc
+  title: Python functools.wraps
+  url: https://docs.python.org/3.13/library/functools.html#functools.wraps
+- kind: official_doc
+  title: Python clock for elapsed time
+  url: https://docs.python.org/3.13/library/time.html#time.perf_counter
+- kind: official_doc
+  title: Python function definitions
+  url: https://docs.python.org/3.13/reference/compound_stmts.html#function-definitions
+vocab:
+- en: nested function
+  ja: 入れ子の関数
+- en: enclosing scope
+  ja: 外側の関数のスコープ
+- en: closure
+  ja: 外側の変数を参照し続ける関数
+- en: nonlocal
+  ja: 外側の関数の変数を更新する宣言
+- en: binding
+  ja: 名前と値の結び付き
+- en: late binding
+  ja: 呼び出し時に外側の値を参照すること
+- en: default argument
+  ja: 引数省略時の値
+- en: decorator
+  ja: 関数を受け取って差し替える関数
+- en: wrapper
+  ja: 元の関数を包む関数
+- en: metadata
+  ja: 関数名などの付帯情報
+- en: module
+  ja: 関数や値などをまとめたPythonの単位
+- en: positional argument
+  ja: 位置で渡す引数
+- en: keyword argument
+  ja: 名前で渡す引数
+- en: elapsed time
+  ja: 経過時間
+- en: retry
+  ja: 再試行
+- en: log sink
+  ja: ログを受け取る関数
+- en: sentinel
+  ja: 特別な状態を表す値
+- en: identity comparison
+  ja: 同一オブジェクトかどうかの比較

@@ -1,0 +1,338 @@
+unit: s2.m03.u01
+python_min: '3.9'
+steps:
+- id: st01
+  type: read
+  title: Follow the next link
+  body: |
+    New urgent server jobs go at the front of a waiting list.
+    A **node** holds one job and a **link** to the next node.
+    A **singly linked list** goes forward by following these links.
+    Its **head** is the first node. Its **tail** is the last node.
+    You will build both the nodes and the list that holds them.
+    In Python, a **class** is a recipe for making objects. Here is a tiny one:
+
+        class Node:
+            def __init__(self, value):
+                self.value = value
+                self.next = None
+
+    `Node("scan")` makes an object. Python runs `__init__` for you.
+    `self` is the new object. `self.value` and `self.next` are its fields.
+    Read a field with a dot: `job.value`.
+- id: st02
+  type: predict
+  title: Two names can point to the same node
+  code: |
+    class Node:
+        def __init__(self, value):
+            self.value = value
+            self.next = None
+
+    head = Node("scan")
+    other = head
+    other.next = Node("mail")
+    print(head.next.value)
+  choices:
+  - text: scan
+    why: This is head.value, one node earlier.
+  - text: mail
+    why: Both names refer to the same first node, whose link changed.
+  - text: None
+    why: The new link points to the mail node.
+  - text: other
+    why: The print reads a stored job name.
+  answer: 1
+- id: st03
+  type: read
+  title: Compare work at each end
+  body: |
+    An array reads index i in O(1) time. In a chain, walk from the head.
+    To **traverse** the chain is to visit nodes one by one.
+    A search by value may visit n items in either structure.
+    Array front edits shift old items in O(n) time.
+    A chain changes its head in O(1). With a tail, it can also append in O(1).
+    A dynamic array appends in amortized O(1) time across many appends.
+- id: st04
+  type: predict
+  title: Trace two jumps from the head
+  code: |
+    values = ["scan", "mail", "sync"]
+    links = [2, None, 1]
+    index = 0
+    index = links[index]
+    index = links[index]
+    print(values[index])
+  choices:
+  - text: scan
+    why: The walk has left index zero.
+  - text: sync
+    why: Sync is the result after the first jump.
+  - text: None
+    why: The link out of the last node is None. Its value is a job name.
+  - text: mail
+    why: The links lead from zero to two and then to one.
+  answer: 3
+- id: st05
+  type: try
+  title: Count moves to the tail
+  starter: |
+    links = [2, None, 1]
+    index = 2
+    moves = 0
+    while links[index] is not None:
+        index = links[index]
+        moves += 1
+    print(index, moves)
+  task: Set the starting index to 0. Print the final index and the number of moves.
+  check:
+    stdout_line: 1 2
+- id: st06
+  type: parsons
+  title: Save a link before changing the head
+  task: Use every line to put urgent before scan and print both jobs.
+  lines:
+  - head = ["scan", None]
+  - urgent = ["urgent", head]
+  - head = urgent
+  - print(head[0], head[1][0])
+  expected_stdout: urgent scan
+  hint_levels:
+  - Use a pair to model a node.
+  - The second slot is the next link.
+  - Build urgent with the old head as its next link.
+- id: st07
+  type: read
+  title: Use None as the end marker
+  body: |
+    Python calls __init__ when it makes an object. In a Node, set self.value and self.next.
+    Use current is None to test for the end. This checks the node reference.
+    Zero can be a value in a real node.
+    Use current = current.next to move a local name along the chain.
+- id: st08
+  type: fix
+  title: Walk until the node reference ends
+  task: 'Given a head node or None, count integer nodes with a loop. Leave links in place. Example: 0 -> 8 -> None
+    gives 2.'
+  starter: |
+    def count_nodes(head):
+        count = 0
+        while head is not None and head.value:
+            count += 1
+            head = head.next
+        return count
+  solution: |
+    def count_nodes(head):
+        count = 0
+        while head is not None:
+            count += 1
+            head = head.next
+        return count
+  tests: |
+    from types import SimpleNamespace
+
+    tail = SimpleNamespace(value=8, next=None)
+    head = SimpleNamespace(value=0, next=tail)
+    assert count_nodes(head) == 2
+    assert head.next is tail and tail.next is None
+    assert count_nodes(None) == 0
+    assert count_nodes(tail) == 1
+  hint_levels:
+  - Look at what stops the loop.
+  - Zero is a valid node value.
+  - Keep only head is not None in the condition.
+  explanation: Read each link once. Time is O(n) and extra space is O(1).
+- id: st09
+  type: predict
+  title: Move a local name one node
+  code: |
+    tail = ["mail", None]
+    head = ["scan", tail]
+    current = head
+    current = current[1]
+    print(head[0], current[0])
+  choices:
+  - text: scan mail
+    why: Only current moved to the second node.
+  - text: mail mail
+    why: Changing current leaves head in place.
+  - text: scan scan
+    why: The second value comes from the next node.
+  - text: mail scan
+    why: The first value comes from the head node.
+  answer: 0
+- id: st10
+  type: code
+  title: Read a chain into a new list
+  task: 'Given a head or None, return a fresh list of values in forward order.
+
+    Use value and next. Walk at most 100 integer nodes. Leave all links in place.
+
+    Example: 4 -> 4 -> 0 -> None becomes [4, 4, 0].'
+  exercise: exercises/practice.py
+  function: chain_values
+  test_class: ChainValues
+  hint_levels:
+  - Make a new output list.
+  - Read one value per node and advance one link.
+  - While head is not None, append head.value and then set head = head.next.
+- id: st11
+  type: read
+  title: Find a value before changing links
+  body: |
+    Keep two names when you may remove a node. One names the current node.
+    The other names its **predecessor**, the node just before it.
+    Let that node skip the first match. This is a **splice**.
+    If there is no predecessor, move the head.
+    If the match is the tail, move the tail back to its predecessor.
+- id: st12
+  type: predict
+  title: Skip only the first matching node
+  code: |
+    last = [5, None]
+    middle = [5, last]
+    head = [2, middle]
+    head[1] = middle[1]
+    print(head[0], head[1][0], head[1][1])
+  choices:
+  - text: 2 5 [5, None]
+    why: That would still have two nodes with value 5.
+  - text: 5 5 None
+    why: The head still holds 2.
+  - text: 2 5 None
+    why: The head points straight to the last node.
+  - text: 2 None None
+    why: One node with value 5 remains.
+  answer: 2
+- id: st13
+  type: code
+  title: Find the first matching node
+  task: 'Return the first node whose value equals target, or None if absent.
+
+    Use value and next. There are up to 100 integer nodes. Leave links unchanged.
+
+    Example: in 2 -> 7 -> 7, searching for 7 returns the middle node itself.'
+  exercise: exercises/practice.py
+  function: first_match
+  test_class: FirstMatch
+  hint_levels:
+  - Return the node itself.
+  - Compare its value before moving to the next node.
+  - If head.value == target, return head inside the loop.
+- id: st14
+  type: fix
+  title: Clear the tail when the only node leaves
+  task: Given head and tail of a valid chain, drop the head if present. Return (head, tail) for the remaining chain.
+    A single node gives (None, None).
+  starter: |
+    def drop_front(head, tail):
+        if head is not None:
+            head = head.next
+        return head, tail
+  solution: |
+    def drop_front(head, tail):
+        if head is not None:
+            head = head.next
+        if head is None:
+            tail = None
+        return head, tail
+  tests: |
+    from types import SimpleNamespace
+
+    tail = SimpleNamespace(next=None)
+    head = SimpleNamespace(next=tail)
+    assert drop_front(tail, tail) == (None, None)
+    assert drop_front(None, None) == (None, None)
+    assert drop_front(head, tail) == (tail, tail)
+  hint_levels:
+  - Think about an empty list.
+  - After moving head, check whether a node remains.
+  - Set tail = None when the new head is None.
+  explanation: Changing the end references takes O(1) time and O(1) extra space.
+- id: st15
+  type: read
+  title: Keep a length field
+  body: |
+    Store the count in self.size. Add one on each insert.
+    Subtract one only when you remove a node. Let __len__ return that field.
+    Python calls this method when you write len(jobs).
+    Each node stores a value and a link. The list uses O(n) space.
+- id: st16
+  type: predict
+  title: Count edits that changed the list
+  code: |
+    values = [2, 2, 5]
+    size = len(values)
+    for target in [8, 2, 5]:
+        if target in values:
+            values.remove(target)
+            size -= 1
+    print(values, size)
+  choices:
+  - text: '[] 0'
+    why: Removing 2 once leaves the other 2.
+  - text: '[2] 1'
+    why: Two removals succeed. The miss leaves size alone.
+  - text: '[2] 0'
+    why: The miss leaves the count alone.
+  - text: '[2, 2] 2'
+    why: Both 2 and 5 match once.
+  answer: 1
+- id: st17
+  type: read
+  title: Choose by the operation you do most
+  body: |
+    Index reads favor arrays. Front inserts favor chains over shifting arrays.
+    A chain still takes O(n) time to find a value to remove.
+    The splice itself takes O(1) if you have the predecessor.
+    Removing the tail needs a walk if you only have its own reference.
+- id: st18
+  type: code
+  title: Build Node and SinglyLinkedList
+  task: 'Finish Node and SinglyLinkedList. Keep head, tail, and size.
+
+    Values are integers. push_front and append insert in O(1).
+
+    find returns the first matching node or None. remove deletes the first
+
+    match and returns True, or False on a miss. to_list builds a fresh list.
+
+    len reads size. Store data in nodes. The factory returns an empty list.
+
+    Example: append(4), push_front(9), append(4), remove(4) leaves [9, 4].'
+  exercise: exercises/practice.py
+  function: make_singly_linked_list
+  test_class: MakeSinglyLinkedList
+  hint_levels:
+  - Build nodes first. Test an empty list and then one node.
+  - Update both ends if the old list was empty. Use head for the front and tail for the back.
+  - For remove, link previous.next or head to current.next. If current is tail, set tail to previous.
+- id: st19
+  type: explain
+  title: Explain it to a teammate
+  prompt: Write 2–4 English sentences. Why is reading index 30 cheap in an array, while adding a new head is cheap
+    in a chain? Compare with the model in the lesson after writing.
+  rubric:
+  - Explain how an array reaches a slot.
+  - Explain what a front insert changes.
+  model_answer: An array can use the index to reach a slot in one step. A chain follows links from the head to reach
+    index 30. For a front insert, I point the new node at the old head and update head.
+- id: st20
+  type: terminal
+  title: 'Hands-on: Count moves to the tail'
+  guide: handson.md
+  check: The demo prints 1 2.
+- id: st21
+  type: boss
+  title: 'Mini boss: Build Node and SinglyLinkedList'
+  time_limit_minutes: 15
+  draws_from: [st02, st04, st09, st12, st16, st18]
+  pass_rule: Get four of five predicts right and pass the selected Code exercise.
+review_cards:
+  from_steps:
+  - st02
+  - st04
+  - st09
+  - st12
+  - st16
+  vocab: true

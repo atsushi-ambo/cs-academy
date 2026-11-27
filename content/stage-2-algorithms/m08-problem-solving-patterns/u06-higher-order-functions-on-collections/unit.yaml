@@ -1,0 +1,70 @@
+id: s2.m08.u06
+title: 'Higher-order functions on collections: map, filter, reduce, sorting with keys'
+stage: 2
+module: Problem-Solving Patterns
+version: 1
+status: draft
+estimated_minutes: 90
+prerequisites:
+- s1.m03.u05
+- s1.m04.u04
+- s2.m02.u04
+objectives:
+- Compare comprehensions with map and filter and tell when they run.
+- Implement map, filter, and a left-to-right reduction.
+- Build a log report by selecting, transforming, combining, and ordering records.
+skills:
+- python.collection-transforms
+- python.log-pipeline
+- english.explain-code
+parts:
+- steps.yaml
+- lesson.md
+- handson.md
+- exercises/
+- tests/
+- solutions/solutions.md
+references:
+- kind: official_doc
+  title: Python map and filter
+  url: https://docs.python.org/3.13/library/functions.html
+- kind: official_doc
+  title: Python functools.reduce
+  url: https://docs.python.org/3.13/library/functools.html#functools.reduce
+- kind: official_doc
+  title: Python comprehensions
+  url: https://docs.python.org/3.13/tutorial/datastructures.html#list-comprehensions
+- kind: official_doc
+  title: Python sorting techniques
+  url: https://docs.python.org/3.13/howto/sorting.html
+vocab:
+- en: iterable
+  ja: 順に要素を取り出せるもの
+- en: iterator
+  ja: 要素を1つずつ取り出すオブジェクト
+- en: lazy
+  ja: 必要になるまで処理しない
+- en: consume
+  ja: イテレータから要素を取り出して使う
+- en: map
+  ja: 各要素を変換する
+- en: filter
+  ja: 条件を満たす要素を残す
+- en: predicate
+  ja: 残すかどうかを真偽値で示す関数
+- en: truthy
+  ja: 真とみなされる
+- en: reduce
+  ja: 列を順に結合して1つの値にする
+- en: accumulator
+  ja: 途中までの集計値
+- en: initial value
+  ja: 最初に使う値
+- en: pipeline
+  ja: 複数の処理を順につないだ流れ
+- en: transform
+  ja: 変換する
+- en: materialize
+  ja: 全要素を具体的なコレクションにする
+- en: incident
+  ja: 障害・問題の発生

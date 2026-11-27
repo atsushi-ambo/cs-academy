@@ -1,0 +1,41 @@
+id: s2.m03.u06
+title: 'Doubly linked lists: insert, delete, and the prev/next invariant'
+stage: 2
+module: Linear Data Structures
+version: 1
+status: draft
+estimated_minutes: 85
+prerequisites:
+- s2.m03.u01
+objectives:
+- Insert and remove by node in constant time.
+- Check the links, ends, and size of a chain.
+skills:
+- python.doubly-linked-lists
+- english.explain-code
+parts:
+- steps.yaml
+- lesson.md
+- handson.md
+- exercises/
+- tests/
+- solutions/solutions.md
+references:
+- kind: official_doc
+  title: Classes and objects
+  url: https://docs.python.org/3.13/tutorial/classes.html
+vocab:
+- en: doubly linked list
+  ja: 双方向連結リスト
+- en: previous link
+  ja: 前のノードへの参照
+- en: invariant
+  ja: 常に成立すべき条件
+- en: neighbor
+  ja: 隣のノード
+- en: detach
+  ja: ノードの両リンクを外す
+- en: cycle
+  ja: ループ状のリンク
+- en: identity
+  ja: 同じオブジェクトかどうか

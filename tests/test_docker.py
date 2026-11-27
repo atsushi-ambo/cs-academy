@@ -1,12 +1,13 @@
 import os
 import subprocess
+from concurrent.futures import ThreadPoolExecutor
 from tempfile import TemporaryDirectory
 from unittest import SkipTest
 
 from app.execution import run_problem
 from runner.host import IMAGE, OUTPUT_LIMIT, docker_endpoint, run_container
 
-from .http_support import play_path, tcp_api
+from .http_support import play_path, tcp_api, try_source
 from .support import FOR, LISTS, PLACEMENT_SOURCE, RECURSION, SOLUTIONS, AcademyCase
 
 PLACEMENT_SOLUTIONS = {
@@ -21,6 +22,39 @@ PLACEMENT_SOLUTIONS = {
 }
 
 
+WORKERS = min(8, (os.cpu_count() or 2) * 2)
+
+
+def parallel(function, jobs):
+    with ThreadPoolExecutor(WORKERS) as pool:
+        return list(pool.map(lambda job: function(*job), jobs))
+
+
+def journey_runs(catalog):
+    for uid, sequence in catalog.play.items():
+        attempt = 0
+        for key in sequence:
+            kind = catalog.steps[key]["type"]
+            problem = catalog.problems.get(key)
+            if kind == "try" and uid != LISTS:
+                yield (key, *try_source(uid, {"starter": problem.starter}, attempt))
+                attempt += 1
+            elif kind in ("fix", "code"):
+                yield key, problem.starter, None
+                yield key, problem.solution, None
+
+
+def prefetched_runner(catalog):
+    jobs = list(dict.fromkeys(journey_runs(catalog)))
+    results = dict(zip(jobs, parallel(run_problem, jobs), strict=True))
+
+    def runner(key, source, stdin=None):
+        found = results.get((key, source, stdin))
+        return found if found is not None else run_problem(key, source, stdin)
+
+    return runner
+
+
 class DockerIntegrationTest(AcademyCase):
     lists_only = False
 
@@ -28,14 +62,14 @@ class DockerIntegrationTest(AcademyCase):
     def setUpClass(cls):
         try:
             subprocess.run(["docker", "info", "--format", "{{.ServerVersion}}"],
-                           capture_output=True, timeout=8, check=True)
+                           capture_output=True, timeout=30, check=True)
         except (OSError, subprocess.SubprocessError) as error:
             if os.environ.get("CS_ACADEMY_REQUIRE_DOCKER"):
                 raise AssertionError("Docker is required for this test run") from error
             raise SkipTest("Docker is unavailable") from error
         try:
             subprocess.run(["docker", "image", "inspect", IMAGE],
-                           capture_output=True, timeout=8, check=True)
+                           capture_output=True, timeout=30, check=True)
         except (OSError, subprocess.SubprocessError) as error:
             raise AssertionError("Runner image is missing. Run make runner-image.") from error
 
@@ -59,28 +93,27 @@ class DockerIntegrationTest(AcademyCase):
         with TemporaryDirectory(prefix="academy-test-docker-") as config:
             env = {"PATH": os.environ.get("PATH", os.defpath), "DOCKER_HOST": endpoint,
                    "DOCKER_CONFIG": config}
+            jobs = []
             for sequence in catalog.play.values():
                 for key in sequence:
                     step = catalog.steps[key]
-                    with self.subTest(step=key):
-                        if step["type"] == "predict":
-                            expected = step["choices"][step["answer"]]["text"].rstrip()
-                            result = run_container({"source": step["code"], "stdin": ""}, env)
-                            if key == f"{LISTS}/st05":
-                                self.assertEqual(result["status"], "failed", result)
-                                self.assertEqual(result["stderr"].splitlines()[-1], expected)
-                                continue
-                            if key == f"{LISTS}/st12":
-                                self.assertEqual(expected, "0 1 2 (on three lines)")
-                                expected = "0\n1\n2"
-                        elif step["type"] == "parsons":
-                            expected = step["expected_stdout"].rstrip()
-                            source = "\n".join(step["lines"])
-                            result = run_container({"source": source, "stdin": ""}, env)
-                        else:
-                            continue
-                        self.assertEqual(result["status"], "passed", result)
-                        self.assertEqual(result["stdout"].rstrip(), expected)
+                    if step["type"] == "predict":
+                        jobs.append((key, step["code"], step["choices"][step["answer"]]["text"].rstrip()))
+                    elif step["type"] == "parsons":
+                        jobs.append((key, "\n".join(step["lines"]), step["expected_stdout"].rstrip()))
+            results = parallel(lambda key, source, _: run_container({"source": source, "stdin": ""}, env),
+                               jobs)
+            for (key, _, expected), result in zip(jobs, results, strict=True):
+                with self.subTest(step=key):
+                    if key == f"{LISTS}/st05":
+                        self.assertEqual(result["status"], "failed", result)
+                        self.assertEqual(result["stderr"].splitlines()[-1], expected)
+                        continue
+                    if key == f"{LISTS}/st12":
+                        self.assertEqual(expected, "0 1 2 (on three lines)")
+                        expected = "0\n1\n2"
+                    self.assertEqual(result["status"], "passed", result)
+                    self.assertEqual(result["stdout"].rstrip(), expected)
 
     def test_limits(self):
         key = f"{LISTS}/st02"
@@ -103,7 +136,7 @@ else:
         self.assertEqual(len(large["stdout"]), OUTPUT_LIMIT)
 
     def test_path_journey_over_tcp_and_docker(self):
-        self.learning.runner = run_problem
+        self.learning.runner = prefetched_runner(self.store.catalog)
         with tcp_api(self) as api:
             for uid, spec in self.store.catalog.placements.items():
                 with self.subTest(placement=uid):

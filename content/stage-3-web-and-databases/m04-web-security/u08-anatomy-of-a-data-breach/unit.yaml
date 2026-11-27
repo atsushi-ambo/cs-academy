@@ -1,0 +1,75 @@
+id: s3.m04.u08
+title: Anatomy of a data breach
+stage: 3
+module: Web Security
+version: 1
+status: draft
+estimated_minutes: 100
+prerequisites:
+- s3.m04.u01
+- s3.m04.u04
+- s3.m04.u05
+- s3.m04.u07
+objectives:
+- Connect common breach causes to specific controls.
+- Audit a toy report app and verify selected fixes.
+- Triage signals and order an incident response.
+skills:
+- security.breach-analysis
+- security.incident-response
+- security.safe-logging
+- english.explain-code
+parts:
+- steps.yaml
+- lesson.md
+- handson.md
+- exercises/
+- tests/
+- solutions/solutions.md
+references:
+- kind: official_doc
+  title: CISA Incident and Vulnerability Response Playbooks
+  url: https://www.cisa.gov/sites/default/files/publications/Cybersecurity_Incident_Vulnerability_Response_Playbooks_508c.pdf
+- kind: official_doc
+  title: OWASP Logging
+  url: https://cheatsheetseries.owasp.org/cheatsheets/Logging_Cheat_Sheet.html
+- kind: official_doc
+  title: OWASP Dependency-Check
+  url: https://owasp.org/www-project-dependency-check/
+vocab:
+- en: data breach
+  ja: データの漏えい
+- en: exposure
+  ja: 情報が見える状態になること
+- en: root cause
+  ja: 根本原因
+- en: control
+  ja: リスクを減らす対策
+- en: audit
+  ja: 設定や処理の点検
+- en: dependency
+  ja: 依存ライブラリ
+- en: patch
+  ja: 修正更新
+- en: least privilege
+  ja: 最小権限
+- en: detection signal
+  ja: 検知の手がかり
+- en: false positive
+  ja: 誤検知
+- en: baseline
+  ja: 通常時の基準
+- en: blast radius
+  ja: 影響範囲
+- en: containment
+  ja: 被害の封じ込め
+- en: rotation
+  ja: 秘密値の入れ替え
+- en: revocation
+  ja: 失効
+- en: notification
+  ja: 関係者への通知
+- en: timeline
+  ja: 時系列
+- en: remediation
+  ja: 原因の是正

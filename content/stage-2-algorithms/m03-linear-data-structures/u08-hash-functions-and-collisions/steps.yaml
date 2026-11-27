@@ -1,0 +1,345 @@
+unit: s2.m03.u08
+python_min: '3.9'
+steps:
+- id: st01
+  type: read
+  title: Give a key a starting position
+  body: |
+    A service table can store a timeout for each route name.
+    First turn the route name into a number. Use % to make a slot index.
+    When two names land at the same index, their keys still differ.
+    You will build a hash and two ways to keep both values after a collision.
+- id: st02
+  type: read
+  title: Mix in one character at a time
+  body: |
+    ord gives a **character code**, a number for one character. ord("a") is 97.
+    Start h at zero. For each character ch, set h = (31 * h + ord(ch)) % capacity.
+    The remainder keeps h within the slot range. The empty string stays at zero.
+    This is a simple teaching hash. It can still send many keys to one slot.
+- id: st03
+  type: predict
+  title: Carry an earlier character into the next step
+  code: |
+    h = 0
+    for ch in "ab":
+        h = (31 * h + ord(ch)) % 7
+    print(h)
+  choices:
+  - text: '6'
+    why: Six is the first step. The loop still has one character to read.
+  - text: '4'
+    why: The first step gives 6. The next gives 284 % 7, which is 4.
+  - text: '0'
+    why: Zero uses only the last character modulo 7.
+  - text: '284'
+    why: This is the last sum before taking the remainder.
+  answer: 1
+- id: st04
+  type: parsons
+  title: Apply a string hash in order
+  task: Use all lines. Hash route ab into five slots and print its slot index.
+  lines:
+  - key = "ab"
+  - capacity = 5
+  - h = 0
+  - 'for ch in key:'
+  - '    h = (31 * h + ord(ch)) % capacity'
+  - print(h)
+  expected_stdout: '0'
+  hint_levels:
+  - Set the key, capacity, and start value first.
+  - The update belongs inside the loop.
+  - Print once after every character is mixed in.
+  accepted_orders:
+  - - 0
+    - 2
+    - 1
+    - 3
+    - 4
+    - 5
+  - - 1
+    - 0
+    - 2
+    - 3
+    - 4
+    - 5
+  - - 1
+    - 2
+    - 0
+    - 3
+    - 4
+    - 5
+  - - 2
+    - 0
+    - 1
+    - 3
+    - 4
+    - 5
+  - - 2
+    - 1
+    - 0
+    - 3
+    - 4
+    - 5
+- id: st05
+  type: code
+  title: Write a small string hash
+  task: 'key is a string of up to 32 characters. Capacity is positive and at most 1,024.
+
+    Start h at zero. For each ch, update h to (31 * h + ord(ch)) % capacity.
+
+    Return h. Do not use hash(). Example: string_slot(''ab'', 7) gives 4.'
+  exercise: exercises/practice.py
+  function: string_slot
+  test_class: StringSlot
+  hint_levels:
+  - Use a number that starts at zero.
+  - Mix one code at a time into that number.
+  - Use h = (31 * h + ord(char)) % capacity inside the loop.
+- id: st06
+  type: predict
+  title: Two different keys land together
+  code: |
+    capacity = 4
+    print(ord("a") % capacity, ord("e") % capacity, "a" == "e")
+  choices:
+  - text: 1 1 True
+    why: The slot number matches, but the strings differ.
+  - text: 0 0 False
+    why: Both codes are one past a multiple of four.
+  - text: 1 2 False
+    why: Changing the code by four leaves the remainder alone.
+  - text: 1 1 False
+    why: Both land at slot 1 and keep their own key.
+  answer: 3
+- id: st07
+  type: read
+  title: Keep colliding pairs together
+  body: |
+    A **bucket** holds pairs whose keys have the same slot number.
+    Using one list of pairs per bucket is **chaining**.
+    When getting or putting a key, walk only that bucket.
+    Compare the whole key. If it matches, read or replace its value.
+    If no pair matches, a put appends a new pair and raises the size.
+- id: st08
+  type: predict
+  title: Search past the first pair in a bucket
+  code: |
+    bucket = [("a", 4), ("e", 8)]
+    key = "e"
+    value = None
+    for saved, item in bucket:
+        if saved == key:
+            value = item
+            break
+    print(value)
+  choices:
+  - text: '8'
+    why: The second pair has the full key e.
+  - text: '4'
+    why: The first pair shares a bucket but has a different key.
+  - text: None
+    why: The loop finds e before it ends.
+  - text: e
+    why: The result is the value stored with e.
+  answer: 0
+- id: st09
+  type: fix
+  title: Leave room for separate bucket lists
+  task: 'Return a list of capacity independent empty lists. Capacity is 1 to 1,024. Example: capacity 2 gives [[],
+    []], and editing bucket 0 leaves bucket 1 alone.'
+  starter: |
+    def empty_buckets(capacity):
+        return [[]] * capacity
+  solution: |
+    def empty_buckets(capacity):
+        buckets = []
+        for i in range(capacity):
+            buckets.append([])
+        return buckets
+  tests: |
+    single = empty_buckets(1)
+    assert single == [[]]
+    two = empty_buckets(2)
+    assert two == [[], []]
+    two[0].append(("a", 4))
+    assert two == [[("a", 4)], []]
+    assert empty_buckets(2) == [[], []]
+  hint_levels:
+  - Check what list multiplication repeats.
+  - Make each inner list as a new object.
+  - Loop capacity times and append [] each time.
+  explanation: For capacity c, creating c empty lists takes O(c) time and O(c) output space.
+- id: st10
+  type: read
+  title: Recompute positions after a resize
+  body: |
+    The **load factor** is size divided by capacity.
+    For this table, double the number of buckets when size would exceed capacity.
+    To **rehash** is to place every old pair using the new capacity.
+    For example, code 101 gives slot 1 with four buckets and slot 5 with eight.
+    Copying an entire old bucket to the same index would put some keys out of reach.
+- id: st11
+  type: try
+  title: Watch what changes when capacity doubles
+  starter: |
+    capacity = 4
+    print(ord("e") % capacity)
+  task: Change capacity from 4 to 8. Print the new slot for e.
+  check:
+    stdout_line: '5'
+- id: st12
+  type: predict
+  title: Keep size when a key is replaced
+  code: |
+    bucket = [("a", 2), ("c", 7)]
+    size = 2
+    key = "c"
+    for i in range(len(bucket)):
+        saved, value = bucket[i]
+        if saved == key:
+            bucket[i] = (key, 9)
+            break
+    print(size, bucket[1][1])
+  choices:
+  - text: 3 9
+    why: A replacement does not add a key.
+  - text: 2 7
+    why: The pair stored at index one changes.
+  - text: 2 9
+    why: The same key gets a new value. The count is unchanged.
+  - text: 1 9
+    why: Both keys remain.
+  answer: 2
+- id: st13
+  type: code
+  title: Build a chained hash map that doubles
+  task: 'Start with 1 to 16 buckets. Use independent lists of (string key, integer value) pairs.
+
+    Use the supplied slot helper. Keys are up to 32 characters. Store at most 100 keys.
+
+    get returns the value or None. put adds or replaces a key. Track size.
+
+    Before adding past capacity, double the buckets and rehash. Use your own buckets, no dict.
+
+    Example from capacity 2: put(''a'', 4), put(''c'', 7), put(''e'', 9) makes four buckets.
+
+    get(''c'') gives 7 even after the resize.'
+  exercise: exercises/practice.py
+  function: make_chained_map
+  test_class: MakeChainedMap
+  hint_levels:
+  - Search the proper bucket by full key.
+  - Replace a match before checking whether to grow.
+  - On growth, reinsert each pair into new_buckets[slot(key, len(new_buckets))]. Then add the new pair.
+- id: st14
+  type: read
+  title: Look for room one slot at a time
+  body: |
+    **Open addressing** stores pairs directly in slots. None marks a free slot.
+    A **probe** checks a slot. **Linear probing** walks to the next slot on a collision.
+    Start at the hash index. Advance by one with % so the walk can wrap.
+    On get, stop at a match or an empty slot. We have no deletes here.
+    On a full table, stop after capacity probes. A **cluster** is a run of filled slots.
+    Long clusters can slow a search.
+- id: st15
+  type: predict
+  title: Wrap a probe to find another key
+  code: |
+    slots = [("g", 9), None, None, ("c", 4)]
+    index = ord("g") % len(slots)
+    while slots[index] is not None and slots[index][0] != "g":
+        index = (index + 1) % len(slots)
+    print(index, slots[index][1])
+  choices:
+  - text: 3 4
+    why: The key at slot 3 is c, so the walk continues.
+  - text: 0 9
+    why: The walk wraps to slot zero and finds g.
+  - text: 1 None
+    why: The match comes before this empty slot.
+  - text: 0 4
+    why: The value in slot zero is 9.
+  answer: 1
+- id: st16
+  type: fix
+  title: End a probe when every slot has been seen
+  task: 'Return the first empty slot at or after start, with wraparound. Return None if full. Slots are a nonempty
+    list of None or key/value pairs. Example: [None, (''x'', 2)] from 1 gives 0.'
+  starter: |
+    def find_free(slots, start):
+        index = start
+        for i in range(len(slots)):
+            if slots[index] is None:
+                return index
+            index += 1
+        return None
+  solution: |
+    def find_free(slots, start):
+        index = start
+        for i in range(len(slots)):
+            if slots[index] is None:
+                return index
+            index = (index + 1) % len(slots)
+        return None
+  tests: |
+    slots = [None, ("x", 2)]
+    assert find_free(slots, 1) == 0
+    assert slots == [None, ("x", 2)]
+    assert find_free([None], 0) == 0
+    assert find_free([("x", 2)], 0) is None
+    assert find_free([("x", 2), ("y", 2)], 1) is None
+  hint_levels:
+  - The walk may pass the last index.
+  - Use capacity as the divisor in a remainder.
+  - Replace index += 1 with index = (index + 1) % len(slots).
+  explanation: At most c slots are probed, for O(c) worst-case time and O(1) extra space.
+- id: st17
+  type: code
+  title: Build a map with linear probing
+  task: 'Capacity is 1 to 100. Keep slots fixed. Use the supplied slot helper.
+
+    Store string keys of up to 32 characters and integer values in pairs. No dict or deletes.
+
+    get returns the value or None. put returns True on insert or replacement.
+
+    A full table rejects a new key with False. Probe at most capacity slots.
+
+    Example: at capacity 4, ''c'' starts at slot 3. After ''c'', inserting ''g'' uses slot 0.'
+  exercise: exercises/practice.py
+  function: make_probing_map
+  test_class: MakeProbingMap
+  hint_levels:
+  - Start at the hash index.
+  - Stop on the same key or an empty slot.
+  - Probe at most capacity times, stepping with (index + 1) % capacity.
+- id: st18
+  type: explain
+  title: Explain it to a teammate
+  prompt: Write 2–4 English sentences. Why does a new table size change where an old key belongs? Compare with the
+    model in the lesson after writing.
+  rubric:
+  - Connect capacity with the remainder.
+  - Explain why a resize must rehash each key.
+  model_answer: The slot index is a remainder that uses capacity. A larger capacity can give a different slot for
+    the same key. I rehash each key so a later lookup can find it.
+- id: st19
+  type: terminal
+  title: 'Hands-on: Watch what changes when capacity doubles'
+  guide: handson.md
+  check: The demo prints 5.
+- id: st20
+  type: boss
+  title: 'Mini boss: Build a map with linear probing'
+  time_limit_minutes: 15
+  draws_from: [st03, st06, st08, st12, st15, st17]
+  pass_rule: Get four of five predicts right and pass the selected Code exercise.
+review_cards:
+  from_steps:
+  - st03
+  - st06
+  - st08
+  - st12
+  - st15
+  vocab: true

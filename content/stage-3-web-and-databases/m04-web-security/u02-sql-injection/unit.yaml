@@ -1,0 +1,62 @@
+id: s3.m04.u02
+title: 'SQL injection: break it, then fix it'
+stage: 3
+module: Web Security
+version: 1
+status: draft
+estimated_minutes: 80
+prerequisites:
+- s1.m03.u01
+- s3.m02.u01
+- s3.m04.u01
+objectives:
+- Explain how input can change a query's structure.
+- Bind values in SQLite.
+- Choose dynamic query parts from a fixed list.
+skills:
+- security.sql-parameters
+- security.least-privilege
+- english.explain-code
+parts:
+- steps.yaml
+- lesson.md
+- handson.md
+- exercises/
+- tests/
+- solutions/solutions.md
+references:
+- kind: official_doc
+  title: Python sqlite3
+  url: https://docs.python.org/3.13/library/sqlite3.html#how-to-use-placeholders-to-bind-values-in-sql-queries
+- kind: official_doc
+  title: OWASP SQL Injection Prevention
+  url: https://cheatsheetseries.owasp.org/cheatsheets/SQL_Injection_Prevention_Cheat_Sheet.html
+vocab:
+- en: SQL injection
+  ja: SQL命令の構造への入力の混入
+- en: query
+  ja: 問い合わせ
+- en: concatenate
+  ja: 文字列を連結する
+- en: parse
+  ja: 構文を解析する
+- en: placeholder
+  ja: 値の差し込み位置
+- en: bind
+  ja: 値をプレースホルダーに渡す
+- en: parameterized query
+  ja: パラメーター化されたクエリ
+- en: tuple
+  ja: タプル
+- en: literal
+  ja: リテラル
+- en: escaping
+  ja: 特殊文字をデータとして扱う変換
+- en: allowlist
+  ja: 許可リスト
+- en: identifier
+  ja: 表や列などの名前
+- en: least privilege
+  ja: 最小権限
+- en: in-memory database
+  ja: メモリ内データベース

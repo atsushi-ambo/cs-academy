@@ -1,0 +1,5 @@
+# Test-only: one edit per try step, in step order, that makes the try check pass.
+- find: values = [1, 2, 3, 4]
+  replace: values = [1, 2, 3, 4, 5]
+- find: values = [5, 1, 4, 2]
+  replace: values = [2, 3, 4, 1]

@@ -1,0 +1,19 @@
+# Test-only: one edit per try step, in step order, that makes the try check pass.
+- find: 'values = [9, 6, 5, 1, 12]
+
+    end = 4
+
+    '
+  replace: 'values = [9, 6, 5, 1, 4]
+
+    end = 5
+
+    '
+- find: 'values[0], values[2] = values[2], values[0]
+
+    '
+  replace: 'other = values.pop(2)
+
+    values.insert(0, other)
+
+    '

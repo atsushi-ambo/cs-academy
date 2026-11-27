@@ -1,0 +1,5 @@
+# Test-only: one edit per try step, in step order, that makes the try check pass.
+- find: count += 1
+  replace: count += ms
+- find: '[4, 7], [], [9]'
+  replace: '[4, 7], [5], [9]'

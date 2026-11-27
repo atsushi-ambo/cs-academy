@@ -1,0 +1,7 @@
+# Test-only: one edit per try step, in step order, that makes the try check pass.
+- find: range(1, 4)
+  replace: range(1, 5)
+- find: scan(2)
+  replace: scan(3)
+- find: print(ways(3))
+  replace: print(ways(4))

@@ -1,0 +1,71 @@
+id: s2.m07.u02
+title: 'Tabulation: knapsack'
+stage: 2
+module: Dynamic Programming
+version: 1
+status: draft
+estimated_minutes: 115
+prerequisites:
+- s2.m07.u01
+- s2.m03.u05
+- s1.m03.u05
+- s2.m02.u04
+objectives:
+- Fill a bottom-up table for a capacity limit.
+- Reconstruct a best 0/1 knapsack choice and compress a value-only table.
+- Build tables for minimum coin count and longest common subsequence.
+skills:
+- algorithms.tabulation
+- algorithms.knapsack
+- algorithms.lcs
+- english.explain-code
+parts:
+- steps.yaml
+- lesson.md
+- handson.md
+- exercises/
+- tests/
+- solutions/solutions.md
+references:
+- kind: official_doc
+  title: Python lists and comprehensions
+  url: https://docs.python.org/3.13/tutorial/datastructures.html#list-comprehensions
+- kind: official_doc
+  title: Python range and iteration
+  url: https://docs.python.org/3.13/tutorial/controlflow.html#the-range-function
+- kind: official_doc
+  title: Python sequence types
+  url: https://docs.python.org/3.13/library/stdtypes.html#sequence-types-list-tuple-range
+vocab:
+- en: tabulation
+  ja: 表を順に埋める動的計画法
+- en: bottom-up
+  ja: 小さい状態から順に計算する方法
+- en: table cell
+  ja: 表のマス
+- en: base row
+  ja: 初期条件を表す行
+- en: capacity
+  ja: 容量の上限
+- en: 0/1 knapsack
+  ja: 各品を最大1回選ぶナップサック問題
+- en: item weight
+  ja: 品物の重さ
+- en: item value
+  ja: 品物の価値
+- en: choice reconstruction
+  ja: 最適な選択肢の復元
+- en: space optimization
+  ja: 使用メモリを減らす工夫
+- en: aliasing
+  ja: 複数の名前が同じ実体を指すこと
+- en: descending order
+  ja: 大きい方から先に進む順序
+- en: unreachable
+  ja: 到達不能の
+- en: subsequence
+  ja: 順を保って一部を抜き出した列
+- en: longest common subsequence
+  ja: 最長共通部分列
+- en: prefix
+  ja: 先頭からの部分

@@ -1,0 +1,81 @@
+id: s3.m04.u04
+title: Passwords, sessions, and secrets
+stage: 3
+module: Web Security
+version: 1
+status: draft
+estimated_minutes: 120
+prerequisites:
+- s1.m03.u01
+- s3.m04.u01
+- s3.m04.u03
+objectives:
+- Explain what plaintext, fast hashes, salts, and slow KDFs protect.
+- Register and verify passwords with scrypt and upgrade the cost after login.
+- Handle reset tokens and describe how to protect other secrets.
+skills:
+- security.password-storage
+- security.kdf
+- security.secret-management
+- english.explain-code
+parts:
+- steps.yaml
+- lesson.md
+- handson.md
+- exercises/
+- tests/
+- solutions/solutions.md
+references:
+- kind: official_doc
+  title: Python hashlib
+  url: https://docs.python.org/3.13/library/hashlib.html
+- kind: official_doc
+  title: Python secrets
+  url: https://docs.python.org/3.13/library/secrets.html
+- kind: official_doc
+  title: Python hmac
+  url: https://docs.python.org/3.13/library/hmac.html
+- kind: official_doc
+  title: OWASP Password Storage
+  url: https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html
+vocab:
+- en: plaintext
+  ja: 平文
+- en: digest
+  ja: ハッシュ値
+- en: dictionary attack
+  ja: よく使われる候補を試す攻撃
+- en: offline guess
+  ja: サーバーに接続せず行う推測
+- en: salt
+  ja: ハッシュの利用者間での使い回しを防ぐランダム値
+- en: key derivation function
+  ja: 鍵導出関数
+- en: scrypt
+  ja: メモリ負荷を調整できるパスワード用KDF
+- en: PBKDF2
+  ja: 繰り返し計算するパスワード用KDF
+- en: memory-hard
+  ja: 計算に大きなメモリを要求する
+- en: Argon2id
+  ja: パスワード保存向けのメモリ負荷型KDF
+- en: bcrypt
+  ja: 旧システムで使われるパスワードハッシュ方式
+- en: parameter
+  ja: 計算設定値
+- en: rehash
+  ja: 新しい設定で再計算する
+- en: pepper
+  ja: 保存先を分ける追加の秘密値
+- en: rate limit
+  ja: 試行回数の制限
+- en: reset token
+  ja: パスワード再設定トークン
+- en: expiry
+  ja: 有効期限
+- en: multifactor authentication
+  ja: 多要素認証
+- en: environment variable
+  ja: 環境変数
+- en: UTF-8
+  ja: 文字列のバイト表現の一つ

@@ -1,0 +1,57 @@
+id: s3.m04.u01
+title: Authentication vs authorization
+stage: 3
+module: Web Security
+version: 1
+status: draft
+estimated_minutes: 75
+prerequisites:
+- s1.m03.u01
+- s3.m01.u02
+- s3.m03.u02
+objectives:
+- Separate identity checks from permission checks.
+- Write a policy for owners, roles, and organizations.
+- Block direct access to another user's report.
+skills:
+- security.authentication
+- security.object-authorization
+- english.explain-code
+parts:
+- steps.yaml
+- lesson.md
+- handson.md
+- exercises/
+- tests/
+- solutions/solutions.md
+references:
+- kind: official_doc
+  title: OWASP Authorization
+  url: https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html
+vocab:
+- en: authentication
+  ja: 本人確認
+- en: authorization
+  ja: 認可
+- en: identity
+  ja: 本人の識別情報
+- en: permission
+  ja: 操作の許可
+- en: resource
+  ja: 操作対象
+- en: role
+  ja: 役割
+- en: organization
+  ja: 組織
+- en: owner
+  ja: 所有者
+- en: deny by default
+  ja: 既定で拒否
+- en: session
+  ja: ログイン状態を管理する仕組み
+- en: IDOR
+  ja: オブジェクトの参照先に対する認可不備
+- en: trusted
+  ja: 信頼できる
+- en: audit log
+  ja: 監査ログ

@@ -1,0 +1,50 @@
+id: s2.m06.u05
+title: 'Binary search trees: insert, search, delete'
+stage: 2
+module: Trees and Graphs
+version: 1
+status: draft
+estimated_minutes: 95
+prerequisites:
+- s2.m06.u01
+- s2.m04.u01
+- s2.m02.u05
+objectives:
+- Insert and find a key by comparing as you go.
+- Delete keys in all three child cases.
+- Check subtree bounds and explain why sorted input can make search slow.
+skills:
+- algorithms.binary-search-trees
+- english.explain-code
+parts:
+- steps.yaml
+- lesson.md
+- handson.md
+- exercises/
+- tests/
+- solutions/solutions.md
+references:
+- kind: official_doc
+  title: Python classes
+  url: https://docs.python.org/3.13/tutorial/classes.html
+vocab:
+- en: binary search tree
+  ja: 二分探索木
+- en: key
+  ja: 比較に使うキー
+- en: invariant
+  ja: 常に保つ条件
+- en: duplicate
+  ja: 重複キー
+- en: bound
+  ja: 許される値の境界
+- en: successor
+  ja: 整列順の直後のキー
+- en: degenerate tree
+  ja: 鎖状に退化した木
+- en: strict inequality
+  ja: 等号を含まない不等式
+- en: search path
+  ja: 探索でたどる経路
+- en: ancestor
+  ja: 上位にある節点

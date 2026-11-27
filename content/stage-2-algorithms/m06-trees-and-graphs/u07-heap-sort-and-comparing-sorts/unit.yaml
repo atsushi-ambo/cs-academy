@@ -1,0 +1,56 @@
+id: s2.m06.u07
+title: Heap sort and comparing all sorts
+stage: 2
+module: Trees and Graphs
+version: 1
+status: draft
+estimated_minutes: 105
+prerequisites:
+- s2.m06.u02
+- s2.m04.u02
+- s2.m04.u03
+- s2.m02.u05
+objectives:
+- Sort an integer list in place with a max-heap.
+- Keep the sorted suffix outside the heap.
+- Compare five sorts using time, space, and stability.
+skills:
+- algorithms.heap-sort-and-comparing-sorts
+- english.explain-code
+parts:
+- steps.yaml
+- lesson.md
+- handson.md
+- exercises/
+- tests/
+- solutions/solutions.md
+references:
+- kind: official_doc
+  title: Python heapq
+  url: https://docs.python.org/3.13/library/heapq.html
+- kind: official_doc
+  title: Python sorting guide
+  url: https://docs.python.org/3.13/howto/sorting.html
+vocab:
+- en: heap sort
+  ja: ヒープソート
+- en: max-heap
+  ja: 最大ヒープ
+- en: active prefix
+  ja: 操作対象の先頭部分
+- en: exclusive end
+  ja: 範囲に含めない終端
+- en: sorted suffix
+  ja: 整列済みの末尾部分
+- en: in place
+  ja: 元の配列内で行う
+- en: stability
+  ja: 同じキーの入力順を保つ性質
+- en: auxiliary space
+  ja: 補助領域
+- en: pivot
+  ja: 分割の基準要素
+- en: partition
+  ja: 基準で分ける操作
+- en: comparison sort
+  ja: 比較ソート

@@ -1,0 +1,64 @@
+id: s3.m04.u07
+title: Input validation and query safety, everywhere
+stage: 3
+module: Web Security
+version: 1
+status: draft
+estimated_minutes: 85
+prerequisites:
+- s3.m03.u03
+- s3.m04.u01
+- s3.m04.u02
+objectives:
+- Validate types, lengths, ranges, and choices on the server.
+- Contain resolved paths within an allowed directory.
+- Allow only approved fields in an update request.
+skills:
+- security.server-validation
+- security.path-containment
+- security.field-allowlist
+- english.explain-code
+parts:
+- steps.yaml
+- lesson.md
+- handson.md
+- exercises/
+- tests/
+- solutions/solutions.md
+references:
+- kind: official_doc
+  title: Python pathlib
+  url: https://docs.python.org/3.13/library/pathlib.html
+- kind: official_doc
+  title: OWASP Input Validation
+  url: https://cheatsheetseries.owasp.org/cheatsheets/Input_Validation_Cheat_Sheet.html
+- kind: official_doc
+  title: OWASP Mass Assignment
+  url: https://cheatsheetseries.owasp.org/cheatsheets/Mass_Assignment_Cheat_Sheet.html
+vocab:
+- en: validation
+  ja: 入力が条件を満たすか検査すること
+- en: allowlist
+  ja: 許可リスト
+- en: range
+  ja: 値の範囲
+- en: boundary value
+  ja: 境界値
+- en: path traversal
+  ja: 許可した範囲をパスで逸脱すること
+- en: absolute path
+  ja: 絶対パス
+- en: relative path
+  ja: 相対パス
+- en: resolve
+  ja: パスを正規化しリンクをたどること
+- en: symbolic link
+  ja: 別のパスを参照するリンク
+- en: parent directory
+  ja: 親ディレクトリ
+- en: mass assignment
+  ja: 無制限に入力項目を一括反映する問題
+- en: schema
+  ja: 入力の構造と制約
+- en: race condition
+  ja: 処理順により結果が変わる競合

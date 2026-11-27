@@ -1,0 +1,315 @@
+unit: s1.m04.u04
+python_min: '3.9'
+steps:
+- id: st01
+  type: read
+  title: Give a report one rule at a time
+  body: |
+    A server report can sort the same logs by time, host, or delay.
+    You can pass a different sorting rule for each view.
+    In this unit, you will pass functions, write short rules, and order log records.
+
+    A **first-class function** can be stored or passed around like other values.
+    A **higher-order function** takes or returns a function.
+    A function passed for a later call is often called a **callback**.
+
+    The exercise answers use **Big-O** to describe how time or memory grows.
+    O(1) stays steady as input grows. O(n) grows in step with the number of items.
+- id: st02
+  type: predict
+  title: Pass the rule before calling it
+  code: |
+    def run(rule, value):
+        return rule(value)
+
+    def double(value):
+        return value * 2
+
+    print(run(double, 4))
+  choices:
+  - text: '8'
+    why: run calls double with 4 and returns its result.
+  - text: '4'
+    why: The callback changes the value before run returns.
+  - text: '16'
+    why: The callback runs once.
+  - text: double
+    why: run returns the result of double, rather than its name.
+  answer: 0
+- id: st03
+  type: try
+  title: Give the report a new rule
+  task: Change double so it adds 10 instead of multiplying by 2. Keep run unchanged.
+  starter: |
+    def run(rule, value):
+        return rule(value)
+
+    def double(value):
+        return value * 2
+
+    print(run(double, 4))
+  check:
+    stdout_line: '14'
+- id: st04
+  type: read
+  title: Write a lambda for one expression
+  body: |
+    Write `lambda value: value + 10` to make a function.
+    The name after lambda is the parameter.
+    The **expression** after the colon gives the result.
+    Pass it directly as in `run(lambda value: value + 10, 4)`.
+    Use `def` when the rule needs several statements or a clear name.
+- id: st05
+  type: predict
+  title: A lambda reads the field you choose
+  code: |
+    record = ("web", 12)
+    rule = lambda row: row[1] + 1
+    print(rule(record))
+  choices:
+  - text: '12'
+    why: The expression also adds 1.
+  - text: '13'
+    why: The lambda reads 12 at index 1 and adds 1.
+  - text: web
+    why: Index 1 gives the delay. The host is at index 0.
+  - text: '1'
+    why: The index selects a value. The index itself is not used in the addition.
+  answer: 1
+- id: st06
+  type: fix
+  title: Call the rule for the current delay
+  task: 'Given one integer and a one-argument callback, return the callback result. apply(7, lambda n:
+    n - 1) returns 6.'
+  starter: |
+    def apply(delay, rule):
+        return rule
+  solution: |
+    def apply(delay, rule):
+        return rule(delay)
+  tests: |
+    assert apply(7, lambda n: n - 1) == 6
+    assert apply(0, lambda n: "ready") == "ready"
+  hint_levels:
+  - Separate the rule from the result of calling it.
+  - Pass delay as the argument.
+  - Return rule(delay).
+  explanation: Calling the rule once returns its result. The wrapper adds O(1) time and O(1) space beyond
+    the call.
+- id: st07
+  type: read
+  title: Choose a key to compare
+  body: |
+    A log **record** is one entry. A **field** is one part, such as the delay.
+    A **key function** takes one item and returns a value for comparison.
+
+    `sorted(rows, key=lambda row: row[1])` returns a new list ordered by delay.
+    Python sorts by the key and returns the original records.
+    `min` and `max` use the same kind of key but return one record.
+    If the input can be empty, pass `default=None` to `min` or `max`.
+- id: st08
+  type: predict
+  title: Return the record that has the largest key
+  code: |
+    logs = [("web", 2), ("db", 15)]
+    print(max(logs, key=lambda row: row[1]))
+  choices:
+  - text: '15'
+    why: 15 is the comparison key. The return value is an input record.
+  - text: ('web', 2)
+    why: The key compares delays, so the host name does not affect this choice.
+  - text: ('db', 15)
+    why: The largest delay is 15. max returns the whole record.
+  - text: '[(''db'', 15)]'
+    why: max returns one record, without an outer list.
+  answer: 2
+- id: st09
+  type: parsons
+  title: Pick the fastest host by key
+  task: Define the delay rule before passing it to min. Print the selected host.
+  lines:
+  - 'def delay(row):'
+  - '    return row[1]'
+  - logs = [("web", 5), ("db", 1)]
+  - fastest = min(logs, key=delay)
+  - print(fastest[0])
+  expected_stdout: db
+  accepted_orders:
+  - - 2
+    - 0
+    - 1
+    - 3
+    - 4
+- id: st10
+  type: code
+  title: Apply a rule to each reading
+  task: 'Return a new list of rule results in input order. Call rule once per integer and leave readings
+    unchanged. Example: apply_each([3, 3, 1], lambda n: n + 2) returns [5, 5, 3]. Empty input returns
+    [].'
+  exercise: exercises/practice.py
+  function: apply_each
+  test_class: ApplyEach
+  hint_levels:
+  - Make a new list for the results.
+  - Visit readings in order and call rule on each one.
+  - In the loop, append rule(reading) to result. Return result after the loop.
+- id: st11
+  type: predict
+  title: Equal keys keep their input order
+  code: |
+    logs = [("web", 5), ("db", 5), ("api", 2)]
+    print(sorted(logs, key=lambda row: row[1]))
+  choices:
+  - text: '[(''api'', 2), (''db'', 5), (''web'', 5)]'
+    why: A delay tie does not cause a new comparison by host.
+  - text: '[2, 5, 5]'
+    why: The keys guide the sort. The records form the result.
+  - text: '[(''web'', 5), (''db'', 5), (''api'', 2)]'
+    why: Delay 2 sorts before delay 5.
+  - text: '[(''api'', 2), (''web'', 5), (''db'', 5)]'
+    why: The two delay-5 records keep their input order.
+  answer: 3
+- id: st12
+  type: predict
+  title: Use the default for an empty report
+  code: |
+    logs = []
+    print(min(logs, key=lambda row: row[1], default="no logs"))
+  choices:
+  - text: no logs
+    why: With no records, min returns the default and calls no key function.
+  - text: None
+    why: The code sets the default to the string no logs.
+  - text: '[]'
+    why: min returns the default value, rather than the empty list.
+  - text: ValueError
+    why: Passing a default makes this empty input valid.
+  answer: 0
+- id: st13
+  type: code
+  title: Find the slowest record
+  task: 'Return the first record with the largest delay. Records are (host, delay) pairs with string hosts
+    and nonnegative integer delays. Use max with a key. Return None for an empty list and leave logs unchanged.
+    Example: slowest([(''web'', 1), (''db'', 9)]) returns (''db'', 9).'
+  exercise: exercises/practice.py
+  function: slowest
+  test_class: Slowest
+  hint_levels:
+  - Compare records by their delay.
+  - Read index 1 in the key. Pass a default.
+  - 'Use max(logs, key=lambda row: row[1], default=None).'
+- id: st14
+  type: read
+  title: Add a tie-breaker with a tuple
+  body: |
+    A **stable sort** keeps the input order of items with equal keys.
+    A **tie** happens when two keys match.
+    A **tie-breaker** adds another comparison.
+
+    Python compares tuples from left to right and stops at the first difference.
+    For a host-first view, return `(row[0], row[1])`.
+    For highest delay first, return `(-row[1], row[0])`.
+    A negative numeric key puts large delays first. This is **descending** order.
+- id: st15
+  type: predict
+  title: Use a numeric key and a name tie-breaker
+  code: |
+    logs = [("web", 7), ("db", 7), ("api", 2)]
+    print(sorted(logs, key=lambda row: (-row[1], row[0])))
+  choices:
+  - text: '[(''web'', 7), (''db'', 7), (''api'', 2)]'
+    why: The names break the delay tie, so the full keys are different.
+  - text: '[(''db'', 7), (''web'', 7), (''api'', 2)]'
+    why: Minus seven comes first. The two tied delays are then compared by host.
+  - text: '[(''api'', 2), (''db'', 7), (''web'', 7)]'
+    why: Negating the delay puts 7 ahead of 2.
+  - text: '[(-7, ''db''), (-7, ''web''), (-2, ''api'')]'
+    why: The keys decide order. sorted returns the input records.
+  answer: 1
+- id: st16
+  type: fix
+  title: Do not reverse the host tie-breaker
+  task: 'Return a new sorted list of (host, delay) pairs. Put higher delays first and tied hosts in ascending
+    order. Keep every pair and leave the input alone. Example: [(''web'', 5), (''db'', 5)] becomes [(''db'',
+    5), (''web'', 5)].'
+  starter: |
+    def order(logs):
+        return sorted(logs, key=lambda row: (row[1], row[0]), reverse=True)
+  solution: |
+    def order(logs):
+        return sorted(logs, key=lambda row: (-row[1], row[0]))
+  tests: |
+    logs = [('api', 2), ('web', 5), ('db', 5), ('db', 5)]
+    assert order(logs) == [('db', 5), ('db', 5), ('web', 5), ('api', 2)]
+    assert logs == [('api', 2), ('web', 5), ('db', 5), ('db', 5)]
+    assert order([]) == []
+  hint_levels: &id001
+  - reverse affects the whole tuple.
+  - Keep ascending order and change only the delay key.
+  - Use the key (-row[1], row[0]) with no reverse argument.
+  explanation: Negative delays reverse just the numeric order. At fixed host length, sorting takes O(n
+    log n) worst-case time and O(n) extra space.
+- id: st17
+  type: code
+  title: 'Boss: sort an incident report by three fields'
+  task: 'Return a new list ordered by host (A–Z), delay (highest first), then time (earliest first). Each
+    pair of parentheses holds (host, delay, time). Hosts are lowercase strings and the other fields are
+    nonnegative integers. Keep duplicates and leave logs unchanged. Example: [(''a'', 4, 8), (''a'', 4,
+    3)] becomes [(''a'', 4, 3), (''a'', 4, 8)].'
+  exercise: exercises/practice.py
+  function: incident_order
+  test_class: IncidentOrder
+  hint_levels:
+  - Make one key tuple with three fields.
+  - Put the host first and use a negative number for delay.
+  - 'Pass key=lambda row: (row[0], -row[1], row[2]) to sorted.'
+- id: st18
+  type: explain
+  title: Explain it to a teammate
+  prompt: Write 2–4 English sentences. Explain how to sort logs by high delay first and host name second.
+    After writing, compare with the model answer in the lesson.
+  rubric:
+  - State what the callback receives and returns.
+  - Explain the negative delay and the host tie-breaker.
+  model_answer: The key function receives one log record and returns a tuple. I put the negative delay
+    first so high delays come first. I put the host next to break ties in name order.
+- id: st19
+  type: terminal
+  title: 'Hands-on: run and change the sample'
+  guide: handson.md
+  check: The original sample prints the expected output in the guide.
+- id: st20
+  type: boss
+  title: 'Mini boss: review and repair'
+  time_limit_minutes: 15
+  pass_rule: Answer at least 5 of 6 predicts and pass the bug-fix tests.
+  draws_from: &id002
+  - st02
+  - st05
+  - st08
+  - st11
+  - st12
+  - st15
+  plus:
+  - type: fix
+    title: Do not reverse the host tie-breaker
+    task: 'Return a new sorted list of (host, delay) pairs. Put higher delays first and tied hosts in
+      ascending order. Keep every pair and leave the input alone. Example: [(''web'', 5), (''db'', 5)]
+      becomes [(''db'', 5), (''web'', 5)].'
+    starter: |
+      def order(logs):
+          return sorted(logs, key=lambda row: (row[1], row[0]), reverse=True)
+    solution: |
+      def order(logs):
+          return sorted(logs, key=lambda row: (-row[1], row[0]))
+    tests: |
+      logs = [('api', 2), ('web', 5), ('db', 5), ('db', 5)]
+      assert order(logs) == [('db', 5), ('db', 5), ('web', 5), ('api', 2)]
+      assert logs == [('api', 2), ('web', 5), ('db', 5), ('db', 5)]
+      assert order([]) == []
+    hint_levels: *id001
+    explanation: Negative delays reverse just the numeric order. At fixed host length, sorting takes O(n
+      log n) worst-case time and O(n) extra space.
+review_cards:
+  from_steps: *id002
+  vocab: true

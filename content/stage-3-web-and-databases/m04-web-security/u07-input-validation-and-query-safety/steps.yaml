@@ -1,0 +1,338 @@
+unit: s3.m04.u07
+python_min: '3.9'
+steps:
+- id: st01
+  type: read
+  title: Check requests where rules can be enforced
+  body: |
+    An operations form takes a port, report name, and display label.
+    The browser can warn about mistakes. The server must check requests before acting.
+    Validation checks the type, length, set of choices, and range of values.
+    You will validate these values, contain file paths, and limit which fields someone can edit.
+- id: st02
+  type: predict
+  title: Is a Boolean an exact integer?
+  code: |
+    port = True
+    print(isinstance(port, int), type(port) is int)
+  choices:
+  - text: True True
+    why: The types share some behavior but are distinct.
+  - text: True False
+    why: bool is a subclass of int, but its exact type is bool.
+  - text: False False
+    why: isinstance includes subclasses.
+  - text: False True
+    why: The exact type check is the narrower one.
+  answer: 1
+- id: st03
+  type: try
+  title: Find the smallest allowed port
+  task: Change the port to 1. Keep the type and range checks in the print call.
+  starter: |
+    port = 0
+    print(type(port) is int and 1 <= port <= 65535)
+  check:
+    stdout_line: 'True'
+- id: st04
+  type: read
+  title: Give every field a contract
+  body: |
+    A port must be an integer from 1 through 65535. A label may require 1 through 30 characters.
+    A mode from a fixed menu should be checked against that same allowlist on the server.
+    Check the type before the range. Python bool is a subclass of int, so use type(value) is int here.
+    Check lengths before passing large input to a more expensive process.
+- id: st05
+  type: predict
+  title: An integer at the upper boundary
+  code: |
+    for port in (65534, 65535, 65536):
+        print(type(port) is int and 1 <= port <= 65535)
+  choices:
+  - text: |-
+      True
+      False
+      False
+    why: That would use a strict less-than check.
+  - text: |-
+      True
+      True
+      True
+    why: 65536 exceeds the bound.
+  - text: |-
+      False
+      True
+      False
+    why: 65534 is also in range.
+  - text: |-
+      True
+      True
+      False
+    why: The upper bound includes 65535.
+  answer: 3
+- id: st06
+  type: parsons
+  title: Validate before using a value
+  task: Set the allowed modes and the chosen mode separately, then check the mode against the allowed
+    values.
+  lines:
+  - allowed = ("brief", "full")
+  - mode = "brief"
+  - valid = mode in allowed
+  - print(valid)
+  accepted_orders:
+  - - 1
+    - 0
+    - 2
+    - 3
+  expected_stdout: 'True'
+- id: st07
+  type: code
+  title: Validate port, label, and mode
+  task: |
+    valid_target(port, label, mode) returns bool. Values may be any basic Python type.
+    Require an exact integer from 1 through 65535, a string of 1–30 characters, and mode "brief" or "full".
+    Do not coerce values. Example: valid_target("443", "api", "brief") returns False.
+  exercise: exercises/practice.py
+  function: valid_target
+  test_class: ValidTarget
+  hint_levels:
+  - Check each value separately.
+  - Check the type before using len or numeric comparisons.
+  - Use type(port) is int, two inclusive ranges, and a two-choice tuple for mode.
+- id: st08
+  type: read
+  title: Compare real path components
+  body: |
+    A relative path is read from a starting directory. An absolute path starts at the file system root.
+    A symbolic link points to another path. A name inside the folder can still lead outside it.
+    Path.resolve returns an absolute path, removes dot components, and follows symbolic links.
+    Use strict=True to reject a missing target or a link that loops.
+    Use Path.parents to get the containing directories. Compare whole components instead of string prefixes.
+    Path traversal is when a request reaches files beyond the intended directory.
+- id: st09
+  type: predict
+  title: Two names with the same text prefix
+  code: |
+    from pathlib import Path
+
+    root = Path("/lab/reports")
+    target = Path("/lab/reports-old/summary.txt")
+    print(str(target).startswith(str(root)), root in target.parents)
+  choices:
+  - text: True False
+    why: The text prefix overlaps. The folder names are different path components.
+  - text: True True
+    why: The target lives under reports-old, not reports.
+  - text: False True
+    why: Text prefix comparison ignores path components.
+  - text: False False
+    why: The target string begins with exactly the root string.
+  answer: 0
+- id: st10
+  type: fix
+  title: Replace the text prefix test
+  task: |
+    inside(root, target) returns bool. root and target are already resolved pathlib.Path values.
+    Return True only when target is below root. Treat root itself as False.
+    Example: inside(Path("/lab/a"), Path("/lab/ab/file")) returns False.
+  starter: |
+    def inside(root, target):
+        return str(target).startswith(str(root))
+  solution: |
+    def inside(root, target):
+        return root in target.parents
+  tests: |
+    from pathlib import Path
+
+    root = Path("/lab/reports")
+    assert inside(root, root / "a") is True
+    assert inside(root, root / "team" / "a") is True
+    assert inside(root, root) is False
+    assert inside(root, Path("/lab/reports-old/a")) is False
+    assert inside(root, Path("/lab/a")) is False
+  hint_levels:
+  - An old directory can start with the same letters.
+  - Use a path component check. Exclude the root itself.
+  - Check whether root is in target.parents.
+  explanation: Checking parents keeps directory boundaries intact. With bounded path depth and length,
+    time and extra space are O(1).
+- id: st11
+  type: code
+  title: Resolve a report path before use
+  task: |
+    report_path(root, name) returns a resolved Path or None. root is a trusted existing directory.
+    name is a string up to 160 characters. Reject empty names and absolute paths.
+    Resolve the joined path and require the resolved root among its parents. Return None for resolution errors.
+    The target must exist. Make no writes. Example: an existing relative "today.txt" resolves under root.
+  exercise: exercises/practice.py
+  function: report_path
+  test_class: ReportPath
+  hint_levels:
+  - Compare the paths after interpreting them.
+  - Reject an absolute name. Resolve the root and the joined path with strict=True.
+  - Return the candidate only if base in candidate.parents. Catch resolution errors.
+- id: st12
+  type: read
+  title: Write only fields the caller may set
+  body: |
+    Mass assignment happens when a server copies all request fields into a record.
+    A user can send fields that were never in the browser form.
+    Keep a server-side list of fields the operation may update. Reject extra fields in this unit.
+    A real app should also authorize the action on the actual record.
+- id: st13
+  type: predict
+  title: What would a blanket update change?
+  code: |
+    profile = {"label": "api", "role": "viewer"}
+    body = {"label": "web", "role": "editor"}
+    updated = profile.copy()
+    updated.update(body)
+    print(updated["label"], updated["role"])
+  choices:
+  - text: web viewer
+    why: A raw update has no list of editable fields.
+  - text: api editor
+    why: Both keys appear in the input.
+  - text: web editor
+    why: update copies every incoming key, even role.
+  - text: api viewer
+    why: The copy starts with old values, then update replaces both.
+  answer: 2
+- id: st14
+  type: fix
+  title: Block unexpected fields in a profile update
+  task: |
+    profile_patch(profile, body) returns a new profile or None. Only label may be changed.
+    profile has label and role strings. body is a dictionary with string keys and basic values.
+    If label is present it must be a string of 1–30 characters. Accept an empty patch with no changes.
+    Leave inputs unchanged. Example: a body with role as any value returns None.
+  starter: |
+    def profile_patch(profile, body):
+        result = profile.copy()
+        result.update(body)
+        return result
+  solution: |
+    def profile_patch(profile, body):
+        for key in body:
+            if key != "label":
+                return None
+        if "label" in body:
+            label = body["label"]
+            if not isinstance(label, str) or not 1 <= len(label) <= 30:
+                return None
+        result = profile.copy()
+        result.update(body)
+        return result
+  tests: |
+    profile = {"label": "api", "role": "viewer"}
+    assert profile_patch(profile, {"label": "web"}) == {"label": "web", "role": "viewer"}
+    assert profile_patch(profile, {"role": "viewer"}) is None
+    assert profile_patch(profile, {"label": "", "role": "editor"}) is None
+    assert profile_patch(profile, {"label": 5}) is None
+    assert profile_patch(profile, {"label": "a" * 31}) is None
+    assert profile_patch(profile, {"label": ""}) is None
+    assert profile_patch(profile, {"label": None}) is None
+    assert profile_patch(profile, {"label": "a"}) == {"label": "a", "role": "viewer"}
+    assert profile_patch(profile, {"label": "a" * 30}) == {"label": "a" * 30, "role": "viewer"}
+    assert profile_patch(profile, {}) == profile
+    assert profile_patch(profile, {}) is not profile
+    assert profile == {"label": "api", "role": "viewer"}
+  hint_levels:
+  - The bug accepts every key from the body.
+  - Reject every field besides label and validate its value.
+  - Copy the profile and apply the patch only after all checks pass.
+  explanation: Validation visits at most m request keys. Time is O(m + p) for p profile fields, and space
+    is O(p) for the new profile.
+- id: st15
+  type: read
+  title: Use multiple checks at the server
+  body: |
+    Check access, then validate the data for this action. Keep using bound SQL values after validation.
+    Do not let a path change between the check and opening it. That race needs a separate filesystem design.
+    Serve files from trusted directories. Limit who can change them or their links.
+    Use good error messages for valid users. Keep private file names and internal paths out of errors.
+- id: st16
+  type: predict
+  title: A browser warning is not a server decision
+  code: |
+    request = {"port": "443", "browser_ok": True}
+    server_ok = type(request["port"]) is int
+    print(request["browser_ok"], server_ok)
+  choices:
+  - text: True True
+    why: The browser flag cannot turn text into an integer.
+  - text: True False
+    why: The server checks the actual type and rejects the string.
+  - text: False False
+    why: The request claims the browser passed.
+  - text: False True
+    why: The first value is a supplied flag. The second is a type test.
+  answer: 1
+- id: st17
+  type: code
+  title: 'Checkpoint: accept only a valid and authorized edit'
+  task: |
+    edit_label(user_id, profile, body) returns a new profile or None. profile has id, label, and role strings.
+    user_id is a trusted string or None. It must match profile["id"].
+    body is a dictionary with string keys. Require exactly one field, label, with a string of 1–30 characters.
+    Do not change the inputs. Example: a body with label and role is rejected even for the owner.
+  exercise: exercises/practice.py
+  function: edit_label
+  test_class: EditLabel
+  hint_levels:
+  - First ask who can edit. Then ask what they can edit.
+  - Require the owner and exactly one permitted field. Validate its value.
+  - Use len(body) == 1 and 'label' in body. Return a changed copy only after all checks.
+- id: st18
+  type: predict
+  title: A recognized field with an unknown neighbor
+  code: |
+    body = {"label": "api", "debug": True}
+    print("label" in body, len(body) == 1 and "label" in body)
+  choices:
+  - text: True True
+    why: debug is a second key.
+  - text: False True
+    why: label is present in the mapping.
+  - text: False False
+    why: The first check does not inspect other fields.
+  - text: True False
+    why: The first expression finds label. The second also requires exactly one field.
+  answer: 3
+- id: st19
+  type: explain
+  title: Explain a layered edit
+  prompt: Write 2–4 English sentences. Explain why a valid label needs both a field check and an owner
+    check. Check the model answer in the lesson after writing.
+  rubric:
+  - State why the server must run the checks.
+  - Explain the two distinct decisions.
+  model_answer: The server checks that the actor owns the profile. It also accepts only the label field
+    and checks its size. A browser form can help the user, but the server enforces the rules.
+- id: st20
+  type: terminal
+  title: Hands-on in the Python sandbox
+  guide: handson.md
+  check: Run each sample and match the stated output.
+- id: st21
+  type: boss
+  title: Module checkpoint
+  draws_from:
+  - st02
+  - st05
+  - st09
+  - st13
+  - st16
+  - st18
+  - st17
+  pass_rule: Answer five predicts correctly and pass the final Code tests.
+review_cards:
+  from_steps:
+  - st02
+  - st05
+  - st09
+  - st13
+  - st16
+  - st18
+  vocab: true

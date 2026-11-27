@@ -1,0 +1,425 @@
+unit: s2.m04.u01
+python_min: '3.9'
+steps:
+- id: st01
+  type: read
+  title: Find a log entry without reading every line
+  body: |
+    A server stores request times from oldest to newest. You want to find a time in that list.
+    Check the middle first. If the time there is too small, skip that item and everything before it.
+    This is **binary search**. Each step cuts the part you still need to look at roughly in half.
+    You will find a time, find the first time at or after it, and find the smallest shipping capacity.
+- id: st02
+  type: read
+  title: Exact search with two included ends
+  body: |
+    Keep two **inclusive bounds**. Both lo and hi can hold the **target**, the value you want.
+    Start at lo = 0 and hi = len(times) - 1. The **midpoint** is (lo + hi) // 2.
+    If the middle is too small, set lo to mid + 1. If it is too large, set hi to mid - 1.
+
+    Your **loop invariant** is a fact that stays true at the start of every pass.
+    Here it means that if you have yet to find a match, any match must be within the bounds.
+    Inspect while lo <= hi. Equal ends still give you one index. A guard that skips it makes an **off-by-one error**. That means a boundary is one step off.
+- id: st03
+  type: predict
+  title: Which half can still have 7?
+  code: |
+    times = [2, 4, 5, 7, 9]
+    target = 7
+    lo, hi = 0, len(times) - 1
+    mid = (lo + hi) // 2
+    if times[mid] < target:
+        lo = mid + 1
+    print(lo, hi)
+  choices:
+  - text: 2 4
+    why: Index 2 has 5. It has already been ruled out.
+  - text: 0 1
+    why: The target is larger than the middle value, so the right side remains.
+  - text: 3 4
+    why: The middle is at index 2. Start again at index 3.
+  - text: 3 5
+    why: The inclusive high bound starts at the last valid index, 4.
+  answer: 2
+- id: st04
+  type: try
+  title: Move the other bound
+  starter: |
+    times = [2, 4, 5, 7, 9]
+    target = 7
+    lo, hi = 0, len(times) - 1
+    mid = (lo + hi) // 2
+    if times[mid] < target:
+        lo = mid + 1
+    elif times[mid] > target:
+        hi = mid - 1
+    print(lo, hi)
+  task: Change target to 4. Check that index 2 is ruled out with the right half.
+  check:
+    stdout_line: 0 1
+- id: st05
+  type: predict
+  title: How many times does the loop run?
+  code: |
+    values = [41]
+    lo, hi = 0, len(values) - 1
+    checks = 0
+    while lo < hi:
+        checks += 1
+        lo += 1
+    print(checks)
+  choices:
+  - text: '0'
+    why: The two ends are equal from the start. The strict guard skips the only item.
+  - text: '1'
+    why: There is one item, but the guard needs lo to be less than hi.
+  - text: '2'
+    why: There are two variables, but they point at the same item.
+  - text: '41'
+    why: The program prints a check count, not the value in the list.
+  answer: 0
+- id: st06
+  type: fix
+  title: Keep searching when one index remains
+  task: 'Return the index of target, or -1 if absent. Use binary search on a list of up to 4096 sorted,
+    distinct integers. For example, locate([3, 9], 9) returns 1. locate([], 9) returns -1.'
+  starter: |
+    def locate(ids, target):
+        lo, hi = 0, len(ids) - 1
+        while lo < hi:
+            mid = (lo + hi) // 2
+            if ids[mid] == target:
+                return mid
+            if ids[mid] < target:
+                lo = mid + 1
+            else:
+                hi = mid - 1
+        return -1
+  solution: |
+    def locate(ids, target):
+        lo, hi = 0, len(ids) - 1
+        while lo <= hi:
+            mid = (lo + hi) // 2
+            if ids[mid] == target:
+                return mid
+            if ids[mid] < target:
+                lo = mid + 1
+            else:
+                hi = mid - 1
+        return -1
+  tests: |
+    assert locate([3, 9], 9) == 1
+    assert locate([5], 5) == 0
+    assert locate([], 9) == -1
+    assert locate([1, 3], 2) == -1
+  hint_levels:
+  - Trace the loop with a one-item list.
+  - Both ends are included. Check the guard when the ends meet.
+  - Use while lo <= hi so a single candidate gets checked.
+  explanation: The inclusive range still has one item when lo equals hi. Binary search takes O(log n)
+    time for n ≥ 2 and O(1) extra space.
+- id: st07
+  type: code
+  title: Find a request time
+  exercise: exercises/practice.py
+  function: find_time
+  test_class: FindTime
+  hint_levels:
+  - Start with all valid indexes between your two ends.
+  - Compare the middle value. Discard mid and the side that cannot match.
+  - Use lo = mid + 1 or hi = mid - 1. Return -1 after the loop.
+- id: st08
+  type: read
+  title: 'Lower bound: keep the first possible position'
+  body: |
+    The **lower bound** is the first index with a value at least as large as the target.
+    It may equal len(values). At that position you could insert the target at the end.
+
+    Use a **half-open range** with lo included and hi left out when reading values.
+    Everything before lo is too small. From hi onward, every value is large enough.
+    At first lo is 0 and hi is len(values). Both facts hold because those outer parts are empty.
+    If the middle is too small, move lo past it. Otherwise move hi to mid.
+    Stop at lo == hi. This boundary is the first position that meets the rule.
+- id: st09
+  type: predict
+  title: Lower bound inside a run of equal times
+  code: |
+    times = [2, 6, 6, 6, 11]
+    lo, hi = 0, len(times)
+    while lo < hi:
+        mid = (lo + hi) // 2
+        if times[mid] < 6:
+            lo = mid + 1
+        else:
+            hi = mid
+    print(lo)
+  choices:
+  - text: '2'
+    why: The first middle value matches, but the loop keeps looking to its left.
+  - text: '1'
+    why: Index 1 is the first position where the time is at least 6.
+  - text: '4'
+    why: Index 4 is the first position strictly greater than 6.
+  - text: '0'
+    why: Index 0 has 2, which is too small.
+  answer: 1
+- id: st10
+  type: parsons
+  title: Compute the initial midpoint
+  task: Use all lines. Set both bounds before finding the middle of the half-open range.
+  lines:
+  - values = [2, 6, 9, 10]
+  - lo = 0
+  - hi = len(values)
+  - mid = (lo + hi) // 2
+  - print(mid, values[mid])
+  expected_stdout: 2 9
+  accepted_orders:
+  - - 1
+    - 0
+    - 2
+    - 3
+    - 4
+  - - 0
+    - 2
+    - 1
+    - 3
+    - 4
+- id: st11
+  type: predict
+  title: Can an insertion index follow the last item?
+  code: |
+    values = [3, 5]
+    target = 9
+    lo, hi = 0, len(values)
+    while lo < hi:
+        mid = (lo + hi) // 2
+        if values[mid] < target:
+            lo = mid + 1
+        else:
+            hi = mid
+    print(lo)
+  choices:
+  - text: '0'
+    why: The range begins at zero, but both items are too small.
+  - text: '1'
+    why: Index 1 has value 5, which is too small.
+  - text: '-1'
+    why: The lower bound is an insertion position even without a match.
+  - text: '2'
+    why: Both values are smaller than 9. The insertion position is after them.
+  answer: 3
+- id: st12
+  type: code
+  title: Find the first time at or after a limit
+  exercise: exercises/practice.py
+  function: first_at_least
+  test_class: FirstAtLeast
+  hint_levels:
+  - Think of the answer as the boundary between small and large values.
+  - If a value is too small, skip it. Otherwise keep its index as a possible answer.
+  - Start hi at len(times). Set hi = mid on >= and return lo when the bounds meet.
+- id: st13
+  type: read
+  title: Search capacities instead of list indexes
+  body: |
+    A backup sends files in order. Each day can send at most the same **capacity**, measured in file size units.
+    Assume the capacity is at least the size of the largest file. A smaller capacity can never send that file,
+    however many days you allow. Keep each file whole. Send files until the next one would exceed the daily limit.
+    Then open another day. This **greedy check** fills each day as far as possible.
+
+    This check uses the fewest days for a given capacity. No valid first day can take a longer prefix.
+    The same rule holds for the files that remain. A larger capacity can always keep a schedule that already fits.
+    This gives a **monotone test**. The answers go from no to yes as capacity grows, with no change back.
+- id: st14
+  type: predict
+  title: When does the next day begin?
+  code: |
+    sizes = [4, 3, 2]
+    capacity = 5
+    days = 1
+    used = 0
+    for size in sizes:
+        if used + size > capacity:
+            days += 1
+            used = 0
+        used += size
+    print(days, used)
+  choices:
+  - text: 1 9
+    why: The first two files exceed the capacity together.
+  - text: 2 5
+    why: Day one sends 4. Day two sends 3 and 2, which fit exactly.
+  - text: 3 2
+    why: Start a new day only when the sum exceeds 5.
+  - text: 2 2
+    why: The file of size 3 is counted on the same day as the file of size 2.
+  answer: 1
+- id: st15
+  type: read
+  title: Make the capacity range safe
+  body: |
+    For nonempty input, the largest file is a safe low bound. A smaller capacity cannot send that file.
+    The total size is a safe high bound. It can send all files in one day.
+
+    Try a middle capacity. If it fits, keep it as the high bound. If it fails, move low past it.
+    The smallest workable capacity stays between the two bounds. When they meet, return that capacity.
+    A check takes O(n) time for n files. Halving a range with W possible capacities takes O(log W) checks.
+    Include at least one check's worth of work when describing the cost for small inputs.
+- id: st16
+  type: predict
+  title: An off-by-one at the capacity boundary
+  code: |
+    lo, hi = 4, 9
+    mid = (lo + hi) // 2
+    used = 3
+    next_file = 3
+    if used + next_file <= mid:
+        hi = mid
+    else:
+        lo = mid + 1
+    print(lo, hi)
+  choices:
+  - text: 4 5
+    why: Capacity 6 fits exactly and must remain a possible answer.
+  - text: 7 9
+    why: The test accepts a total equal to capacity 6.
+  - text: 4 6
+    why: The check at the midpoint passes. Keep 6 as the new high bound.
+  - text: 6 9
+    why: Move the low bound only for a capacity that fails.
+  answer: 2
+- id: st17
+  type: code
+  title: Find the smallest capacity for ordered backups
+  exercise: exercises/practice.py
+  function: smallest_capacity
+  test_class: SmallestCapacity
+  hint_levels:
+  - Start between the largest file and the sum of all sizes.
+  - For each middle capacity, count days by starting a new day when the next file would go over.
+  - If needed <= days, set hi = mid. Otherwise set lo = mid + 1. Return lo.
+- id: st18
+  type: fix
+  title: 'Challenge: place a new time before ties'
+  task: Fix the lower bound of target in up to 4096 sorted integers. Keep the list unchanged. For [2,
+    4, 4] and 4 return 1. For [2, 4] and 8 return 2.
+  starter: |
+    def insert_slot(values, target):
+        lo, hi = 0, len(values)
+        while lo < hi:
+            mid = (lo + hi) // 2
+            if values[mid] <= target:
+                lo = mid + 1
+            else:
+                hi = mid
+        return lo
+  solution: |
+    def insert_slot(values, target):
+        lo, hi = 0, len(values)
+        while lo < hi:
+            mid = (lo + hi) // 2
+            if values[mid] < target:
+                lo = mid + 1
+            else:
+                hi = mid
+        return lo
+  tests: &id003 |
+    import ast
+    tree = ast.parse(open(__file__, encoding="utf-8").read())
+    for node in ast.walk(tree):
+        names = [alias.name for alias in getattr(node, "names", [])] + [getattr(node, "module", None) or ""]
+        assert not any(name.split(".")[0] in ("bisect", "_bisect", "importlib") for name in names), "Write the search yourself"
+        assert not (isinstance(node, ast.Constant) and node.value in ("bisect", "_bisect")), "Write the search yourself"
+    assert insert_slot([2, 4, 4], 4) == 1
+    assert insert_slot([2, 4], 8) == 2
+    assert insert_slot([], 1) == 0
+    assert insert_slot([2], 2) == 0
+    assert insert_slot([2], 1) == 0
+    assert insert_slot([2, 4, 4, 4, 9], 4) == 1
+    assert insert_slot([2, 4, 4, 4, 9], 5) == 4
+    values = [1] * 1000 + [2] * 3000 + [3] * 96
+    reads = [0]
+    class Counted(list):
+        def __getitem__(self, index):
+            reads[0] += 1
+            return list.__getitem__(self, index)
+        def __iter__(self):
+            for index in range(len(self)):
+                yield self[index]
+        def copy(self):
+            reads[0] += len(self)
+            return list(list.__iter__(self))
+        def index(self, *args):
+            reads[0] += len(self)
+            return list.index(self, *args)
+    data = Counted(values)
+    assert insert_slot(data, 2) == 1000
+    assert insert_slot(data, 3) == 4000
+    assert insert_slot(data, 4) == 4096
+    assert reads[0] <= 60, "Use binary search, not a scan"
+    assert list(list.__iter__(data)) == values
+  hint_levels: &id001
+  - Look at what happens when the middle value equals the target.
+  - An equal value could be the first match. Keep its position as a candidate.
+  - Use values[mid] < target to move lo. Equality should move hi.
+  explanation: Equality moves the upper bound to the matching position. That preserves the first match.
+    Time is O(log n) for n ≥ 2 and extra space is O(1).
+- id: st19
+  type: terminal
+  title: 'Hands-on: run and change a small script'
+  guide: handson.md
+  check: The script prints the expected output and you can explain the changed run.
+- id: st20
+  type: explain
+  title: Explain your plan to a teammate
+  prompt: Write 2–4 English sentences. Why does a lower-bound search keep the midpoint when its value
+    equals the target? Then compare with the model in the lesson summary.
+  rubric:
+  - State which positions are too small.
+  - Explain why an equal value moves hi.
+  model_answer: Every position before lo has a value below the target. An equal value might be the first
+    match, so I set hi to mid and keep looking to its left.
+- id: st21
+  type: boss
+  title: 'Unit challenge: Binary search'
+  time_limit_minutes: 12
+  pass_rule: Get 4 of 5 predicts right and pass the fix in st18.
+  draws_from: &id002
+  - st03
+  - st05
+  - st09
+  - st11
+  - st14
+  - st16
+  plus:
+  - type: fix
+    task: Fix the lower bound of target in up to 4096 sorted integers. Keep the list unchanged. For
+      [2, 4, 4] and 4 return 1. For [2, 4] and 8 return 2.
+    starter: |
+      def insert_slot(values, target):
+          lo, hi = 0, len(values)
+          while lo < hi:
+              mid = (lo + hi) // 2
+              if values[mid] <= target:
+                  lo = mid + 1
+              else:
+                  hi = mid
+          return lo
+    solution: |
+      def insert_slot(values, target):
+          lo, hi = 0, len(values)
+          while lo < hi:
+              mid = (lo + hi) // 2
+              if values[mid] < target:
+                  lo = mid + 1
+              else:
+                  hi = mid
+          return lo
+    tests: *id003
+    hint_levels: *id001
+    explanation: Equality moves the upper bound to the matching position. That preserves the first match.
+      Time is O(log n) for n ≥ 2 and extra space is O(1).
+review_cards:
+  from_steps: *id002
+  vocab: true

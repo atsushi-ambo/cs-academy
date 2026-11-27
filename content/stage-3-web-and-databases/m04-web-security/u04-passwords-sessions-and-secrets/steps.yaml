@@ -1,0 +1,441 @@
+unit: s3.m04.u04
+python_min: '3.13'
+steps:
+- id: st01
+  type: read
+  title: What would a copied password table reveal?
+  body: |
+    Imagine a backup of an operations portal appears outside the team.
+    A plaintext table gives away every stored password at once. Reuse may expose other services too.
+    A digest is the result of a hash. You can check an input by hashing it again.
+    You will compare storage choices and build a verifier with a slow password function.
+- id: st02
+  type: predict
+  title: What does a plaintext row contain?
+  code: |
+    copied_row = {"account": "toy-user", "password": "demo-only"}
+    print("password" in copied_row, copied_row["password"] == "demo-only")
+  choices:
+  - text: True False
+    why: The row stores the password in plaintext.
+  - text: True True
+    why: The column contains the original value. Everyone with a copy can read it.
+  - text: False True
+    why: The dictionary has a password field.
+  - text: False False
+    why: Both the field and the original value are present.
+  answer: 1
+- id: st03
+  type: read
+  title: Fast hashes are cheap to check
+  body: |
+    MD5 and SHA-256 are fast hashes. Both give the same digest for the same bytes every time.
+    SHA-256 is useful for fingerprints. Its speed works against password storage.
+    In a dictionary attack, someone tries common guesses against a copied digest table.
+    These offline guesses never reach the login endpoint. A login rate limit cannot slow them.
+    In the sample you know the toy input. The b prefix makes ASCII text a bytes value.
+- id: st04
+  type: predict
+  title: Does SHA-256 separate equal passwords?
+  code: |
+    from hashlib import sha256
+
+    a = sha256(b"public-demo").digest()
+    b = sha256(b"public-demo").digest()
+    print(a == b, len(a))
+  choices:
+  - text: False 64
+    why: The digest is deterministic and measured in bytes here.
+  - text: False 32
+    why: SHA-256 does not add random data.
+  - text: True 64
+    why: A hex display has 64 characters. digest returns 32 raw bytes.
+  - text: True 32
+    why: Equal inputs give equal digests of 32 bytes.
+  answer: 3
+- id: st05
+  type: try
+  title: Count how little a fast hash needs
+  task: Change OUTPUT to 'sha256'. Both use one hash call here. Compare these with the later KDF timing.
+  starter: |
+    import hashlib
+
+    OUTPUT = "md5"
+    known_input = b"public-demo"
+    digest = hashlib.new(OUTPUT, known_input).digest()
+    print("digest bytes", len(digest))
+  check:
+    stdout_line: digest bytes 32
+- id: st06
+  type: read
+  title: Add a unique salt to each record
+  body: |
+    A salt is random data stored beside the digest. It does not need to stay secret.
+    secrets.token_bytes(16) draws 16 random bytes. Make a fresh salt each time you create a record.
+    With unique salts, equal passwords produce different digests in practice.
+    Unique salts stop reuse of a precomputed digest across records. A single guess can still be cheap with a fast hash.
+- id: st07
+  type: parsons
+  title: Build a toy fingerprint with salt
+  task: Make the salt and known bytes first. Hash the two values and print the digest size.
+  lines:
+  - from hashlib import sha256
+  - salt = b"fixed-only-for-this-example"
+  - known = b"public-demo"
+  - digest = sha256(salt + known).digest()
+  - print(len(digest))
+  accepted_orders:
+  - - 0
+    - 2
+    - 1
+    - 3
+    - 4
+  - - 1
+    - 0
+    - 2
+    - 3
+    - 4
+  - - 1
+    - 2
+    - 0
+    - 3
+    - 4
+  - - 2
+    - 1
+    - 0
+    - 3
+    - 4
+  - - 2
+    - 0
+    - 1
+    - 3
+    - 4
+  expected_stdout: '32'
+- id: st08
+  type: fix
+  title: Replace the shared salt
+  task: |
+    new_salt() returns 16 random bytes from secrets.token_bytes. Generate them on each call.
+    Example: len(new_salt()) returns 16. Keep the salt as bytes.
+  starter: |
+    def new_salt():
+        return b"fixed-salt-value"
+  solution: |
+    def new_salt():
+        from secrets import token_bytes
+
+        return token_bytes(16)
+  tests: |
+    import secrets
+    from unittest.mock import Mock, patch
+
+    original = secrets.token_bytes
+    source = Mock(side_effect=[b"a" * 16, b"b" * 16])
+    swapped = [name for name, value in new_salt.__globals__.items() if value is original and name != "original"]
+    with patch("secrets.token_bytes", source):
+        for name in swapped:
+            new_salt.__globals__[name] = source
+        try:
+            assert new_salt() == b"a" * 16
+            assert new_salt() == b"b" * 16
+        finally:
+            for name in swapped:
+                new_salt.__globals__[name] = original
+    assert source.call_count == 2
+    assert all(call.args == (16,) or call.kwargs == {"nbytes": 16}
+               for call in source.call_args_list)
+  hint_levels:
+  - The same salt should not be reused.
+  - Ask secrets for fresh random bytes inside the function.
+  - Return secrets.token_bytes(16).
+  explanation: For a fixed 16-byte salt, time and space are O(1). The test gives the randomness source
+    two known outputs.
+- id: st09
+  type: predict
+  title: Should two accounts share the salt?
+  code: |
+    from hashlib import sha256
+
+    password = b"public-demo"
+    salt_a = b"a"
+    salt_b = b"b"
+    print(sha256(salt_a + password).digest() == sha256(salt_b + password).digest())
+  choices:
+  - text: 'True'
+    why: The salt is part of the digest input.
+  - text: a
+    why: The expression compares two outputs.
+  - text: 'False'
+    why: The two digest inputs differ even though the password is equal.
+  - text: '32'
+    why: The code compares the digests, not their lengths.
+  answer: 2
+- id: st10
+  type: read
+  title: Make every guess cost time and memory
+  body: |
+    A password KDF is a function designed to make each check costly. scrypt uses time and memory.
+    n sets its main cost, r sets the block size, and p changes the amount of work.
+    PBKDF2 raises the cost with repeated steps. It has no scrypt-style memory cost setting.
+    The next sample times each method. perf_counter() returns a clock reading in seconds.
+    Subtract the start reading from the end reading to get the elapsed seconds.
+    Multiply by 1000 for milliseconds, then divide by the number of calls for ms per call.
+    hasattr(hashlib, "scrypt") is True when this Python has scrypt. raise SystemExit("text") stops the program with a message.
+    Workload and machine speed affect the numbers.
+- id: st11
+  type: try
+  title: Measure the cost per known input
+  task: Change calls from 4 to 8. Compare the printed average times. The test counts examples, so timer
+    noise cannot fail it. The scrypt n=1024 and the 10000 PBKDF2 steps are lab-only values. Real settings are in the next step.
+  starter: |
+    import hashlib
+    from time import perf_counter
+
+    if not hasattr(hashlib, "scrypt"):
+        raise SystemExit("This Python has no scrypt. Run the lab in the app's Python 3.13 sandbox.")
+
+    known = b"public-demo"
+    calls = 4
+    start = perf_counter()
+    for _ in range(calls):
+        hashlib.sha256(known).digest()
+    print("fast ms/call", 1000 * (perf_counter() - start) / calls)
+    start = perf_counter()
+    for _ in range(calls):
+        hashlib.scrypt(known, salt=b"timer-fixture", n=1024, r=8, p=1, dklen=32)
+    print("scrypt ms/call", 1000 * (perf_counter() - start) / calls)
+    start = perf_counter()
+    for _ in range(calls):
+        hashlib.pbkdf2_hmac("sha256", known, b"timer-fixture", 10000)
+    print("PBKDF2 ms/call", 1000 * (perf_counter() - start) / calls)
+    print("calls per method", calls)
+  check:
+    stdout_line: calls per method 8
+- id: st12
+  type: read
+  title: Choose and store the cost settings
+  body: |
+    A maintained password library can use Argon2id. It makes many guesses require memory as well as CPU time.
+    An OWASP baseline is 19 MiB of memory, two passes, and one lane for Argon2id.
+    A scrypt baseline is n=131072, r=8, p=1. That needs about 128 MiB per check, from 128 × n × r bytes.
+    Python's hashlib.scrypt refuses that by default. Raise its maxmem limit on purpose, for example to 160 MiB.
+    Measure the cost, then count how many checks can run at once. Memory use is the cost times the concurrent checks.
+    If you must use PBKDF2, OWASP suggests 600,000 steps with HMAC-SHA-256. Our 10,000 is lab-only.
+    Prefer bcrypt only for older systems without Argon2id or scrypt. A cost of ten or higher is the suggested floor.
+    Most bcrypt implementations limit inputs to 72 bytes. Check that limit before accepting passwords.
+    Our lower KDF settings are for the sandbox. They are safe for sample data only.
+    The scrypt exercises need a Python built with OpenSSL. The app sandbox runs Python 3.13, which has scrypt.
+    The macOS system Python 3.9 does not have it. Store the algorithm and settings with each hash.
+- id: st13
+  type: code
+  title: Register a password with the sandbox scrypt profile
+  task: |
+    register(password, n) returns a record with algorithm, n, r, p, salt, and digest.
+    password is a string of 1–128 UTF-8 bytes. n is 1024 or 2048 for this lab.
+    Set algorithm to "scrypt", r to 8, p to 1, and draw a fresh 16-byte salt.
+    Use password.encode("utf-8") and scrypt(..., dklen=32). Keep digest and salt as bytes.
+    Example: register("demo", 1024)["n"] returns 1024.
+  exercise: exercises/practice.py
+  function: register
+  test_class: Register
+  hint_levels:
+  - Use bytes for the password input and salt.
+  - Generate the salt, run scrypt, then describe the result in a dictionary.
+  - Use scrypt(password.encode('utf-8'), salt=salt, n=n, r=8, p=1, dklen=32).
+- id: st14
+  type: predict
+  title: A record stores the earlier cost
+  code: |
+    record = {"algorithm": "scrypt", "n": 1024, "r": 8, "p": 1}
+    current_n = 2048
+    print(record["n"], record["n"] < current_n)
+  choices:
+  - text: 1024 True
+    why: Use the stored cost to verify, then upgrade after successful verification.
+  - text: 2048 True
+    why: The policy did not rewrite the record.
+  - text: 1024 False
+    why: The stored and current costs differ.
+  - text: 2048 False
+    why: The record still points to its old profile.
+  answer: 0
+- id: st15
+  type: read
+  title: Verify first, then upgrade
+  body: |
+    Recompute with the record's original salt and cost. Use hmac.compare_digest for the byte digests.
+    This comparison avoids ending early at the first wrong byte. It does not hide every timing difference.
+    Accept only supported algorithms and cost profiles. Reject bad settings before running the KDF.
+    After a successful check, rehash with the current profile and a fresh salt if the profile changed.
+    In a real database, replace the record only if it still matches the one you checked. A concurrent password reset must take priority.
+- id: st16
+  type: code
+  title: Verify with the saved profile
+  task: |
+    verify(password, record) returns bool. The password has at most 128 UTF-8 bytes and can be empty.
+    record is a dictionary. Reject an empty password, missing fields, or algorithm other than "scrypt".
+    Accept only integer n=1024 or 2048, integer r=8, and integer p=1.
+    Require bytes for salt (16 bytes) and digest (32 bytes). Use the stored settings without changing record.
+    Use hmac.compare_digest, with the computed digest first. Example: a correct password with a valid old profile returns True.
+  exercise: exercises/practice.py
+  function: verify
+  test_class: Verify
+  hint_levels:
+  - Treat the stored settings as inputs to validate.
+  - Check the profile and byte lengths first. Derive at the saved cost.
+  - Return compare_digest(scrypt(password.encode('utf-8'), salt=salt, n=n, r=r, p=p, dklen=32), digest).
+- id: st17
+  type: fix
+  title: Expire and consume reset tokens
+  task: |
+    redeem(resets, digest, now) returns the account string or None. digest is a 32-byte SHA-256 digest.
+    resets maps digests of random reset tokens to (account, expires) tuples.
+    Times are integer seconds. The token is usable only before expires. Delete the entry after one success.
+    Example: an entry expiring at 20 can be redeemed at 19. A second redemption returns None.
+  starter: |
+    def redeem(resets, digest, now):
+        record = resets.get(digest)
+        if record is None:
+            return None
+        return record[0]
+  solution: |
+    def redeem(resets, digest, now):
+        record = resets.get(digest)
+        if record is None or now >= record[1]:
+            return None
+        del resets[digest]
+        return record[0]
+  tests: |
+    a, b = b"a" * 32, b"b" * 32
+    resets = {a: ("lee", 20), b: ("kai", 40)}
+    assert redeem({}, a, 0) is None
+    assert redeem(resets, a, 20) is None
+    assert redeem(resets, b, 41) is None
+    assert redeem(resets, a, 19) == "lee"
+    assert redeem(resets, a, 19) is None
+    assert resets == {b: ("kai", 40)}
+  hint_levels:
+  - A token has both a deadline and one use.
+  - Compare now to the expiry before returning the account.
+  - Return None at now >= record[1]. On success, del resets[digest].
+  explanation: The lookup and deletion use average O(1) time and O(1) extra space for fixed digests. Consume
+    and reset together in a real transaction.
+- id: st18
+  type: read
+  title: Protect the full password lifecycle
+  body: |
+    A pepper is an extra secret kept apart from the password table. Use a secret manager for it.
+    Inject service secrets through deployment settings such as environment variables. Keep them out of code and logs.
+    Limit login attempts and add multifactor authentication (MFA) for a second kind of proof.
+    Make a reset token with secrets.token_urlsafe(32). Store its SHA-256 digest and an expiry.
+    Send the original token through your reset flow. Accept it only once and keep it out of logs.
+    A fast hash is suitable for a long random reset token. Such tokens lack a small pool of likely guesses.
+    Check the reset token and update the password together. After a reset, revoke affected sessions.
+- id: st19
+  type: predict
+  title: At the exact reset deadline
+  code: |
+    expires = 20
+    for now in (19, 20, 21):
+        print(now < expires)
+  choices:
+  - text: |-
+      True
+      True
+      False
+    why: That would accept the deadline with <=.
+  - text: |-
+      False
+      True
+      True
+    why: This reverses the comparison.
+  - text: |-
+      False
+      False
+      False
+    why: The token is still within its lifetime at 19.
+  - text: |-
+      True
+      False
+      False
+    why: The deadline itself is already expired.
+  answer: 3
+- id: st20
+  type: code
+  title: 'Checkpoint: verify, then upgrade on login'
+  task: |
+    login(records, account, password, current_n, verify, register) returns bool.
+    records maps account strings to lab scrypt records. current_n is 1024 or 2048.
+    Call verify(password, record). If there is no record or verification fails, return False and leave records unchanged.
+    If verification passes and the stored n is lower than current_n, replace just that account with register(password, current_n).
+    Never replace a record with a weaker one. A stored n equal to or above current_n stays as it is, and the login still returns True.
+    Example: a successful login at current_n=2048 replaces a 1024 record. A failed login never replaces it.
+  exercise: exercises/practice.py
+  function: login
+  test_class: Login
+  hint_levels:
+  - Do not replace a record until you know the password is correct.
+  - Return False before inspecting the cost if verify fails.
+  - After a True verification, assign the new record only when record['n'] is lower than current_n.
+- id: st21
+  type: predict
+  title: Which guesses can a login rate limit slow?
+  code: |
+    for guess_source in ("login request", "copied table"):
+        print(guess_source == "login request")
+  choices:
+  - text: |-
+      True
+      True
+    why: A copy of the table can be checked without the service.
+  - text: |-
+      True
+      False
+    why: Only requests handled by the login service can be rate limited there.
+  - text: |-
+      False
+      True
+    why: The server sees login requests, not checks against a copied table.
+  - text: |-
+      False
+      False
+    why: The login path can enforce attempt limits.
+  answer: 1
+- id: st22
+  type: explain
+  title: Explain a safer copied table
+  prompt: Write 2–4 English sentences. Explain what will happen if someone copies salted scrypt records.
+    Check the model answer in the lesson after writing.
+  rubric:
+  - Explain what a salt stops.
+  - Explain the cost of each offline check.
+  - Name an additional control for online login.
+  model_answer: A unique salt means one computed digest cannot be reused for many accounts. The attacker
+    must run the same guess again for each salt. scrypt makes every one of those checks cost time and memory.
+    An online rate limit protects the login service from repeated requests.
+- id: st23
+  type: terminal
+  title: Hands-on in the Python sandbox
+  guide: handson.md
+  check: Run each sample and match the stated output.
+- id: st24
+  type: boss
+  title: Module checkpoint
+  draws_from:
+  - st02
+  - st04
+  - st09
+  - st14
+  - st19
+  - st21
+  - st20
+  pass_rule: Answer five predicts correctly and pass the final Code tests.
+review_cards:
+  from_steps:
+  - st02
+  - st04
+  - st09
+  - st14
+  - st19
+  - st21
+  vocab: true

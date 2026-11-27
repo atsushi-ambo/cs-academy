@@ -1,0 +1,59 @@
+id: s2.m06.u02
+title: Heaps and priority queues
+stage: 2
+module: Trees and Graphs
+version: 1
+status: draft
+estimated_minutes: 110
+prerequisites:
+- s2.m06.u01
+- s2.m03.u05
+- s2.m03.u02
+- s2.m02.u04
+objectives:
+- Map a complete tree to list indexes.
+- Build a min-heap with sifts, push, pop, and heapify.
+- Use heapq to serve urgent jobs first and break ties by arrival.
+skills:
+- algorithms.heaps-and-priority-queues
+- english.explain-code
+parts:
+- steps.yaml
+- lesson.md
+- handson.md
+- exercises/
+- tests/
+- solutions/solutions.md
+references:
+- kind: official_doc
+  title: Python heapq
+  url: https://docs.python.org/3.13/library/heapq.html
+vocab:
+- en: priority
+  ja: 優先度
+- en: priority queue
+  ja: 優先度付きキュー
+- en: binary heap
+  ja: 二分ヒープ
+- en: min-heap
+  ja: 最小ヒープ
+- en: complete binary tree
+  ja: 完全二分木
+- en: heap invariant
+  ja: ヒープの親子順序条件
+- en: sift up
+  ja: 上方向への位置調整
+- en: sift down
+  ja: 下方向への位置調整
+- en: heapify
+  ja: 配列のヒープ化
+- en: push
+  ja: ヒープへの追加
+- en: pop
+  ja: ヒープからの取り出し
+- en: tie-breaker
+  ja: 同順位を決める追加キー
+- en: scheduler
+  ja: 処理順を決める仕組み
+- en: tuple comparison
+  ja: タプルの辞書式比較

@@ -1,0 +1,376 @@
+unit: s3.m04.u08
+python_min: '3.9'
+steps:
+- id: st01
+  type: read
+  title: Trace a leak through an operations app
+  body: |
+    A toy report app stores credentials, exports reports, and writes logs.
+    A data breach is unauthorized access to data or disclosure of that data.
+    A root cause is a fault that let the incident happen. A control reduces that risk.
+    You will audit the toy setup, repair the report route, and choose response actions.
+- id: st02
+  type: predict
+  title: Which control limits a copied password table?
+  code: |
+    exposed = {"account": "toy", "password_mode": "plaintext"}
+    control = {"plaintext": "salted slow KDF", "broad-role": "least privilege"}
+    print(control[exposed["password_mode"]])
+  choices:
+  - text: least privilege
+    why: Permissions can limit access, but they do not change copied plaintext.
+  - text: HTML escaping
+    why: This is a password storage issue.
+  - text: notification
+    why: Notification responds to an incident rather than protecting stored passwords.
+  - text: salted slow KDF
+    why: It removes plaintext from the intended storage design and makes guesses costly.
+  answer: 3
+- id: st03
+  type: try
+  title: Flag a risk in a fictitious config
+  task: Change patched to False. The audit should report one issue.
+  starter: |
+    config = {"patched": True}
+    issues = []
+    if not config["patched"]:
+        issues.append("dependency")
+    print(len(issues))
+  check:
+    stdout_line: '1'
+- id: st04
+  type: read
+  title: Audit the toy app's six weak points
+  body: |
+    Plaintext or a fast password hash leaves passwords exposed or cheap to guess.
+    A key in a repository can remain in history. Move it out and revoke any leaked copy.
+    Missing object checks expose reports. Broad service permissions increase the amount of data at risk.
+    An unpatched dependency may have a known flaw. Track versions and install verified fixes.
+    Logs can copy secrets into another system. Record selected event fields without tokens.
+- id: st05
+  type: predict
+  title: Two places contain the same key
+  code: |
+    key_enabled = True
+    copies = {"source file": True, "old repository copy": True}
+    copies.pop("source file")
+    print(key_enabled, len(copies))
+  choices:
+  - text: True 1
+    why: A removed source file does not revoke the old key or remove earlier copies.
+  - text: False 0
+    why: Neither revocation nor history cleanup occurred.
+  - text: False 1
+    why: One copy remains, and the key still works.
+  - text: True 0
+    why: The older copy still holds the key.
+  answer: 0
+- id: st06
+  type: parsons
+  title: Assemble two audit checks
+  task: Check both settings and print the risk count after they run.
+  lines:
+  - 'config = {"patched": False, "scoped": False}'
+  - count = 0
+  - 'if not config["patched"]:'
+  - '    count += 1'
+  - 'if not config["scoped"]:'
+  - '    count = count + 1'
+  - print(count)
+  accepted_orders:
+  - - 1
+    - 0
+    - 2
+    - 3
+    - 4
+    - 5
+    - 6
+  - - 0
+    - 1
+    - 4
+    - 5
+    - 2
+    - 3
+    - 6
+  - - 1
+    - 0
+    - 4
+    - 5
+    - 2
+    - 3
+    - 6
+  - - 0
+    - 1
+    - 2
+    - 5
+    - 4
+    - 3
+    - 6
+  - - 1
+    - 0
+    - 2
+    - 5
+    - 4
+    - 3
+    - 6
+  - - 0
+    - 1
+    - 4
+    - 3
+    - 2
+    - 5
+    - 6
+  - - 1
+    - 0
+    - 4
+    - 3
+    - 2
+    - 5
+    - 6
+  expected_stdout: '2'
+- id: st07
+  type: code
+  title: Audit the six risk flags
+  task: |
+    audit(config) returns a list of issue strings in this order:
+    "password", "repo-key", "authorization", "dependency", "permissions", "logging".
+    config contains password_mode (plaintext, fast-hash, or salted-kdf), plus bool fields
+    key_in_repo, checks_owner, patched, broad_access, logs_secrets.
+    Report a password issue unless salted-kdf. Flag an exposed key, missing owner check, missing patch,
+    broad access, and logs with secrets. Leave config unchanged. For a clean config return [].
+  exercise: exercises/practice.py
+  function: audit
+  test_class: Audit
+  hint_levels:
+  - Turn each risk into one independent check.
+  - The absence of an owner check and patch are both issues.
+  - Append 'password' unless password_mode equals 'salted-kdf', then append the other five findings in
+    order.
+- id: st08
+  type: read
+  title: Look for signals and retain safe evidence
+  body: |
+    Watch for unusual read volumes, bursts of rejected requests, or new login locations.
+    A signal is a clue. A batch job can make volume jump without a leak.
+    Compare with a normal baseline and link events by request ID and time.
+    Keep useful evidence with restricted access. Prevent fresh logs from collecting passwords or tokens.
+- id: st09
+  type: predict
+  title: Which control would have kept a token out of logs?
+  code: |
+    event = {"request_id": "r7", "decision": "denied", "token": "toy"}
+    log_fields = ("request_id", "decision")
+    print("token" in event, "token" in log_fields)
+  choices:
+  - text: True True
+    why: The allowlist contains just the two safe fields.
+  - text: True False
+    why: A field allowlist keeps the token outside the log record.
+  - text: False False
+    why: The field still exists in the incoming event.
+  - text: False True
+    why: The event contains the token, but the allowlist omits it.
+  answer: 1
+- id: st10
+  type: fix
+  title: Stop logging whole request records
+  task: |
+    safe_event(event) returns a fresh dictionary with request_id and decision.
+    event always has those two safe fields as short strings. It can contain other fields and nested values.
+    Keep event unchanged. Example: token="toy" in event must never add a token field to the result.
+  starter: |
+    def safe_event(event):
+        return event.copy()
+  solution: |
+    def safe_event(event):
+        return {"request_id": event["request_id"], "decision": event["decision"]}
+  tests: |
+    event = {"request_id": "r1", "decision": "denied", "token": "toy",
+             "headers": {"Authorization": "toy"}}
+    assert safe_event(event) == {"request_id": "r1", "decision": "denied"}
+    assert event["headers"] == {"Authorization": "toy"}
+    assert event["token"] == "toy"
+    plain = {"request_id": "r2", "decision": "allowed"}
+    assert safe_event(plain) == plain
+    assert safe_event(plain) is not plain
+  hint_levels:
+  - Choose fields rather than removing a few known secrets.
+  - Build a new record with the two safe keys.
+  - 'Return {''request_id'': event[''request_id''], ''decision'': event[''decision'']}.'
+  explanation: Selecting two fields gives average O(1) time and space for the fixed record.
+- id: st11
+  type: code
+  title: Find a burst of access denials
+  task: |
+    denial_alert(events, limit) returns bool. events is a list from one time window.
+    Each event has decision "denied" or "allowed". limit is a positive integer.
+    Return True when at least limit denials appear. Do not modify events.
+    Example: allowed, denied, denied at limit 2 returns True. This is a signal for review.
+  exercise: exercises/practice.py
+  function: denial_alert
+  test_class: DenialAlert
+  hint_levels:
+  - Count denials within the window.
+  - Skip allowed events. Compare the count to the limit.
+  - Increment only on 'denied' and return True at count >= limit.
+- id: st12
+  type: read
+  title: Contain and recover in a planned order
+  body: |
+    Containment stops further harm. Pause a risky export and revoke a leaked key.
+    Preserve a timeline and relevant evidence. Identify which records and systems were affected.
+    Rotate exposed secrets, close the cause, and check that old credentials fail.
+    Force password resets for affected accounts and revoke their sessions when passwords may be exposed.
+    Notify the incident lead and affected parties through the response plan. Notification may run during containment.
+    Confirm the fix with allowed and denied tests. Add monitoring to detect a return of the issue.
+- id: st13
+  type: predict
+  title: When does a rotated key stop working?
+  code: |
+    enabled = {"old", "fresh"}
+    print("old" in enabled)
+    enabled.remove("old")
+    print("old" in enabled)
+  choices:
+  - text: |-
+      False
+      False
+    why: Both keys are enabled before removal.
+  - text: |-
+      True
+      True
+    why: The code removes old from the active set.
+  - text: |-
+      True
+      False
+    why: Adding a replacement leaves the older key valid. Revoking the old one stops it.
+  - text: |-
+      False
+      True
+    why: The set loses an entry during containment.
+  answer: 2
+- id: st14
+  type: fix
+  title: Cut the export service's permissions
+  task: |
+    export_allowed(grants, action, table) returns bool.
+    grants is a set of (action, table) string pairs from trusted policy.
+    Allow only an exact grant. Keep grants unchanged.
+    Example: with only ("read", "reports"), an action of "read" on "accounts" returns False.
+  starter: |
+    def export_allowed(grants, action, table):
+        return any(grant[0] == action for grant in grants)
+  solution: |
+    def export_allowed(grants, action, table):
+        return (action, table) in grants
+  tests: |
+    grants = {("read", "reports"), ("insert", "alerts")}
+    assert export_allowed(grants, "read", "reports") is True
+    assert export_allowed(grants, "read", "accounts") is False
+    assert export_allowed(grants, "write", "reports") is False
+    assert export_allowed(grants, "insert", "reports") is False
+    assert export_allowed(set(), "read", "reports") is False
+    assert grants == {("read", "reports"), ("insert", "alerts")}
+  hint_levels:
+  - The operation alone does not define the grant.
+  - Compare action and table as a pair.
+  - Return (action, table) in grants.
+  explanation: An exact grant limits the service's access. Average time and extra space are O(1) for bounded
+    keys.
+- id: st15
+  type: read
+  title: Repair the route and verify the result
+  body: |
+    The export route uses two policies. The service needs access, and the actor must own the report.
+    Check both policies before returning even a small part of the report.
+    Write a safe decision event for both allowed and denied requests.
+    Return only the report title in this exercise. The response does not need other fields.
+- id: st16
+  type: predict
+  title: Which control would have stopped the wrong report read?
+  code: |
+    actor = "kai"
+    report = {"owner": "lee"}
+    service_read = True
+    print(service_read, actor == report["owner"])
+  choices:
+  - text: True False
+    why: The service can read the table, but the owner check rejects this actor.
+  - text: True True
+    why: The service grant does not switch ownership.
+  - text: False False
+    why: The service has its table permission.
+  - text: False True
+    why: The service grant is true and the IDs differ.
+  answer: 0
+- id: st17
+  type: code
+  title: 'Checkpoint: repair a toy report export'
+  task: |
+    export_title(actor, reports, report_id, grants, request_id, log) returns the title or None.
+    actor is a trusted user ID or None. reports maps IDs to records with owner and title strings.
+    grants is the service's set of (action, table) pairs. IDs, titles, and names are bounded strings.
+    Allow only if ("read", "reports") is present, actor is identified, and the actor owns the report.
+    Append exactly one dictionary with request_id and decision ("allowed" or "denied") to log.
+    Do not change reports or grants. Example: the right owner without the grant is denied and logged.
+  exercise: exercises/practice.py
+  function: export_title
+  test_class: ExportTitle
+  hint_levels:
+  - Separate the service's grant from the end user's permission.
+  - Decide access, append one event, then return the title only on success.
+  - Combine the exact grant, actor, record, and owner checks. Log only request_id and decision.
+- id: st18
+  type: predict
+  title: Which control addresses a known flaw in a dependency?
+  code: |
+    inventory = {"installed": 2, "first_fixed": 3}
+    print(inventory["installed"] >= inventory["first_fixed"])
+  choices:
+  - text: 'True'
+    why: Version 2 is below 3 in this numeric example.
+  - text: 'False'
+    why: The installed toy version is below the first fixed version. Update and verify it.
+  - text: '2'
+    why: The expression compares version numbers.
+  - text: '3'
+    why: The expression checks the installed version against the fixed version.
+  answer: 1
+- id: st19
+  type: explain
+  title: Explain your first incident actions
+  prompt: Write 2–4 English sentences. A fictitious export service logged an active key. Explain your
+    first actions and how you would verify the fix. Check the model answer in the lesson after writing.
+  rubric:
+  - Name containment and revocation.
+  - Preserve safe evidence and notify the incident lead.
+  - Check that the fixed log omits credentials.
+  model_answer: I pause the risky export and revoke the leaked key. I keep restricted evidence and notify
+    the incident lead. After rotating the key, I check that the old one fails and that new logs contain
+    only approved fields.
+- id: st20
+  type: terminal
+  title: Hands-on in the Python sandbox
+  guide: handson.md
+  check: Run each sample and match the stated output.
+- id: st21
+  type: boss
+  title: Module checkpoint
+  draws_from:
+  - st02
+  - st05
+  - st09
+  - st13
+  - st16
+  - st18
+  - st17
+  pass_rule: Answer five predicts correctly and pass the final Code tests.
+review_cards:
+  from_steps:
+  - st02
+  - st05
+  - st09
+  - st13
+  - st16
+  - st18
+  vocab: true

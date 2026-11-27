@@ -1,0 +1,318 @@
+unit: s2.m03.u03
+python_min: '3.9'
+steps:
+- id: st01
+  type: read
+  title: Find a status by its server name
+  body: |
+    A log tool often needs the last status for a named service.
+    A **key** is the name or value used to look up an entry.
+    A **hash table** uses a number from a key to choose a **slot**, a place in storage.
+    A **hash function** makes that number. A **lookup** checks for the key.
+    A **collision** occurs when different keys choose the same slot.
+    You will use dict and set to build small log tools.
+- id: st02
+  type: predict
+  title: Check a dict for a key
+  code: |
+    status = {"web": "ready", "db": "busy"}
+    print("db" in status, "busy" in status)
+  choices:
+  - text: True True
+    why: The string busy is a value only.
+  - text: True False
+    why: The membership test checks keys.
+  - text: False True
+    why: The key db exists. There is no key named busy.
+  - text: False False
+    why: Db is the second key.
+  answer: 1
+- id: st03
+  type: read
+  title: Use a dict for values and a set for membership
+  body: |
+    A dict maps each key to one value. A set stores unique items without extra values.
+    A **membership** test asks if an item is present. Use in for dict keys or set items.
+    Make an empty set with `set()`. Add an item with `seen.add(item)`.
+    Keys and set items must be **hashable**. Their hash must stay the same during use.
+    Objects that are equal must have the same hash. So `1` and `1.0` are one key.
+    Strings and integers work. Lists can change and cannot be used as keys.
+    For keys of fixed length with good hash distribution, lookup takes O(1) average time.
+    Many collisions can make a lookup O(n). Reading a long string to hash it also takes work.
+- id: st04
+  type: predict
+  title: Adding duplicates changes a set once
+  code: |
+    seen = set()
+    for name in ["api", "db", "api"]:
+        seen.add(name)
+    print(len(seen), "api" in seen)
+  choices:
+  - text: 3 True
+    why: A set stores each distinct item once.
+  - text: 2 False
+    why: Adding the same item keeps it present.
+  - text: 1 True
+    why: Both api and db are present.
+  - text: 2 True
+    why: Only two different names enter the set.
+  answer: 3
+- id: st05
+  type: try
+  title: Repeat a status in a log
+  starter: |
+    codes = [200, 500, 200]
+    seen = set()
+    for code in codes:
+        seen.add(code)
+    print(len(seen))
+  task: Add 503 at the end of codes. Count distinct status codes.
+  check:
+    stdout_line: '3'
+- id: st06
+  type: read
+  title: Count logs with a default of zero
+  body: |
+    Set a count to one when a name first appears.
+    On another visit, add one to its old count.
+    Use counts.get(name, 0) to read a count or use zero if it is missing.
+    Calling get does not add a key. Assign the new count into counts[name].
+- id: st07
+  type: predict
+  title: Read a default without adding a key
+  code: |
+    counts = {"api": 2}
+    first = counts.get("db", 0)
+    print(first, "db" in counts)
+  choices:
+  - text: 2 True
+    why: Get only looks up db, which is missing.
+  - text: 0 True
+    why: Get returns the default without adding it.
+  - text: 0 False
+    why: The lookup gives zero and leaves the dict alone.
+  - text: 2 False
+    why: Two belongs to api, a different key.
+  answer: 2
+- id: st08
+  type: parsons
+  title: Add one event to a count
+  task: Use every line. Start with two api events, record one more, and print the resulting count.
+  lines:
+  - 'counts = {"api": 2}'
+  - name = "api"
+  - old = counts.get(name, 0)
+  - counts[name] = old + 1
+  - print(counts[name])
+  expected_stdout: '3'
+  hint_levels:
+  - Choose a key and set up its count first.
+  - Read the old value before writing.
+  - Print after adding one.
+  accepted_orders:
+  - - 1
+    - 0
+    - 2
+    - 3
+    - 4
+- id: st09
+  type: fix
+  title: Count the first event once
+  task: 'Return counts keyed by service for a list of up to 1,000 service names. Leave names unchanged. Example:
+    [''api'', ''db'', ''api''] gives {''api'': 2, ''db'': 1}.'
+  starter: |
+    def tally(names):
+        counts = {}
+        for name in names:
+            counts[name] = counts.get(name, 1) + 1
+        return counts
+  solution: |
+    def tally(names):
+        counts = {}
+        for name in names:
+            counts[name] = counts.get(name, 0) + 1
+        return counts
+  tests: |
+    names = ["api", "db", "api"]
+    assert tally(names) == {"api": 2, "db": 1}
+    assert names == ["api", "db", "api"]
+    assert tally([]) == {}
+    assert tally(["api"]) == {"api": 1}
+  hint_levels:
+  - Think about a name before its first event.
+  - There are zero previous events.
+  - Change the get default to 0.
+  explanation: With good hashes and bounded-length keys, n updates take O(n) average time. The map uses O(u) space
+    for u names.
+- id: st10
+  type: code
+  title: Count response codes in one pass
+  task: 'Return a fresh dict of counts for a list of up to 1,000 integer status codes.
+
+    Use one pass and a dict. Leave the list unchanged. Do not call Counter or list.count.
+
+    Example: count_codes([503, 200, 503]) gives {503: 2, 200: 1}.'
+  exercise: exercises/practice.py
+  function: count_codes
+  test_class: CountCodes
+  hint_levels:
+  - The code is the key.
+  - Read the old count with a default of zero.
+  - Assign counts[code] = counts.get(code, 0) + 1.
+- id: st11
+  type: read
+  title: Group rows under a shared key
+  body: |
+    To **group** rows, keep a dict from each service name to its own list.
+    On the first visit, put a new empty list at that key.
+    Append each code to its service list so each group keeps log order.
+    If two keys share one list, edits to either group change both groups.
+- id: st12
+  type: predict
+  title: Check which group owns a list
+  code: |
+    events = []
+    groups = {"api": events, "db": events}
+    groups["api"].append(503)
+    print(groups["db"])
+  choices:
+  - text: '[503]'
+    why: Both keys refer to the same list.
+  - text: '[]'
+    why: This would hold if the keys had separate lists.
+  - text: '503'
+    why: The lookup returns a whole list.
+  - text: '[503, 503]'
+    why: One append adds just one item to the shared list.
+  answer: 0
+- id: st13
+  type: fix
+  title: Give each service its own group
+  task: 'Given up to 1,000 (service, code) pairs, return a dict of lists. Keep order in each list. Leave input alone.
+    Example: [(''api'', 200), (''db'', 503)] gives {''api'': [200], ''db'': [503]}.'
+  starter: |
+    def collect(rows):
+        empty = []
+        groups = {}
+        for name, code in rows:
+            if name not in groups:
+                groups[name] = empty
+            groups[name].append(code)
+        return groups
+  solution: |
+    def collect(rows):
+        groups = {}
+        for name, code in rows:
+            if name not in groups:
+                groups[name] = []
+            groups[name].append(code)
+        return groups
+  tests: |
+    rows = [("api", 200), ("db", 503), ("api", 200)]
+    assert collect(rows) == {"api": [200, 200], "db": [503]}
+    assert rows == [("api", 200), ("db", 503), ("api", 200)]
+    assert collect([]) == {}
+    assert collect([("db", 0)]) == {"db": [0]}
+    mixed = [("api", 503), ("db", 1), ("api", 200), ("api", 503)]
+    assert collect(mixed) == {"api": [503, 200, 503], "db": [1]}
+    assert collect(mixed)["api"] is not collect(mixed)["api"]
+  hint_levels:
+  - Two keys may hold the same object.
+  - Make a fresh list for each missing key.
+  - Replace groups[name] = empty with groups[name] = [].
+  explanation: For bounded-length keys and good hashes, grouping takes O(n) average time. The result needs O(n)
+    space.
+- id: st14
+  type: code
+  title: Group time samples by service
+  task: 'Rows are up to 1,000 (service, milliseconds) pairs. Return a new dict
+
+    with one fresh list per service. Keep sample order and duplicates. Leave rows unchanged.
+
+    Example: [(''api'', 4), (''db'', 9), (''api'', 2)] gives {''api'': [4, 2], ''db'': [9]}.'
+  exercise: exercises/practice.py
+  function: group_times
+  test_class: GroupTimes
+  hint_levels:
+  - Use the name as a key.
+  - Add an empty list on the first visit.
+  - Append elapsed to groups[service] after checking that the key exists.
+- id: st15
+  type: read
+  title: Look back for the missing half
+  body: |
+    In **two-sum**, find two different positions whose values add up to a target.
+    For a current value x, the **complement** is target - x.
+    Store earlier values with their first index. Ask whether the complement is in this dict.
+    Check before storing x so a position cannot match itself.
+    Store a value only if it is not in the dict yet, so the dict keeps its first index.
+    Use range(len(values)) to get the positions from left to right.
+- id: st16
+  type: predict
+  title: Keep the first index of a repeated value
+  code: |
+    values = [4, 4, 6]
+    seen = {}
+    for i in range(len(values)):
+        value = values[i]
+        if 10 - value in seen:
+            print(seen[10 - value], i)
+            break
+        if value not in seen:
+            seen[value] = i
+  choices:
+  - text: 1 2
+    why: The second 4 is not stored. The dict still keeps index 0 for 4.
+  - text: 0 2
+    why: The 6 at index 2 needs 4. The dict holds the first 4, at index 0.
+  - text: 0 1
+    why: The second 4 needs a 6, and no 6 has been seen yet.
+  - text: 2 0
+    why: The earlier position comes first in the printed pair.
+  answer: 1
+- id: st17
+  type: code
+  title: Find the first pair that reaches a target
+  task: 'Values is a list of up to 1,000 integers. Return (left, right) of two
+
+    different positions summing to target, or None. Choose the smallest right index.
+
+    If several left indexes work, choose the smallest left. Leave values unchanged.
+
+    Use one pass and a dict of earlier positions. Example: two_sum([4, 4, 6], 10) gives (0, 2).'
+  exercise: exercises/practice.py
+  function: two_sum
+  test_class: TwoSum
+  hint_levels:
+  - Compute the number you still need.
+  - Look for it among earlier values only. Keep their first indexes.
+  - Test need in seen before storing seen[value] = right for a new value.
+- id: st18
+  type: explain
+  title: Explain it to a teammate
+  prompt: Write 2–4 English sentences. Why must two-sum look for the complement before saving the current index?
+    Compare with the model in the lesson after writing.
+  rubric:
+  - Explain why positions must differ.
+  - Explain what the dict stores.
+  model_answer: The dict stores the first position of each earlier value. I look up the complement before saving
+    the current value. That way an item can never match itself.
+- id: st19
+  type: terminal
+  title: 'Hands-on: Repeat a status in a log'
+  guide: handson.md
+  check: The demo prints 3.
+- id: st20
+  type: boss
+  title: 'Mini boss: Find the first pair that reaches a target'
+  time_limit_minutes: 15
+  draws_from: [st02, st04, st07, st12, st16, st17]
+  pass_rule: Get four of five predicts right and pass the selected Code exercise.
+review_cards:
+  from_steps:
+  - st02
+  - st04
+  - st07
+  - st12
+  - st16
+  vocab: true

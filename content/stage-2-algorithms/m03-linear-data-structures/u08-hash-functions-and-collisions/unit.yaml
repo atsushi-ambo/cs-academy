@@ -1,0 +1,49 @@
+id: s2.m03.u08
+title: Hash functions and collisions (chaining, open addressing)
+stage: 2
+module: Linear Data Structures
+version: 1
+status: draft
+estimated_minutes: 105
+prerequisites:
+- s2.m03.u03
+- s2.m03.u05
+objectives:
+- Build a string-to-slot function.
+- Resolve collisions with chains, resizing, and linear probing.
+skills:
+- python.hash-functions-and-collisions
+- english.explain-code
+parts:
+- steps.yaml
+- lesson.md
+- handson.md
+- exercises/
+- tests/
+- solutions/solutions.md
+references:
+- kind: official_doc
+  title: Built-in functions
+  url: https://docs.python.org/3.13/library/functions.html
+- kind: official_doc
+  title: Built-in types
+  url: https://docs.python.org/3.13/library/stdtypes.html
+vocab:
+- en: character code
+  ja: 文字コードの数値
+- en: bucket
+  ja: 同じ開始位置の項目を入れる入れ物
+- en: chaining
+  ja: バケット内で衝突項目をまとめる方式
+- en: load factor
+  ja: 項目数を容量で割った値
+- en: rehash
+  ja: 新しい容量で格納位置を計算し直す
+- en: open addressing
+  ja: 空きスロットを探す方式
+- en: linear probing
+  ja: 隣のスロットを順に試す方式
+- en: probe
+  ja: 候補の格納位置を調べる
+- en: cluster
+  ja: 連続して埋まったスロットのかたまり

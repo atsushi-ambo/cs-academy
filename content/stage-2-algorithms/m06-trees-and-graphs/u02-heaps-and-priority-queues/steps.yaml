@@ -1,0 +1,469 @@
+unit: s2.m06.u02
+python_min: '3.9'
+steps:
+- id: st01
+  type: read
+  title: Start urgent jobs first
+  body: |
+    A server has jobs waiting. An outage check should run before a routine report.
+    A **priority queue** removes the job with the most urgent priority first.
+    Here, a smaller priority number means more urgent.
+    A **binary heap** is a tree stored in a list. It can keep the next job at index 0.
+    A **scheduler** chooses which job runs next.
+    You will build a min-heap by hand, then use Python tools to schedule jobs.
+- id: st02
+  type: read
+  title: Map a complete tree into a list
+  body: |
+    A **complete binary tree** fills each level from left to right. Only the last level may be short.
+    The list holds nodes in level order. For node i, the children are at `2*i + 1` and `2*i + 2`.
+    For i above 0, its parent is at `(i - 1) // 2`. The // operator gives whole-number division here.
+    A **min-heap** has a parent no greater than either child. This is the **heap invariant**.
+
+    ```text
+             2 (0)
+            /     \
+        7 (1)    4 (2)
+        /
+     9 (3)
+
+    List: [2, 7, 4, 9]
+    ```
+
+    The root value 2 is at index 0. Its children 7 and 4 are at indexes 1 and 2.
+    Only the left child of 7 exists. Its value is 9 at index 3.
+    The root is the minimum. Sibling values may appear in either order.
+- id: st03
+  type: predict
+  title: Find the two children of index 1
+  code: |
+    heap = [2, 7, 4, 9, 12, 6]
+    i = 1
+    print(heap[2*i + 1], heap[2*i + 2])
+  choices:
+  - text: 7 4
+    why: These are the children of index 0.
+  - text: 4 9
+    why: The left child starts at 2*i + 1, not 2*i.
+  - text: 9 12
+    why: The two child indexes are 3 and 4.
+  - text: 12 6
+    why: Those are indexes 4 and 5. The left child is one slot earlier.
+  answer: 2
+- id: st04
+  type: try
+  title: Find the parent of a different item
+  starter: |
+    heap = [2, 7, 4, 9, 12, 6]
+    i = 4
+    parent = (i - 1) // 2
+    print(heap[parent])
+  task: Set i to 5. Read its parent value and check it against the tree shape.
+  check:
+    stdout_line: '4'
+- id: st05
+  type: predict
+  title: The list is a heap without being sorted
+  code: |
+    heap = [2, 7, 4, 9, 12, 6]
+    print(heap[0] <= heap[2], heap[1] <= heap[2])
+  choices:
+  - text: True False
+    why: The root is below both children. There is no order rule between siblings.
+  - text: True True
+    why: The list does not place all values in sorted order.
+  - text: False True
+    why: 2 is smaller than 4, and 7 is greater than 4.
+  - text: False False
+    why: The sibling test fails, but the parent-to-child test passes.
+  answer: 0
+- id: st06
+  type: read
+  title: Move an added value up
+  body: |
+    To **push**, append a value at the end. This keeps the tree shape complete.
+    Only its path to the root may be out of order.
+    **Sift up** means to swap a value with its parent while the value is smaller.
+    After a swap, follow the value to the parent index. Stop at index 0 or when the parent fits.
+- id: st07
+  type: parsons
+  title: Build the upward repair
+  task: The only value that might violate the heap rule starts at index i. Move it up until the rule holds.
+  lines:
+  - 'def sift_up(heap, i):'
+  - '    while i > 0:'
+  - '        parent = (i - 1) // 2'
+  - '        if heap[parent] <= heap[i]:'
+  - '            break'
+  - '        heap[i], heap[parent] = heap[parent], heap[i]'
+  - '        i = parent'
+  - heap = [2, 7, 5, 1]
+  - sift_up(heap, 3)
+  - print(heap)
+  expected_stdout: '[1, 2, 5, 7]'
+- id: st08
+  type: code
+  title: Implement sift up
+  task: Change a list of integers in place and return None. The list was a min-heap until one value
+    was just appended; i is that last index. Use index comparisons and swaps, with no heap library or sort.
+    Sift up at index 3 in [2, 7, 5, 1] to get [1, 2, 5, 7].
+  exercise: exercises/practice.py
+  function: sift_up
+  test_class: SiftUp
+  hint_levels:
+  - Repair one parent link at a time.
+  - Compare with the parent at (i - 1) // 2. Stop at i == 0.
+  - Swap when the value is smaller than its parent. Set i = parent after the swap.
+- id: st09
+  type: code
+  title: Push an integer into a min-heap
+  task: Append an integer to the given heap list in place and use the given sift_up(heap, i) to repair it.
+    Return None. Do not use heapq or sort. Push 3 into [5, 7, 8] to get [3, 5, 8, 7].
+  exercise: exercises/practice.py
+  function: push
+  test_class: Push
+  hint_levels:
+  - Put the new value at the first open leaf slot.
+  - For a list, append creates that slot.
+  - Append value, then call sift_up(heap, len(heap) - 1).
+- id: st10
+  type: read
+  title: Move a large value down
+  body: |
+    To **pop** the minimum, save the root. Move the last value into the root slot and shorten the list.
+    The new root may be too large. **Sift down** by swapping it with the smaller existing child.
+    A child exists only when its index is below the list length.
+    In code, `a if test else b` means a when test is true, otherwise b. It picks one of two values.
+    Stop if no child exists or the smaller child is at least as large as the parent.
+- id: st11
+  type: predict
+  title: Choose the smaller child
+  code: |
+    heap = [9, 6, 3, 8, 7, 4, 5]
+    i = 0
+    left = 2*i + 1
+    right = 2*i + 2
+    child = right if heap[right] < heap[left] else left
+    heap[i], heap[child] = heap[child], heap[i]
+    print(heap)
+  choices:
+  - text: '[6, 9, 3, 8, 7, 4, 5]'
+    why: Moving 6 up would put it above the smaller child 3.
+  - text: '[3, 6, 9, 8, 7, 4, 5]'
+    why: The first swap brings 3 to the root and sends 9 to index 2.
+  - text: '[3, 6, 4, 8, 7, 9, 5]'
+    why: That includes a second swap, which this code does not run.
+  - text: '[9, 6, 3, 8, 7, 4, 5]'
+    why: 9 is larger than both children, so it has to move.
+  answer: 1
+- id: st12
+  type: fix
+  title: Use the smaller of two children
+  task: Fix sift_down for a min-heap list of integers. Index i is valid. Both child subtrees are already
+    heaps. Change the list in place and return None. For [9, 5, 1] at index 0, the result is [1, 5, 9].
+  starter: |
+    def sift_down(heap, i):
+        while 2*i + 1 < len(heap):
+            child = 2*i + 1
+            right = child + 1
+            if right < len(heap) and heap[right] > heap[child]:
+                child = right
+            if heap[i] <= heap[child]:
+                break
+            heap[i], heap[child] = heap[child], heap[i]
+            i = child
+  solution: |
+    def sift_down(heap, i):
+        while 2*i + 1 < len(heap):
+            child = 2*i + 1
+            right = child + 1
+            if right < len(heap) and heap[right] < heap[child]:
+                child = right
+            if heap[i] <= heap[child]:
+                break
+            heap[i], heap[child] = heap[child], heap[i]
+            i = child
+  tests: |
+    heap = [9, 5, 1]
+    assert sift_down(heap, 0) is None
+    assert heap == [1, 5, 9]
+    heap = [4, 1]
+    sift_down(heap, 0)
+    assert heap == [1, 4]
+    heap = [10, 6, 3, 7, 9, 4]
+    sift_down(heap, 0)
+    assert heap == [3, 6, 4, 7, 9, 10]
+  hint_levels: &id001
+  - Which child must become the parent of both children?
+  - Use the left child first. Check whether the right is smaller.
+  - Switch to right only when it exists and heap[right] < heap[child].
+  explanation: Choosing the smaller child preserves its new place above both children. Following one path
+    takes O(log n) time and O(1) extra space.
+- id: st13
+  type: code
+  title: Implement sift down
+  task: Repair the subtree at a valid index i in place, with both child subtrees already min-heaps. Return
+    None. Use no heap library or sort. [10, 6, 3, 7, 9, 4] at i = 0 becomes [3, 6, 4, 7, 9, 10].
+  exercise: exercises/practice.py
+  function: sift_down
+  test_class: SiftDown
+  hint_levels:
+  - Check for an existing left child before comparing.
+  - Pick the smaller existing child. Stop if the parent is already small enough.
+  - After swapping with child, set i = child and repeat.
+- id: st14
+  type: fix
+  title: Do not restore a removed singleton
+  task: Fix pop_min for an integer min-heap. Return its minimum or None if empty, and update the same heap
+    list. Repair it with the given sift_down(heap, 0). For [7], return 7 and leave [].
+  starter: |
+    def sift_down(heap, i):
+        while 2*i + 1 < len(heap):
+            child = 2*i + 1
+            right = child + 1
+            if right < len(heap) and heap[right] < heap[child]:
+                child = right
+            if heap[i] <= heap[child]:
+                break
+            heap[i], heap[child] = heap[child], heap[i]
+            i = child
+    def pop_min(heap, sift_down):
+        if not heap:
+            return None
+        smallest = heap[0]
+        last = heap.pop()
+        heap[0] = last
+        sift_down(heap, 0)
+        return smallest
+  solution: |
+    def sift_down(heap, i):
+        while 2*i + 1 < len(heap):
+            child = 2*i + 1
+            right = child + 1
+            if right < len(heap) and heap[right] < heap[child]:
+                child = right
+            if heap[i] <= heap[child]:
+                break
+            heap[i], heap[child] = heap[child], heap[i]
+            i = child
+    def pop_min(heap, sift_down):
+        if not heap:
+            return None
+        smallest = heap[0]
+        last = heap.pop()
+        if heap:
+            heap[0] = last
+            sift_down(heap, 0)
+        return smallest
+  tests: |
+    heap = [7]
+    assert pop_min(heap, sift_down) == 7
+    assert heap == []
+    assert pop_min(heap, sift_down) is None
+    heap = [2, 3, 4, 7]
+    calls = []
+    def spy(h, i):
+        calls.append(i)
+        sift_down(h, i)
+    assert pop_min(heap, spy) == 2
+    assert calls == [0]
+    assert sorted(heap) == [3, 4, 7]
+    assert all(heap[(k - 1) // 2] <= heap[k] for k in range(1, len(heap)))
+  hint_levels:
+  - What remains after removing the last slot of a one-item heap?
+  - The last value only replaces the root when there are items left.
+  - Guard root assignment and sift_down(heap, 0) with if heap.
+  explanation: The minimum is saved before shortening the heap. A remaining last value may move down O(log
+    n) levels. Workspace is O(1).
+- id: st15
+  type: code
+  title: Pop the minimum from a min-heap
+  task: For an integer heap, update the same list and return its minimum, or None for an empty heap. Use
+    the given sift_down(heap, i). Use no heapq or sort. For [2, 4, 3, 7], return 2 and leave [3, 4, 7].
+  exercise: exercises/practice.py
+  function: pop_min
+  test_class: PopMin
+  hint_levels:
+  - Save the smallest value before you remove a slot.
+  - Remove the last item with list.pop(). Handle the empty and one-item heaps.
+  - If items remain, put the old last value at index 0 and call sift_down(heap, 0).
+- id: st16
+  type: read
+  title: Build a heap from the bottom
+  body: |
+    To **heapify** means to turn a list into a heap. Each leaf is already a heap on its own.
+    Start at index `len(heap) // 2 - 1`, the last parent. Work down to index 0.
+    Use `range(start, -1, -1)` to count backward and include 0.
+    Each downward sift now starts with child subtrees that are heaps.
+    A bottom-up build takes O(n) time. Most nodes are near the bottom and can move only a little.
+- id: st17
+  type: predict
+  title: Find the first parent to repair
+  code: |
+    heap = [9, 8, 7, 6, 5, 4]
+    print(list(range(len(heap) // 2 - 1, -1, -1)))
+  choices:
+  - text: '[3, 2, 1, 0]'
+    why: Index 3 has no child in a list of length 6.
+  - text: '[0, 1, 2]'
+    why: This would start at the root and might sift into broken child heaps.
+  - text: '[2, 1]'
+    why: The range stops before -1, so 0 is included.
+  - text: '[2, 1, 0]'
+    why: Index 2 is the last parent. Step backward through the root.
+  answer: 3
+- id: st18
+  type: code
+  title: Heapify a list in place
+  task: Turn an integer list into a min-heap by sifting parents from the bottom. Use the given sift_down(heap,
+    i). Do not use heapq, sorting, or a second list. Return None. For [9, 1, 4], the list becomes [1, 9,
+    4].
+  exercise: exercises/practice.py
+  function: heapify
+  test_class: Heapify
+  hint_levels:
+  - The leaves need no repair.
+  - At each parent, the child heaps must already be ready.
+  - Loop over range(len(heap) // 2 - 1, -1, -1), calling sift_down(heap, i).
+- id: st19
+  type: read
+  title: Use heapq after building the pieces
+  body: |
+    Python's `heapq` works on a list. Import `heappush` and `heappop` to add and remove items.
+    `heappop` raises IndexError when the list is empty. Check for items before calling it.
+    Store a tuple of priority, arrival index, and name for each job.
+    Python compares tuples from left to right. The arrival index is the **tie-breaker** for equal priorities.
+    `enumerate(jobs)` gives each job with its index. Use that index to keep ties in arrival order.
+- id: st20
+  type: predict
+  title: Break a priority tie by arrival
+  code: |
+    from heapq import heappop, heappush
+
+    waiting = []
+    for index, job in enumerate([(4, "archive"), (1, "z-check"), (1, "a-check")]):
+        priority, name = job
+        heappush(waiting, (priority, index, name))
+    while waiting:
+        priority, index, name = heappop(waiting)
+        print(name)
+  choices:
+  - text: |
+      z-check
+      a-check
+      archive
+    why: Priority 1 comes first. For a tie, the earlier index is smaller.
+  - text: |
+      a-check
+      z-check
+      archive
+    why: The name is compared only if priority and index tie.
+  - text: |
+      archive
+      z-check
+      a-check
+    why: Arrival order alone would ignore the smaller priorities.
+  - text: |
+      z-check
+      archive
+      a-check
+    why: Both priority-1 jobs come out before the priority-4 job.
+  answer: 0
+- id: st21
+  type: try
+  title: Make archiving more urgent
+  starter: |
+    from heapq import heappop, heappush
+
+    waiting = []
+    for index, job in enumerate([(4, "archive"), (1, "z-check"), (1, "a-check")]):
+        priority, name = job
+        heappush(waiting, (priority, index, name))
+    if waiting:
+        priority, index, name = heappop(waiting)
+        print(name)
+  task: The if block prints only the next job. Lower archive's priority number to 0 and check which job
+    runs first.
+  check:
+    stdout_line: archive
+- id: st22
+  type: code
+  title: Schedule a batch of waiting jobs
+  task: Use heapq to return job names from a list of (integer priority, name) pairs. Smaller priorities
+    run first. Equal priorities follow arrival order. Keep the input unchanged, and keep repeat names. [(2,
+    "log"), (1, "alert"), (2, "sync")] becomes ["alert", "log", "sync"].
+  exercise: exercises/practice.py
+  function: schedule
+  test_class: Schedule
+  hint_levels:
+  - Make one heap entry per arrival.
+  - Put the priority and arrival index before the name in each entry.
+  - Push (priority, index, name). Pop entries until empty, appending only the name.
+- id: st23
+  type: explain
+  title: Explain a pop to a teammate
+  prompt: Write 2–4 English sentences. Explain how a pop removes the minimum and repairs a heap. Compare
+    your draft with the model in the lesson.
+  rubric:
+  - Name the value moved to the root.
+  - Say why sifting compares both children.
+  model_answer: Save the minimum at index zero, then remove the last item. If the heap still has items,
+    move the old last item to the root. Swap it down with the smaller child until the parent rule holds.
+- id: st24
+  type: terminal
+  title: 'Hands-on: run the example'
+  guide: handson.md
+  check: Match the expected output, then explain the change in one English sentence.
+- id: st25
+  type: boss
+  title: 'Mini boss: explain and repair'
+  time_limit_minutes: 10
+  pass_rule: Answer four of five review questions correctly and pass the repair checks.
+  draws_from: &id002
+  - st03
+  - st05
+  - st11
+  - st17
+  - st20
+  plus:
+  - type: fix
+    task: Fix sift_down for a min-heap list of integers. Index i is valid. Both child subtrees are already
+      heaps. Change the list in place and return None. For [9, 5, 1] at index 0, the result is [1, 5, 9].
+    starter: |
+      def sift_down(heap, i):
+          while 2*i + 1 < len(heap):
+              child = 2*i + 1
+              right = child + 1
+              if right < len(heap) and heap[right] > heap[child]:
+                  child = right
+              if heap[i] <= heap[child]:
+                  break
+              heap[i], heap[child] = heap[child], heap[i]
+              i = child
+    solution: |
+      def sift_down(heap, i):
+          while 2*i + 1 < len(heap):
+              child = 2*i + 1
+              right = child + 1
+              if right < len(heap) and heap[right] < heap[child]:
+                  child = right
+              if heap[i] <= heap[child]:
+                  break
+              heap[i], heap[child] = heap[child], heap[i]
+              i = child
+    tests: |
+      heap = [9, 5, 1]
+      assert sift_down(heap, 0) is None
+      assert heap == [1, 5, 9]
+      heap = [4, 1]
+      sift_down(heap, 0)
+      assert heap == [1, 4]
+      heap = [10, 6, 3, 7, 9, 4]
+      sift_down(heap, 0)
+      assert heap == [3, 6, 4, 7, 9, 10]
+    hint_levels: *id001
+    explanation: Choosing the smaller child preserves its new place above both children. Following one path
+      takes O(log n) time and O(1) extra space.
+review_cards:
+  from_steps: *id002
+  vocab: true

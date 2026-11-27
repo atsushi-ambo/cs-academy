@@ -234,6 +234,7 @@ stages:
           - {id: s3.m04.u05, title: "Cookies, server sessions, and token authentication"}
           - {id: s3.m04.u06, title: "Hashing and signatures (HMAC): integrity of data you send"}
           - {id: s3.m04.u07, title: "Input validation and query safety, everywhere"}
+          - {id: s3.m04.u08, title: "Anatomy of a data breach"}
       - id: s3.boss
         title: "Project: a small web app with AI"
         units:

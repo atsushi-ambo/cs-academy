@@ -1,0 +1,58 @@
+id: s2.m04.u04
+title: 'Divide and conquer: split, solve, combine'
+stage: 2
+module: Searching and Sorting
+version: 1
+status: draft
+estimated_minutes: 100
+prerequisites:
+- s2.m05.u01
+- s2.m05.u03
+- s2.m02.u03
+- s2.m04.u02
+objectives:
+- Split a range and combine the largest values from both halves.
+- Reuse one smaller power to compute a larger power.
+- Count inversions by combining sorted halves.
+- Read a recurrence and count the levels of the calls.
+skills:
+- algo.divide-and-conquer
+- english.explain-code
+parts:
+- steps.yaml
+- lesson.md
+- handson.md
+- exercises/
+- solutions/solutions.md
+references:
+- kind: official_doc
+  title: Python control flow
+  url: https://docs.python.org/3.13/tutorial/controlflow.html
+- kind: official_doc
+  title: Python lists
+  url: https://docs.python.org/3.13/tutorial/datastructures.html
+vocab:
+- en: divide and conquer
+  ja: 分割統治
+- en: subproblem
+  ja: 部分問題
+- en: combine
+  ja: 結果を統合する
+- en: recurrence
+  ja: 小さい入力のコストで表す漸化式
+- en: recursion tree
+  ja: 再帰呼び出しを表す木
+- en: level
+  ja: 木の同じ深さの段
+- en: halving
+  ja: 半分にすること
+- en: exponent
+  ja: 指数
+- en: power by squaring
+  ja: 二乗を再利用する累乗法
+- en: inversion
+  ja: 要素の順序が逆になっている組
+- en: cross inversion
+  ja: 左右の半分をまたぐ逆転
+- en: merge
+  ja: 整列済みの列を一つにまとめる

@@ -1,0 +1,506 @@
+unit: s2.m06.u03
+python_min: '3.9'
+steps:
+- id: st01
+  type: read
+  title: Trace connections between machines
+  body: |
+    A group of servers can pass a message along links.
+    Which machines can receive it? How many links does the message cross?
+    You will trace a network, find groups, and fill part of a grid.
+
+    A **graph** has points called **vertices** and links called **edges**.
+    Two points joined by an edge are **neighbors**.
+    An **undirected** edge can be used both ways. A **directed** edge has one direction.
+- id: st02
+  type: read
+  title: Store neighbors by list or matrix
+  body: |
+    An **adjacency list** maps each vertex to its neighbors.
+    For links A–B and B–C, use `{"A": ["B"], "B": ["A", "C"], "C": ["B"]}`.
+    An **adjacency matrix** uses a row and column per vertex.
+
+    ```text
+        A B C
+    A   0 1 0
+    B   1 0 1
+    C   0 1 0
+    ```
+
+    Read a 1 as a link from the row vertex to the column vertex.
+    The list holds O(V + E) values, where V counts vertices and E counts edges.
+    The matrix holds O(V²) cells but checks any single edge in O(1) time.
+- id: st03
+  type: predict
+  title: Read a matrix entry in the right direction
+  code: |
+    links = [[0, 1], [0, 0]]
+    print(links[1][0], links[0][1])
+  choices:
+  - text: 0 1
+    why: There is a link from 0 to 1 only.
+  - text: 1 0
+    why: The code prints row 1 first, then row 0.
+  - text: 1 1
+    why: The graph is directed. One link does not create its reverse.
+  - text: 0 0
+    why: Row 0 has a link to vertex 1.
+  answer: 0
+- id: st04
+  type: read
+  title: Visit all points one hop farther first
+  body: |
+    A **traversal** visits points by following edges.
+    **Breadth-first search (BFS)** uses a queue to visit by distance from the start.
+    A **hop** is one edge. The start has distance zero.
+    Use `deque` from collections. `append` adds at the back and `popleft` removes the front.
+    The **frontier** holds work you have found and still need to process.
+
+    Add a vertex to the **visited set** as soon as it enters the queue.
+    A dictionary of known distances can act as that set.
+- id: st05
+  type: predict
+  title: Use first-in, first-out order
+  code: |
+    from collections import deque
+
+    frontier = deque(["api", "db"])
+    frontier.append("cache")
+    print(frontier.popleft())
+  choices:
+  - text: cache
+    why: pop would remove the last item, but this code uses popleft.
+  - text: api
+    why: popleft removes the oldest item, which is api.
+  - text: db
+    why: api is still in front of db.
+  - text: '[''api'', ''db'', ''cache'']'
+    why: popleft returns one item and removes it from the queue.
+  answer: 1
+- id: st06
+  type: try
+  title: Watch the queue drain
+  task: Remove the first item with frontier.popleft() before the print line. Which item is now at the
+    front?
+  starter: |
+    from collections import deque
+
+    frontier = deque(["api", "db"])
+    frontier.append("cache")
+    print(frontier.popleft())
+  check:
+    stdout_line: db
+- id: st07
+  type: parsons
+  title: Take one BFS step
+  task: Remove the current vertex. Mark its neighbor before queuing it and then print its distance.
+  lines:
+  - from collections import deque
+  - frontier = deque(["api"])
+  - 'distance = {"api": 0}'
+  - current = frontier.popleft()
+  - distance["db"] = distance[current] + 1
+  - frontier.append("db")
+  - print(distance[frontier.popleft()])
+  expected_stdout: '1'
+  accepted_orders:
+  - - 0
+    - 1
+    - 3
+    - 2
+    - 4
+    - 5
+    - 6
+  - - 0
+    - 2
+    - 1
+    - 3
+    - 4
+    - 5
+    - 6
+  - - 2
+    - 0
+    - 1
+    - 3
+    - 4
+    - 5
+    - 6
+- id: st08
+  type: fix
+  title: Mark a vertex when it joins the queue
+  task: 'Return BFS visit order from start, following each neighbor list in order. Every vertex has a
+    key, and start exists. Process each vertex once. For {''a'': [''b'', ''b''], ''b'': []} starting at
+    ''a'', return [''a'', ''b'']. Leave the graph unchanged.'
+  starter: |
+    from collections import deque
+
+    def visits(graph, start):
+        frontier = deque([start])
+        seen = set()
+        result = []
+        while frontier:
+            node = frontier.popleft()
+            seen.add(node)
+            result.append(node)
+            for neighbor in graph[node]:
+                if neighbor not in seen:
+                    frontier.append(neighbor)
+        return result
+  solution: |
+    from collections import deque
+
+    def visits(graph, start):
+        frontier = deque([start])
+        seen = {start}
+        result = []
+        while frontier:
+            node = frontier.popleft()
+            result.append(node)
+            for neighbor in graph[node]:
+                if neighbor not in seen:
+                    seen.add(neighbor)
+                    frontier.append(neighbor)
+        return result
+  tests: |
+    graph = {'a': ['b', 'c'], 'b': ['d'], 'c': ['d'], 'd': ['a']}
+    assert visits(graph, 'a') == ['a', 'b', 'c', 'd']
+    assert graph == {'a': ['b', 'c'], 'b': ['d'], 'c': ['d'], 'd': ['a']}
+    assert visits({'a': ['b', 'b'], 'b': []}, 'a') == ['a', 'b']
+    assert visits({'a': ['a']}, 'a') == ['a']
+  hint_levels:
+  - Notice where the same vertex can enter twice.
+  - Mark the start right away. Mark each neighbor before adding it.
+  - Use seen = {start}. Move seen.add to the if branch and pass neighbor.
+  explanation: A point is found when it joins the queue. On reached vertices and their edges, time is
+    O(V + E) and extra space is O(V).
+- id: st09
+  type: code
+  title: Count minimum relay steps
+  task: 'Return a dict of reachable vertices and their fewest hops from start. Use BFS over the neighbor
+    lists. Each listed neighbor has a key. Return {} if start is absent. Do not change graph. Example:
+    hop_counts({''a'': [''b''], ''b'': []}, ''a'') returns {''a'': 0, ''b'': 1}.'
+  exercise: exercises/practice.py
+  function: hop_counts
+  test_class: HopCounts
+  hint_levels:
+  - Store a distance at first discovery.
+  - Start a queue with start. Assign each new neighbor one more hop.
+  - Take node with popleft. For an unseen neighbor, set distances[neighbor] = distances[node] + 1 and
+    append it.
+- id: st10
+  type: predict
+  title: First discovery uses fewer edges
+  code: |
+    from collections import deque
+
+    graph = {"a": ["b", "d"], "b": ["c"], "c": ["d"], "d": []}
+    queue = deque(["a"])
+    steps = {"a": 0}
+    while queue:
+        node = queue.popleft()
+        for neighbor in graph[node]:
+            if neighbor not in steps:
+                steps[neighbor] = steps[node] + 1
+                queue.append(neighbor)
+    print(steps["d"])
+  choices:
+  - text: '3'
+    why: The later route through b and c does not replace the first discovery.
+  - text: '2'
+    why: The two neighbors of a each have distance one.
+  - text: '1'
+    why: The edge a to d reaches d in one hop.
+  - text: '0'
+    why: Only the start has zero hops.
+  answer: 2
+- id: st11
+  type: read
+  title: Follow one branch as far as it goes
+  body: |
+    **Depth-first search (DFS)** explores one branch before going back to try another.
+    Recursion keeps unfinished calls on the call stack.
+    Mark a node before calling DFS on its neighbors.
+    You can also use a list as a **stack** with append and pop.
+    The last item added is the first removed.
+    With a stack, you can mark on removal if you skip any point already seen.
+- id: st12
+  type: predict
+  title: The call finishes a branch before returning
+  code: |
+    graph = {"a": ["b", "c"], "b": ["d"], "c": [], "d": []}
+    seen = set()
+    order = []
+
+    def visit(node):
+        if node in seen:
+            return
+        seen.add(node)
+        order.append(node)
+        for neighbor in graph[node]:
+            visit(neighbor)
+
+    visit("a")
+    print(order)
+  choices:
+  - text: '[''a'', ''b'', ''c'', ''d'']'
+    why: BFS reaches c before d. The recursive call visits d right away.
+  - text: '[''d'', ''b'', ''c'', ''a'']'
+    why: Each call appends its node before visiting children.
+  - text: '[''a'', ''c'', ''b'', ''d'']'
+    why: The for loop at a visits b before c.
+  - text: '[''a'', ''b'', ''d'', ''c'']'
+    why: The call at b visits d before the loop at a reaches c.
+  answer: 3
+- id: st13
+  type: fix
+  title: Close a DFS loop with a visited set
+  task: 'Return the set of vertices reachable from start using recursive DFS. All vertices and start have
+    keys. Allow cycles and leave graph unchanged. The graph has at most 300 vertices, so the recursion
+    stays within Python''s default limit. Example: reachable({''a'': [''b''], ''b'': [''a'']},
+    ''a'') returns {''a'', ''b''}.'
+  starter: |
+    def reachable(graph, start):
+        seen = set()
+        def visit(node):
+            if node in seen:
+                return
+            for neighbor in graph[node]:
+                visit(neighbor)
+            seen.add(node)
+        visit(start)
+        return seen
+  solution: |
+    def reachable(graph, start):
+        seen = set()
+        def visit(node):
+            if node in seen:
+                return
+            seen.add(node)
+            for neighbor in graph[node]:
+                visit(neighbor)
+        visit(start)
+        return seen
+  tests: |
+    import sys
+
+    graph = {'a': ['b', 'b'], 'b': ['a'], 'c': []}
+    assert reachable(graph, 'a') == {'a', 'b'}
+    assert reachable({'a': ['a']}, 'a') == {'a'}
+    assert graph == {'a': ['b', 'b'], 'b': ['a'], 'c': []}
+    chain = {i: [i + 1] for i in range(120)}
+    chain[120] = []
+    calls = {'depth': 0, 'deepest': 0}
+    def watch(frame, event, arg):
+        if event == 'call':
+            calls['depth'] += 1
+            calls['deepest'] = max(calls['deepest'], calls['depth'])
+        elif event == 'return':
+            calls['depth'] -= 1
+    sys.setprofile(watch)
+    try:
+        found = reachable(chain, 0)
+    finally:
+        sys.setprofile(None)
+    assert found == set(range(121))
+    assert calls['deepest'] >= 100, "Use a recursive call to visit a neighbor."
+  hint_levels: &id001
+  - Trace a to b to a.
+  - Mark each node before visiting its neighbors.
+  - Move seen.add(node) before the for loop.
+  explanation: Marking on entry stops recursive cycles. Time is O(V + E). The set and deepest chain of
+    calls use O(V) extra space.
+- id: st14
+  type: code
+  title: Follow a route with a stack
+  task: 'Return a set of reachable vertices, starting at start. Use iterative DFS with your own stack
+    logic. Each neighbor has a key. Return an empty set if start is absent. Keep graph unchanged. Example:
+    stack_reachable({''a'': [''b''], ''b'': [''a'']}, ''a'') returns {''a'', ''b''}.'
+  exercise: exercises/practice.py
+  function: stack_reachable
+  test_class: StackReachable
+  hint_levels:
+  - A stack replaces the waiting calls.
+  - Pop from the end. Add any unseen neighbors to the stack.
+  - Start seen with start. Before appending neighbor to stack, add neighbor to seen.
+- id: st15
+  type: read
+  title: Find separate groups and spot a cycle
+  body: |
+    A **connected component** is a group linked by paths in an undirected graph.
+    Walk the whole graph. Start a new search when an unseen vertex appears.
+    One shared visited set keeps the total work small.
+
+    A **cycle** returns to its start without repeating other vertices or using an edge twice.
+    In a simple undirected graph, track each vertex's **parent**, the point you reached it from.
+    An edge to a seen vertex other than its parent reveals a cycle.
+    In a directed DFS, an edge to a vertex still on the current call stack reveals one.
+- id: st16
+  type: predict
+  title: Only start a new search for unseen nodes
+  code: |
+    graph = {"a": ["b"], "b": ["a"], "c": []}
+    seen = set()
+
+    def visit(node):
+        seen.add(node)
+        for neighbor in graph[node]:
+            if neighbor not in seen:
+                visit(neighbor)
+
+    groups = 0
+    for node in graph:
+        if node not in seen:
+            groups += 1
+            visit(node)
+    print(groups)
+  choices:
+  - text: '1'
+    why: No edge joins c to the first group.
+  - text: '2'
+    why: a reaches b. Only c needs a second search.
+  - text: '3'
+    why: b is already seen when the outer loop gets to it.
+  - text: '0'
+    why: Even an isolated vertex forms a component.
+  answer: 1
+- id: st17
+  type: code
+  title: Count isolated network groups
+  task: 'Count connected components of an undirected graph. All vertices have keys and every link is listed
+    in both directions. Repeated links are allowed. Leave graph unchanged. Example: {''a'': [''b''], ''b'':
+    [''a''], ''z'': []} gives 2. An empty graph gives 0.'
+  exercise: exercises/practice.py
+  function: component_count
+  test_class: ComponentCount
+  hint_levels:
+  - One search can cover a whole group.
+  - Share seen across searches. Increase the count at each new start.
+  - Loop over keys. If start is unseen, add one to count and visit its component with a stack or queue.
+- id: st18
+  type: read
+  title: Treat grid cells as vertices
+  body: |
+    A **grid** is a table of cells. Use a tuple `(row, col)` to name a cell.
+    Test four neighbors with moves `(1, 0), (-1, 0), (0, 1), (0, -1)`.
+    Check both bounds before you read a cell.
+    **Flood fill** visits all connected cells of one kind.
+    Here, follow only cells with value 1. A diagonal step does not count.
+- id: st19
+  type: predict
+  title: A diagonal alone does not join two cells
+  code: |
+    grid = [[1, 0], [0, 1]]
+    cells = []
+    for row, col in [(1, 0), (0, 1)]:
+        if grid[row][col] == 1:
+            cells.append((row, col))
+    print(cells)
+  choices:
+  - text: '[]'
+    why: Both four-way neighbors of the starting corner have value 0.
+  - text: '[(1, 1)]'
+    why: The diagonal cell is not one of the moves.
+  - text: '[(1, 0), (0, 1)]'
+    why: Both candidate cells fail the test for 1.
+  - text: '[(0, 0)]'
+    why: This loop lists neighbors only, so it does not add the starting corner.
+  answer: 0
+- id: st20
+  type: code
+  title: 'Boss: measure a flood region'
+  task: 'Return the number of 1 cells reachable from (row, col) by moving up, down, left, or right through
+    1 cells. Use graph traversal. grid is a rectangular list of lists of 0 or 1. An empty, blocked, or
+    out-of-bounds start gives 0. Leave grid unchanged. Example: flood_size([[1, 0], [1, 1]], 0, 0) returns
+    3.'
+  exercise: exercises/practice.py
+  function: flood_size
+  test_class: FloodSize
+  hint_levels:
+  - Use (row, col) as your vertex.
+  - Check bounds, check value 1, and check for a previous visit.
+  - Start seen and pending with (row, col). Add every valid unseen neighbor to both. Return len(seen).
+- id: st21
+  type: explain
+  title: Explain it to a teammate
+  prompt: Write 2–4 English sentences. Explain why BFS finds the fewest hops through a network. After
+    writing, compare with the model answer in the lesson.
+  rubric:
+  - Give the order in which distances are processed.
+  - Describe when a point enters the queue and when it is marked.
+  model_answer: BFS starts with the source in a queue. It visits all points at one distance before visiting
+    points one hop farther away. I mark each point when I add it, so its first distance is saved.
+- id: st22
+  type: terminal
+  title: 'Hands-on: run and change the sample'
+  guide: handson.md
+  check: The original sample prints the expected output in the guide.
+- id: st23
+  type: boss
+  title: 'Mini boss: review and repair'
+  time_limit_minutes: 15
+  pass_rule: Answer at least 5 of 6 predicts and pass the bug-fix tests.
+  draws_from: &id002
+  - st03
+  - st05
+  - st10
+  - st12
+  - st16
+  - st19
+  plus:
+  - type: fix
+    title: Close a DFS loop with a visited set
+    task: 'Return the set of vertices reachable from start using recursive DFS. All vertices and start
+      have keys. Allow cycles and leave graph unchanged. The graph has at most 300 vertices, so the recursion
+      stays within Python''s default limit. Example: reachable({''a'': [''b''], ''b'': [''a'']},
+      ''a'') returns {''a'', ''b''}.'
+    starter: |
+      def reachable(graph, start):
+          seen = set()
+          def visit(node):
+              if node in seen:
+                  return
+              for neighbor in graph[node]:
+                  visit(neighbor)
+              seen.add(node)
+          visit(start)
+          return seen
+    solution: |
+      def reachable(graph, start):
+          seen = set()
+          def visit(node):
+              if node in seen:
+                  return
+              seen.add(node)
+              for neighbor in graph[node]:
+                  visit(neighbor)
+          visit(start)
+          return seen
+    tests: |
+      import sys
+
+      graph = {'a': ['b', 'b'], 'b': ['a'], 'c': []}
+      assert reachable(graph, 'a') == {'a', 'b'}
+      assert reachable({'a': ['a']}, 'a') == {'a'}
+      assert graph == {'a': ['b', 'b'], 'b': ['a'], 'c': []}
+      chain = {i: [i + 1] for i in range(120)}
+      chain[120] = []
+      calls = {'depth': 0, 'deepest': 0}
+      def watch(frame, event, arg):
+          if event == 'call':
+              calls['depth'] += 1
+              calls['deepest'] = max(calls['deepest'], calls['depth'])
+          elif event == 'return':
+              calls['depth'] -= 1
+      sys.setprofile(watch)
+      try:
+          found = reachable(chain, 0)
+      finally:
+          sys.setprofile(None)
+      assert found == set(range(121))
+      assert calls['deepest'] >= 100, "Use a recursive call to visit a neighbor."
+    hint_levels: *id001
+    explanation: Marking on entry stops recursive cycles. Time is O(V + E). The set and deepest chain
+      of calls use O(V) extra space.
+review_cards:
+  from_steps: *id002
+  vocab: true

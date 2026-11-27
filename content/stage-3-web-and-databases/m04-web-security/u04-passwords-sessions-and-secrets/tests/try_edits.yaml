@@ -1,0 +1,5 @@
+# Test-only: one edit per try step, in step order, that makes the try check pass.
+- find: OUTPUT = "md5"
+  replace: OUTPUT = "sha256"
+- find: calls = 4
+  replace: calls = 8

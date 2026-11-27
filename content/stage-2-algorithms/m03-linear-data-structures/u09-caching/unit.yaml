@@ -1,0 +1,52 @@
+id: s2.m03.u09
+title: 'Caching with a hash table: memo and LRU cache'
+stage: 2
+module: Linear Data Structures
+version: 1
+status: draft
+estimated_minutes: 110
+prerequisites:
+- s2.m03.u08
+- s2.m03.u06
+- s1.m04.u05
+objectives:
+- Memoize a slow function.
+- Build a bounded LRU cache and compare library alternatives.
+skills:
+- python.caching
+- english.explain-code
+parts:
+- steps.yaml
+- lesson.md
+- handson.md
+- exercises/
+- tests/
+- solutions/solutions.md
+references:
+- kind: official_doc
+  title: Collections
+  url: https://docs.python.org/3.13/library/collections.html
+- kind: official_doc
+  title: Function caches
+  url: https://docs.python.org/3.13/library/functools.html#functools.lru_cache
+vocab:
+- en: cache
+  ja: 再利用のための一時保存
+- en: cache hit
+  ja: 保存済みの値が見つかること
+- en: cache miss
+  ja: 保存済みの値が見つからないこと
+- en: memoization
+  ja: 関数の計算結果の記憶
+- en: recency
+  ja: 最後に使った時点の新しさ
+- en: LRU
+  ja: 最も長く使っていない項目を優先する方式
+- en: evict
+  ja: 容量を空けるために追い出す
+- en: wrapper
+  ja: 別の関数を包む関数
+- en: OrderedDict
+  ja: 並び順を操作できる辞書
+- en: stale
+  ja: 古くなって現状と合わない

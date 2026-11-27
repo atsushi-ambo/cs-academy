@@ -1,0 +1,60 @@
+id: s2.m05.u02
+title: Backtracking
+stage: 2
+module: Recursion
+version: 1
+status: draft
+estimated_minutes: 105
+prerequisites:
+- s1.m03.u01
+- s1.m03.u04
+- s2.m05.u01
+- s2.m05.u03
+- s2.m05.u04
+objectives:
+- Build subsets and permutations with recursive choices.
+- Restore shared state after exploring each option.
+- Skip choices that cannot lead to a valid queen board.
+skills:
+- algo.backtracking
+- english.explain-code
+parts:
+- steps.yaml
+- lesson.md
+- handson.md
+- exercises/
+- solutions/solutions.md
+references:
+- kind: official_doc
+  title: Python control flow
+  url: https://docs.python.org/3.13/tutorial/controlflow.html
+- kind: official_doc
+  title: Python lists
+  url: https://docs.python.org/3.13/tutorial/datastructures.html
+vocab:
+- en: backtracking
+  ja: 選択を取り消しながら探索する方法
+- en: choice
+  ja: 選択肢
+- en: path
+  ja: 今までの選択の列
+- en: subset
+  ja: 部分集合
+- en: permutation
+  ja: 順列
+- en: snapshot
+  ja: その時点の状態のコピー
+- en: undo
+  ja: 選択を取り消す
+- en: pruning
+  ja: 枝刈り
+- en: conflict
+  ja: 制約に反する組み合わせ
+- en: diagonal
+  ja: 斜めの列
+- en: factorial
+  ja: 階乗
+- en: candidate
+  ja: 次に試す候補
+- en: flag
+  ja: 状態を表す真偽値

@@ -1,0 +1,7 @@
+# Test-only: one edit per try step, in step order, that makes the try check pass.
+- find: '["web", "db"]'
+  replace: '["web", "db", "cache"]'
+- find: range(3, 0, -1)
+  replace: range(3, -1, -1)
+- find: '[4, 7]'
+  replace: '[4, 7, 3]'

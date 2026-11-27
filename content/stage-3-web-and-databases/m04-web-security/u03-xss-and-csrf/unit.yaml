@@ -1,0 +1,64 @@
+id: s3.m04.u03
+title: 'XSS and CSRF: break it, then fix it'
+stage: 3
+module: Web Security
+version: 1
+status: draft
+estimated_minutes: 90
+prerequisites:
+- s3.m01.u02
+- s3.m01.u03
+- s3.m04.u01
+objectives:
+- Keep input as text in HTML.
+- Explain why a session cookie alone cannot prove intent.
+- Protect a simulated POST with a per-session token.
+skills:
+- security.output-escaping
+- security.csrf
+- english.explain-code
+parts:
+- steps.yaml
+- lesson.md
+- handson.md
+- exercises/
+- tests/
+- solutions/solutions.md
+references:
+- kind: official_doc
+  title: Python html
+  url: https://docs.python.org/3.13/library/html.html
+- kind: official_doc
+  title: Python http.cookies
+  url: https://docs.python.org/3.13/library/http.cookies.html
+- kind: official_doc
+  title: OWASP XSS Prevention
+  url: https://cheatsheetseries.owasp.org/cheatsheets/Cross_Site_Scripting_Prevention_Cheat_Sheet.html
+- kind: official_doc
+  title: OWASP CSRF Prevention
+  url: https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html
+vocab:
+- en: XSS
+  ja: クロスサイトスクリプティング
+- en: CSRF
+  ja: クロスサイトリクエストフォージェリ
+- en: render
+  ja: 表示用に組み立てる
+- en: markup
+  ja: マークアップ
+- en: HTML entity
+  ja: HTMLの文字参照
+- en: context
+  ja: 挿入位置の文脈
+- en: attribute
+  ja: 属性
+- en: Content Security Policy
+  ja: コンテンツセキュリティポリシー
+- en: token
+  ja: 照合用の値
+- en: SameSite
+  ja: サイトをまたぐCookie送信を制限する属性
+- en: cross-site
+  ja: 異なるサイトをまたぐ
+- en: constant-time comparison
+  ja: 内容に依存しにくい比較

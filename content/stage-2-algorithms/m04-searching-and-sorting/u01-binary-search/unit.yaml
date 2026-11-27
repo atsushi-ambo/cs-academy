@@ -1,0 +1,57 @@
+id: s2.m04.u01
+title: Binary search
+stage: 2
+module: Searching and Sorting
+version: 1
+status: draft
+estimated_minutes: 85
+prerequisites:
+- s1.m02.u03
+- s1.m03.u01
+- s2.m01.u02
+- s2.m02.u01
+objectives:
+- Find a value in a sorted list by halving the search range.
+- Find the first index whose value reaches a target.
+- Find the smallest workable capacity with a yes-or-no test.
+skills:
+- algo.binary-search
+- english.explain-code
+parts:
+- steps.yaml
+- lesson.md
+- handson.md
+- exercises/
+- solutions/solutions.md
+references:
+- kind: official_doc
+  title: Python insertion points
+  url: https://docs.python.org/3.13/library/bisect.html
+- kind: official_doc
+  title: Python control flow
+  url: https://docs.python.org/3.13/tutorial/controlflow.html
+vocab:
+- en: binary search
+  ja: 二分探索
+- en: sorted
+  ja: 整列済みの
+- en: target
+  ja: 探す値・目標値
+- en: midpoint
+  ja: 中央の位置
+- en: inclusive bound
+  ja: 端を含む境界
+- en: half-open range
+  ja: 左端を含み右端を含まない範囲
+- en: loop invariant
+  ja: ループの各周回で保たれる条件
+- en: off-by-one error
+  ja: 境界が1つずれる誤り
+- en: lower bound
+  ja: 目標値以上となる最初の位置
+- en: capacity
+  ja: 容量
+- en: monotone test
+  ja: 偽から真へ一方向に変わる判定
+- en: greedy check
+  ja: その場で入る限り詰める判定

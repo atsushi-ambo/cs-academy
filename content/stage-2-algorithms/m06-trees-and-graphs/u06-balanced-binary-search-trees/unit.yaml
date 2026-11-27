@@ -1,0 +1,57 @@
+id: s2.m06.u06
+title: Balanced binary search trees (AVL rotations, the idea of red-black)
+stage: 2
+module: Trees and Graphs
+version: 1
+status: draft
+estimated_minutes: 115
+prerequisites:
+- s2.m06.u05
+- s2.m02.u04
+- s2.m01.u02
+objectives:
+- Read stored heights and find the balance factor.
+- Rotate left and right while keeping key order.
+- Repair LL, RR, LR, and RL insertions.
+- Recognize two rules used in red-black trees.
+skills:
+- algorithms.balanced-binary-search-trees
+- english.explain-code
+parts:
+- steps.yaml
+- lesson.md
+- handson.md
+- exercises/
+- tests/
+- solutions/solutions.md
+references:
+- kind: official_doc
+  title: Python classes
+  url: https://docs.python.org/3.13/tutorial/classes.html
+vocab:
+- en: balanced tree
+  ja: 平衡木
+- en: AVL tree
+  ja: AVL木
+- en: cached height
+  ja: 保存された高さ
+- en: balance factor
+  ja: 平衡係数
+- en: lean
+  ja: 片側への偏り
+- en: rotation
+  ja: 木の回転
+- en: pivot
+  ja: 回転で昇格する子
+- en: LL case
+  ja: 左の左に偏る場合
+- en: RR case
+  ja: 右の右に偏る場合
+- en: LR case
+  ja: 左の右に偏る場合
+- en: RL case
+  ja: 右の左に偏る場合
+- en: red-black tree
+  ja: 赤黒木
+- en: black height
+  ja: 黒い節点数による高さ

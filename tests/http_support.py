@@ -5,7 +5,10 @@ import socket
 import threading
 from contextlib import contextmanager
 from datetime import timedelta
+from pathlib import Path
 from urllib.parse import urlencode
+
+import yaml
 
 from app.server import HOST, TEST_PORT, Server, handler_for
 
@@ -180,80 +183,27 @@ def play_lists(case, api):
     case.assertEqual(cards[0]["due_day"], case.date.isoformat())
 
 
-TRY_EDITS = {
-    "s1.m02.u02": [
-        ('["web", "db"]', '["web", "db", "cache"]'),
-        ("range(3, 0, -1)", "range(3, -1, -1)"),
-        ("[4, 7]", "[4, 7, 3]"),
-    ],
-    "s1.m02.u03": [
-        ("left = 2", "left = 4"),
-        ("    checks += 1", "    checks += 1\n    left -= 1"),
-    ],
-    "s1.m02.u04": [
-        ("count += 1", "count += ms"),
-        ("[4, 7], [], [9]", "[4, 7], [5], [9]"),
-    ],
-    "s2.m05.u01": [
-        ("range(1, 4)", "range(1, 5)"),
-        ("scan(2)", "scan(3)"),
-        ("print(ways(3))", "print(ways(4))"),
-    ],
-    "s2.m05.u03": [
-        ("audit(1)", "audit(2)"),
-        ("down(sys.getrecursionlimit() + 10)", "down(4)"),
-        ("calls(7)", "calls(8)"),
-    ],
-    "s2.m05.u04": [
-        ("[4, 8, 5], 1", "[4, 8, 5], 0"),
-        ("walk([1, [2]])", "walk([1, []])"),
-    ],
-    "s2.m05.u05": [
-        ("n = 2", "n = 3"),
-        ('["first", "middle", "previous-last"]', 'reversed(["first", "middle", "previous-last"])'),
-        ("range(2, 4)", "range(2, 5)"),
-        (
-            '        if level > 0:\n            pending.append(("open", level - 1))\n'
-            '        pending.append(("close", level))',
-            '        pending.append(("close", level))\n'
-            '        if level > 0:\n            pending.append(("open", level - 1))',
-        ),
-    ],
-    "s2.m02.u01": [
-        ('n = 4', 'n = 8'),
-        ('n = 3', 'n = 6'),
-    ],
-    "s2.m02.u02": [
-        ('n = 4', 'n = 8'),
-        ('n = 4', 'n = 16'),
-    ],
-    "s2.m02.u03": [
-        ('n = 2', 'n = 3'),
-        ('print(settings(4))', 'print(settings(5))'),
-    ],
-    "s2.m02.u04": [
-        ('[7, 3]', '[7, 3, 7, 7]'),
-        ('([4, 5, 6], 2)', '([4, 5, 6], 1)'),
-    ],
-    "s2.m02.u05": [
-        ('target = 8', 'target = 9'),
-        ('targets = [8, 7, 6]', 'targets = [5, 7, 6]'),
-    ],
-    "s2.m03.u04": [
-        ('alias = queue', 'alias = queue[:]'),
-        ('range(2)', 'range(3)'),
-    ],
-    "s2.m03.u05": [
-        ('slots[0]', 'slots[3]'),
-        ('range(5)', 'range(9)'),
-    ],
-}
+def load_try_edits():
+    edits = {}
+    for path in Path("content").glob("**/unit.yaml"):
+        sample = path.parent / "tests" / "try_edits.yaml"
+        if sample.exists():
+            uid = yaml.safe_load(path.read_text(encoding="utf-8"))["id"]
+            items = yaml.safe_load(sample.read_text(encoding="utf-8"))
+            edits[uid] = [(item["find"], item["replace"]) for item in items]
+    return edits
+
+
+TRY_EDITS = load_try_edits()
 
 
 def try_source(uid, step, index):
     if uid == LISTS:
         return 'print(input())\nprint(len(["web01", "web02", "web03", "db01"]))', "入力を確認\n"
-    old, new = TRY_EDITS[uid][index]
+    edits = TRY_EDITS.get(uid)
+    if edits is None or index >= len(edits):
+        raise AssertionError(f"Add tests/try_edits.yaml with one edit per try step for {uid}")
+    old, new = edits[index]
     if old not in step["starter"]:
         raise AssertionError(f"Missing edit target in {step['id']}: {old}")
     return step["starter"].replace(old, new, 1), ""
