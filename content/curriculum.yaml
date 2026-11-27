@@ -136,23 +136,15 @@ stages:
       - id: s2.m03
         title: Linear Data Structures
         units:
-          - {id: s2.m03.u01, title: "Arrays vs linked lists", ex: [exercism/simple-linked-list, exercism/linked-list], next: [LeetCode Explore Linked List]}
           - {id: s2.m03.u04, title: "How memory holds data: addresses, references, stack and heap"}
           - {id: s2.m03.u05, title: "Fixed, multidimensional, and dynamic arrays (amortized growth)"}
-          - {id: s2.m03.u06, title: "Singly and doubly linked lists: build them yourself", ex: [exercism/linked-list]}
+          - {id: s2.m03.u01, title: "Arrays vs singly linked lists: cost of each operation", ex: [exercism/simple-linked-list], next: [LeetCode Explore Linked List]}
+          - {id: s2.m03.u06, title: "Doubly linked lists: insert, delete, and the prev/next invariant", ex: [exercism/linked-list]}
           - {id: s2.m03.u02, title: "Stacks and queues", ex: [exercism/matching-brackets, exercism/circular-buffer], next: [LeetCode Explore Queue & Stack]}
           - {id: s2.m03.u07, title: "Deques: both ends in O(1)"}
           - {id: s2.m03.u03, title: "Hash tables", next: [LeetCode Explore Hash Table]}
           - {id: s2.m03.u08, title: "Hash functions and collisions (chaining, open addressing)"}
           - {id: s2.m03.u09, title: "Caching with a hash table: memo and LRU cache"}
-      - id: s2.m04
-        title: Searching and Sorting
-        units:
-          - {id: s2.m04.u01, title: "Binary search", ex: [exercism/binary-search], next: [LeetCode Explore Binary Search]}
-          - {id: s2.m04.u02, title: "Simple sorts and why they are slow"}
-          - {id: s2.m04.u03, title: "Merge sort and quicksort", next: [LeetCode Explore Sorting]}
-          - {id: s2.m04.u04, title: "Divide and conquer: split, solve, combine"}
-          - {id: s2.m04.u05, title: "Heap sort and comparing all sorts"}
       - id: s2.m05
         title: Recursion
         units:
@@ -161,6 +153,13 @@ stages:
           - {id: s2.m05.u04, title: "Recursion on lists and strings: sum, reverse, palindrome, flatten"}
           - {id: s2.m05.u05, title: "From recursion to loops: tail calls and an explicit stack"}
           - {id: s2.m05.u02, title: "Backtracking", ex: [exercism/queen-attack, exercism/word-search], next: [LeetCode Explore Recursion II]}
+      - id: s2.m04
+        title: Searching and Sorting
+        units:
+          - {id: s2.m04.u01, title: "Binary search", ex: [exercism/binary-search], next: [LeetCode Explore Binary Search]}
+          - {id: s2.m04.u02, title: "Simple sorts and why they are slow"}
+          - {id: s2.m04.u04, title: "Divide and conquer: split, solve, combine"}
+          - {id: s2.m04.u03, title: "Merge sort and quicksort", next: [LeetCode Explore Sorting]}
       - id: s2.m06
         title: Trees and Graphs
         units:
@@ -168,6 +167,7 @@ stages:
           - {id: s2.m06.u05, title: "Binary search trees: insert, search, delete"}
           - {id: s2.m06.u06, title: "Balanced binary search trees (AVL rotations, the idea of red-black)"}
           - {id: s2.m06.u02, title: "Heaps and priority queues", next: [LeetCode Explore Heap]}
+          - {id: s2.m06.u07, title: "Heap sort and comparing all sorts"}
           - {id: s2.m06.u03, title: "Graphs: BFS and DFS", ex: [exercism/connect], next: [LeetCode Explore Graph]}
           - {id: s2.m06.u04, title: "Shortest paths (Dijkstra)"}
       - id: s2.m07
@@ -397,6 +397,7 @@ stages:
           - {id: s7.m04.u04, title: "Agents and tool use", read: [Building Applications with AI Agents (C)]}
           - {id: s7.m04.u05, title: "Evals: measuring quality"}
           - {id: s7.m04.u06, title: "Cost, latency, and safety"}
+          - {id: s7.m04.u07, title: "Voice AI: speech-to-text, LLM, and text-to-speech in one app"}
       - id: s7.capstone
         title: Capstone
         units:
